@@ -136,7 +136,17 @@ std::unique_ptr<TextBlock> TextBlock::deserializeLegacy(FsFile& file) {
   words.resize(wc);
   wordXpos.resize(wc);
   wordStyles.resize(wc);
-  for (auto& w : words) serialization::readString(file, w);
+  // Read words with bounded allocation to prevent corrupt disk data from causing unbounded memory allocation
+  for (auto& w : words) {
+    uint32_t strLen;
+    serialization::readPod(file, strLen);
+    if (strLen > 1024) {  // Maximum reasonable word length
+      LOG_ERR("TXB", "Deserialization failed: word length %u exceeds maximum", strLen);
+      return nullptr;
+    }
+    w.resize(strLen);
+    if (strLen > 0) file.read(&w[0], strLen);
+  }
   for (auto& x : wordXpos) serialization::readPod(file, x);
   for (auto& s : wordStyles) serialization::readPod(file, s);
 
@@ -180,7 +190,17 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(FsFile& file, uint8_t sectionV
   words.resize(wc);
   wordXpos.resize(wc);
   wordStyles.resize(wc);
-  for (auto& w : words) serialization::readString(file, w);
+  // Read words with bounded allocation to prevent corrupt disk data from causing unbounded memory allocation
+  for (auto& w : words) {
+    uint32_t strLen;
+    serialization::readPod(file, strLen);
+    if (strLen > 1024) {  // Maximum reasonable word length
+      LOG_ERR("TXB", "Deserialization failed: word length %u exceeds maximum", strLen);
+      return nullptr;
+    }
+    w.resize(strLen);
+    if (strLen > 0) file.read(&w[0], strLen);
+  }
   for (auto& x : wordXpos) serialization::readPod(file, x);
   for (auto& s : wordStyles) serialization::readPod(file, s);
 

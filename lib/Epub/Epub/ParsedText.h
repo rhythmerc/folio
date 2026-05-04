@@ -16,6 +16,7 @@ class ParsedText {
   std::vector<std::string> words;
   std::vector<EpdFontFamily::Style> wordStyles;
   std::vector<bool> wordContinues;  // true = word attaches to previous (no space before it)
+  std::vector<uint8_t> wordBackgrounds;  // per-word background color (0 = none)
   BlockStyle blockStyle;
   bool extraParagraphSpacing;
   bool hyphenationEnabled;
@@ -45,7 +46,8 @@ class ParsedText {
   BlockStyle& getBlockStyle() { return blockStyle; }
   size_t size() const { return words.size(); }
   bool isEmpty() const { return words.empty(); }
-  std::vector<uint8_t> wordBackgrounds;  // per-word background color (0 = none)
+  const std::vector<uint8_t>& getWordBackgrounds() const { return wordBackgrounds; }
+  void setWordBackgrounds(std::vector<uint8_t> backgrounds) { wordBackgrounds = std::move(backgrounds); }
   void layoutAndExtractLines(const GfxRenderer& renderer, int fontId, uint16_t viewportWidth,
                              const std::function<void(std::shared_ptr<TextBlock>)>& processLine,
                              bool includeLastLine = true);

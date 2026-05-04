@@ -473,7 +473,6 @@ void GfxRenderer::drawPixelDither<Color::DarkGray>(const int x, const int y) con
 }
 
 void GfxRenderer::fillRectDither(const int x, const int y, const int width, const int height, Color color) const {
-  LOG_DBG("GFX", "fillRectDither: x=%d y=%d w=%d h=%d color=%d", x, y, width, height, (int)color);
   if (color == Color::Clear) {
   } else if (color == Color::Black) {
     fillRect(x, y, width, height, true);

@@ -22,6 +22,9 @@ std::unique_ptr<PageLine> PageLine::deserialize(FsFile& file, uint8_t sectionFil
   serialization::readPod(file, yPos);
 
   auto tb = TextBlock::deserialize(file, sectionFileVersion);
+  if (!tb) {
+    return nullptr;
+  }
   return std::unique_ptr<PageLine>(new PageLine(std::move(tb), xPos, yPos));
 }
 

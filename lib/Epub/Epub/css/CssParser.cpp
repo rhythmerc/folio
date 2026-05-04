@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cerrno>
 #include <string_view>
 
 namespace {
@@ -108,18 +109,47 @@ static uint8_t interpretColor(const std::string& val) {
     result = 0;
   else if (normalized.size() >= 4 && normalized[0] == '#') {
     int r = 0, g = 0, b = 0;
+    auto parseHexComponent = [](const std::string& s, size_t pos, size_t len) -> int {
+      char* endPtr = nullptr;
+      // Copy the hex component to a buffer to ensure null termination
+      char buffer[3] = {0};
+      if (len == 1) {
+        // Short form: "f" -> duplicate to "ff"
+        buffer[0] = s[pos];
+        buffer[1] = s[pos];
+      } else {
+        buffer[0] = s[pos];
+        buffer[1] = s[pos + 1];
+      }
+      errno = 0;
+      long val = std::strtol(buffer, &endPtr, 16);
+      if (*endPtr != '\0' || errno == ERANGE) {
+        return -1;  // Parse failure
+      }
+      return static_cast<int>(val);
+    };
+
     if (normalized.size() == 4) {
-      r = std::stoi(std::string(2, normalized[1]), nullptr, 16);
-      g = std::stoi(std::string(2, normalized[2]), nullptr, 16);
-      b = std::stoi(std::string(2, normalized[3]), nullptr, 16);
+      // Short form #rgb
+      r = parseHexComponent(normalized, 1, 1);
+      g = parseHexComponent(normalized, 2, 1);
+      b = parseHexComponent(normalized, 3, 1);
     } else if (normalized.size() == 7) {
-      r = std::stoi(normalized.substr(1, 2), nullptr, 16);
-      g = std::stoi(normalized.substr(3, 2), nullptr, 16);
-      b = std::stoi(normalized.substr(5, 2), nullptr, 16);
+      // Long form #rrggbb
+      r = parseHexComponent(normalized, 1, 2);
+      g = parseHexComponent(normalized, 3, 2);
+      b = parseHexComponent(normalized, 5, 2);
     } else {
       LOG_DBG("CSS", "interpretColor: failed hex parse for '%s'", normalized.c_str());
       return 0;
     }
+
+    // Validate parsing results
+    if (r < 0 || g < 0 || b < 0 || r > 255 || g > 255 || b > 255) {
+      LOG_DBG("CSS", "interpretColor: malformed hex color '%s'", normalized.c_str());
+      return 0;
+    }
+
     const int luminance = (19595 * r + 38470 * g + 7471 * b) >> 16;
     result = static_cast<uint8_t>(((255 - luminance) * 16 + 127) / 255);
     if (result > 16) result = 16;
@@ -170,7 +200,6 @@ static uint8_t interpretColor(const std::string& val) {
       }
     }
   }
-  LOG_DBG("CSS", "interpretColor('%s') -> %d", normalized.c_str(), (int)result);
   return result;
 }
 
@@ -824,7 +853,8 @@ bool CssParser::saveToCache() const {
     file.write(static_cast<uint8_t>(style.display));
     file.write(style.backgroundColor);
 
-    // Write defined flags as uint16_t (extended to uint32_t for new bits)
+    // Write defined flags as uint16_t (definedBits) plus extra byte (extraBits) for overflow flags
+    // First 16 flags stored in definedBits; additional flags stored in extraBits appended separately
     uint16_t definedBits = 0;
     if (style.defined.textAlign) definedBits |= 1 << 0;
     if (style.defined.fontStyle) definedBits |= 1 << 1;

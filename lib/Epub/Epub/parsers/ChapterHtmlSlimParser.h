@@ -64,6 +64,7 @@ class ChapterHtmlSlimParser {
     bool hasUnderline = false, underline = false;
     bool hasBackgroundColor = false;
     uint8_t backgroundColor = 0;
+    StyleStackEntry() : hasBackgroundColor(false), backgroundColor(0) {}
   };
   std::vector<StyleStackEntry> inlineStyleStack;
   CssStyle currentCssStyle;

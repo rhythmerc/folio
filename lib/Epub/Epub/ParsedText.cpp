@@ -4,6 +4,7 @@
 #include <Utf8.h>
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <functional>
 #include <limits>
@@ -407,12 +408,12 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
   }
 
   // Insert the remainder word (with matching style and continuation flag) directly after the prefix.
+  // Invariant from addWord: words, wordStyles, wordBackgrounds must stay parallel and same size.
+  assert(wordIndex < wordBackgrounds.size());
   words.insert(words.begin() + wordIndex + 1, remainder);
   wordStyles.insert(wordStyles.begin() + wordIndex + 1, style);
   // Inherit background color from original word -> remainder gets same color
-  if (wordIndex < wordBackgrounds.size()) {
-    wordBackgrounds.insert(wordBackgrounds.begin() + wordIndex + 1, wordBackgrounds[wordIndex]);
-  }
+  wordBackgrounds.insert(wordBackgrounds.begin() + wordIndex + 1, wordBackgrounds[wordIndex]);
 
   // Continuation flag handling after splitting a word into prefix + remainder.
   //
@@ -537,10 +538,11 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
   std::vector<std::string> lineWords(std::make_move_iterator(words.begin() + lastBreakAt),
                                      std::make_move_iterator(words.begin() + lineBreak));
   std::vector<EpdFontFamily::Style> lineWordStyles(wordStyles.begin() + lastBreakAt, wordStyles.begin() + lineBreak);
-  std::vector<uint8_t> lineWordBackgrounds(
-      wordBackgrounds.empty()
-          ? std::vector<uint8_t>()
-          : std::vector<uint8_t>(wordBackgrounds.begin() + lastBreakAt, wordBackgrounds.begin() + lineBreak));
+  // Guard against out-of-bounds slice if vectors desync (invariant: addWord keeps sizes equal)
+  std::vector<uint8_t> lineWordBackgrounds;
+  if (!wordBackgrounds.empty() && lastBreakAt <= wordBackgrounds.size() && wordBackgrounds.size() >= lineBreak) {
+    lineWordBackgrounds.assign(wordBackgrounds.begin() + lastBreakAt, wordBackgrounds.begin() + lineBreak);
+  }
 
   for (auto& word : lineWords) {
     if (containsSoftHyphen(word)) {
