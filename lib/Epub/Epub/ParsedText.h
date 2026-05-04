@@ -15,7 +15,7 @@ class GfxRenderer;
 class ParsedText {
   std::vector<std::string> words;
   std::vector<EpdFontFamily::Style> wordStyles;
-  std::vector<bool> wordContinues;  // true = word attaches to previous (no space before it)
+  std::vector<bool> wordContinues;       // true = word attaches to previous (no space before it)
   std::vector<uint8_t> wordBackgrounds;  // per-word background color (0 = none)
   BlockStyle blockStyle;
   bool extraParagraphSpacing;
