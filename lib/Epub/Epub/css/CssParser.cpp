@@ -75,6 +75,84 @@ std::string_view stripTrailingImportant(std::string_view value) {
   return value;
 }
 
+// Convert CSS color value to GfxRenderer::Color enum value (8-bit grayscale)
+// Supports hex colors (#000, #000000), named colors (black, white, gray),
+// and rgb/rgba values.
+static uint8_t interpretColor(const std::string& val) {
+  std::string_view sv = stripTrailingImportant(val);
+  if (sv.empty()) return 0;
+  while (!sv.empty() && isCssWhitespace(sv.front())) sv.remove_prefix(1);
+  while (!sv.empty() && isCssWhitespace(sv.back())) sv.remove_suffix(1);
+  std::string normalized(sv);
+  for (size_t i = 0; i < normalized.size(); ++i) {
+    normalized[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(normalized[i])));
+  }
+  uint8_t result = 0;
+  if (normalized == "black" || normalized == "#000" || normalized == "#000000") result = 16;
+  else if (normalized == "white" || normalized == "#fff" || normalized == "#ffffff") result = 0;
+  else if (normalized == "gray" || normalized == "grey" || normalized == "#808080") result = 10;
+  else if (normalized == "lightgray" || normalized == "#d3d3d3") result = 5;
+  else if (normalized == "darkgray" || normalized == "#a9a9a9") result = 8;
+  else if (normalized == "red" || normalized == "#f00" || normalized == "#ff0000") result = 10;
+  else if (normalized == "blue" || normalized == "#00f" || normalized == "#0000ff") result = 10;
+  else if (normalized == "green" || normalized == "#0f0" || normalized == "#00ff00") result = 10;
+  else if (normalized == "transparent" || normalized == "none") result = 0;
+  else if (normalized.size() >= 4 && normalized[0] == '#') {
+    int r = 0, g = 0, b = 0;
+    if (normalized.size() == 4) {
+      r = std::stoi(std::string(2, normalized[1]), nullptr, 16);
+      g = std::stoi(std::string(2, normalized[2]), nullptr, 16);
+      b = std::stoi(std::string(2, normalized[3]), nullptr, 16);
+    } else if (normalized.size() == 7) {
+      r = std::stoi(normalized.substr(1, 2), nullptr, 16);
+      g = std::stoi(normalized.substr(3, 2), nullptr, 16);
+      b = std::stoi(normalized.substr(5, 2), nullptr, 16);
+    } else {
+      LOG_DBG("CSS", "interpretColor: failed hex parse for '%s'", normalized.c_str());
+      return 0;
+    }
+    const int luminance = (19595 * r + 38470 * g + 7471 * b) >> 16;
+    result = static_cast<uint8_t>(((255 - luminance) * 16 + 127) / 255);
+    if (result > 16) result = 16;
+  } else if (normalized.size() >= 4 && normalized.substr(0, 3) == "rgb") {
+    size_t start = normalized.find('(');
+    size_t end = normalized.find(')');
+    if (start != std::string::npos && end != std::string::npos) {
+      std::string rgbPart = normalized.substr(start + 1, end - start - 1);
+      int r = 0, g = 0, b = 0;
+      size_t comma1 = rgbPart.find(',');
+      if (comma1 != std::string::npos) {
+        size_t comma2 = rgbPart.find(',', comma1 + 1);
+        if (comma2 != std::string::npos) {
+          auto parseInt = [](const std::string& s) -> int {
+            const char* str = s.c_str();
+            while (*str && isCssWhitespace(*str)) ++str;
+            bool neg = false;
+            if (*str == '-') { neg = true; ++str; }
+            int val = 0;
+            while (*str >= '0' && *str <= '9') { val = val * 10 + (*str - '0'); ++str; }
+            return neg ? -val : val;
+          };
+          r = parseInt(rgbPart.substr(0, comma1));
+          g = parseInt(rgbPart.substr(comma1 + 1, comma2 - comma1 - 1));
+          b = parseInt(rgbPart.substr(comma2 + 1));
+          if (r < 0) r = 0;
+          else if (r > 255) r = 255;
+          if (g < 0) g = 0;
+          else if (g > 255) g = 255;
+          if (b < 0) b = 0;
+          else if (b > 255) b = 255;
+          const int luminance = (19595 * r + 38470 * g + 7471 * b) >> 16;
+          result = static_cast<uint8_t>(((255 - luminance) * 16 + 127) / 255);
+          if (result > 16) result = 16;
+        }
+      }
+    }
+  }
+  LOG_DBG("CSS", "interpretColor('%s') -> %d", normalized.c_str(), (int)result);
+  return result;
+}
+
 }  // anonymous namespace
 
 // String utilities implementation
@@ -344,6 +422,9 @@ void CssParser::parseDeclarationIntoStyle(const std::string& decl, CssStyle& sty
     const std::string_view displayValue = stripTrailingImportant(propValueBuf);
     style.display = (displayValue == "none") ? CssDisplay::None : CssDisplay::Block;
     style.defined.display = 1;
+  } else if (propNameBuf == "background-color") {
+    style.backgroundColor = interpretColor(propValueBuf);
+    style.defined.backgroundColor = 1;
   }
 }
 
@@ -720,8 +801,9 @@ bool CssParser::saveToCache() const {
     writeLength(style.imageHeight);
     writeLength(style.imageWidth);
     file.write(static_cast<uint8_t>(style.display));
+    file.write(style.backgroundColor);
 
-    // Write defined flags as uint16_t
+    // Write defined flags as uint16_t (extended to uint32_t for new bits)
     uint16_t definedBits = 0;
     if (style.defined.textAlign) definedBits |= 1 << 0;
     if (style.defined.fontStyle) definedBits |= 1 << 1;
@@ -739,7 +821,11 @@ bool CssParser::saveToCache() const {
     if (style.defined.imageHeight) definedBits |= 1 << 13;
     if (style.defined.imageWidth) definedBits |= 1 << 14;
     if (style.defined.display) definedBits |= 1 << 15;
+    // backgroundColor flag: extend beyond uint16_t; serialize extra byte
+    uint8_t extraBits = 0;
+    if (style.defined.backgroundColor) extraBits |= 1 << 0;
     file.write(reinterpret_cast<const uint8_t*>(&definedBits), sizeof(definedBits));
+    file.write(extraBits);
   }
 
   LOG_DBG("CSS", "Saved %u rules to cache", ruleCount);
@@ -789,7 +875,8 @@ bool CssParser::loadFromCache() {
   constexpr size_t CSS_LENGTH_FIELD_COUNT = 11;
   constexpr size_t CSS_LENGTH_BYTES = sizeof(float) + sizeof(uint8_t);
   constexpr size_t CSS_FIXED_STYLE_BYTES =
-      4 * sizeof(uint8_t) + (CSS_LENGTH_FIELD_COUNT * CSS_LENGTH_BYTES) + sizeof(uint8_t) + sizeof(uint16_t);
+      4 * sizeof(uint8_t) + (CSS_LENGTH_FIELD_COUNT * CSS_LENGTH_BYTES) + sizeof(uint8_t) /* display */ +
+      sizeof(uint8_t) /* backgroundColor */ + sizeof(uint16_t) /* definedBits */ + sizeof(uint8_t) /* extraBits */;
 
   // Read each rule
   for (uint16_t i = 0; i < ruleCount; ++i) {
@@ -880,6 +967,14 @@ bool CssParser::loadFromCache() {
     }
     style.display = static_cast<CssDisplay>(displayVal);
 
+    // Read backgroundColor
+    uint8_t bgColor;
+    if (!hasRemainingBytes(1) || file.read(&bgColor, 1) != 1) {
+      rulesBySelector_.clear();
+      return false;
+    }
+    style.backgroundColor = bgColor;
+
     // Read defined flags
     uint16_t definedBits = 0;
     if (file.read(&definedBits, sizeof(definedBits)) != sizeof(definedBits)) {
@@ -902,6 +997,13 @@ bool CssParser::loadFromCache() {
     style.defined.imageHeight = (definedBits & 1 << 13) != 0;
     style.defined.imageWidth = (definedBits & 1 << 14) != 0;
     style.defined.display = (definedBits & 1 << 15) != 0;
+    // Read extra bits byte for extended flags
+    uint8_t extraBitsRead = 0;
+    if (file.read(&extraBitsRead, 1) != 1) {
+      rulesBySelector_.clear();
+      return false;
+    }
+    style.defined.backgroundColor = (extraBitsRead & 1 << 0) != 0;
 
     rulesBySelector_[selector] = style;
   }
