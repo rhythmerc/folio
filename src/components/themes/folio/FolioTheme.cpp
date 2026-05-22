@@ -138,8 +138,8 @@ void FolioTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* 
     // and clears the 3px inner border at y + 86.
     constexpr int subtitleY = 56;
     const std::string truncatedSubtitle = renderer.truncatedText(
-        NOTOSERIF_12_FONT_ID, subtitle, rect.width - contentPad * 2, EpdFontFamily::ITALIC);
-    renderer.drawText(NOTOSERIF_12_FONT_ID, rect.x + contentPad, rect.y + subtitleY, truncatedSubtitle.c_str(), true,
+        NOTOSERIF_10_FONT_ID, subtitle, rect.width - contentPad * 2, EpdFontFamily::ITALIC);
+    renderer.drawText(NOTOSERIF_10_FONT_ID, rect.x + contentPad, rect.y + subtitleY, truncatedSubtitle.c_str(), true,
                       EpdFontFamily::ITALIC);
   }
 }
@@ -203,34 +203,38 @@ void FolioTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount,
       valueText = rowValue(i);
       if (!valueText.empty()) {
         const int maxValW = std::max(0, rowTextWidth - minTitleWidth - minValueGap);
-        valueText = renderer.truncatedText(NOTOSERIF_12_FONT_ID, valueText.c_str(), maxValW);
-        valueDrawWidth = renderer.getTextWidth(NOTOSERIF_12_FONT_ID, valueText.c_str());
+        valueText = renderer.truncatedText(NOTOSERIF_10_FONT_ID, valueText.c_str(), maxValW);
+        valueDrawWidth = renderer.getTextWidth(NOTOSERIF_10_FONT_ID, valueText.c_str());
         rowTextWidth -= valueDrawWidth + minValueGap;
       }
     }
 
-    // Title — serif at the smallest embedded size (no NOTOSERIF_10 in flash).
+    // Title — 12pt serif for primary list content.
     const std::string itemName = rowTitle(i);
     const std::string truncatedTitle = renderer.truncatedText(NOTOSERIF_12_FONT_ID, itemName.c_str(), rowTextWidth);
     const int titleY = (rowSubtitle != nullptr) ? itemY + 8
                                                 : itemY + (rowHeight - renderer.getLineHeight(NOTOSERIF_12_FONT_ID)) / 2;
     renderer.drawText(NOTOSERIF_12_FONT_ID, rect.x + textPad, titleY, truncatedTitle.c_str());
 
-    // Subtitle — same point size as title, italic to imply secondary content
-    // since we don't have a smaller serif face to drop down to.
+    // Subtitle — 10pt italic serif, true secondary visual weight.
     if (rowSubtitle != nullptr) {
       const std::string subtitleText = rowSubtitle(i);
       if (!subtitleText.empty()) {
         const std::string truncatedSub =
-            renderer.truncatedText(NOTOSERIF_12_FONT_ID, subtitleText.c_str(), rowTextWidth, EpdFontFamily::ITALIC);
-        renderer.drawText(NOTOSERIF_12_FONT_ID, rect.x + textPad, itemY + 32, truncatedSub.c_str(), true,
+            renderer.truncatedText(NOTOSERIF_10_FONT_ID, subtitleText.c_str(), rowTextWidth, EpdFontFamily::ITALIC);
+        renderer.drawText(NOTOSERIF_10_FONT_ID, rect.x + textPad, itemY + 30, truncatedSub.c_str(), true,
                           EpdFontFamily::ITALIC);
       }
     }
 
     if (!valueText.empty()) {
+      // Right-align value baseline with the title's baseline. Both are now
+      // different sizes, so use the title font's line height for the y math.
+      const int valueLineHeight = renderer.getLineHeight(NOTOSERIF_10_FONT_ID);
+      const int titleLineHeight = renderer.getLineHeight(NOTOSERIF_12_FONT_ID);
+      const int valueY = titleY + (titleLineHeight - valueLineHeight);
       const int valueX = rect.x + rect.width - contentPad - valueDrawWidth - 4;
-      renderer.drawText(NOTOSERIF_12_FONT_ID, valueX, titleY, valueText.c_str());
+      renderer.drawText(NOTOSERIF_10_FONT_ID, valueX, valueY, valueText.c_str());
     }
 
     // Checkerboard dither over dimmed rows (mirrors BaseTheme behavior).
