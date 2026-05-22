@@ -25,6 +25,7 @@
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
+#include "ThemeFontRegistry.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
@@ -333,6 +334,10 @@ void setupDisplayAndFonts(bool seamless = false) {
 
   // Discover and load SD card fonts
   sdFontSystem.begin(renderer);
+
+  // Theme-role font registry — scans /.fonts/themes/<theme>/<role>.cpfont and
+  // makes role overrides available to BaseTheme::getFontForRole().
+  ThemeFontRegistry::getInstance().discover(renderer);
 
   LOG_DBG("MAIN", "Fonts setup");
 }

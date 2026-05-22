@@ -101,6 +101,26 @@ enum UIIcon { Folder, Text, Image, Book, File, Recent, Settings, Transfer, Libra
 
 enum class KeyboardKeyType { Normal, Shift, Mode, Space, Del, Ok, Disabled };
 
+// Theme font role registry --------------------------------------------------
+//
+// Themes expose a font *role* (semantic name) instead of a specific font ID
+// so the renderer can swap in user-installed SD-card faces without code
+// changes. Each theme overrides `getFontForRole()` to map roles to its
+// preferred embedded faces; the ThemeFontRegistry walks
+// `/.fonts/themes/<theme>/<role>.cpfont` at boot and lets the theme prefer an
+// SD-loaded face over the embedded default.
+enum class FontRole {
+  Title,    // Display titles ("Library.", page headers)
+  Heading,  // Section headings, button-menu primary labels
+  Body,     // Standard UI text (settings rows, list titles)
+  Caption,  // Secondary text below the body (subtitles, author lines, hints)
+  Accent,   // Italic accents, meta lines, breadcrumb / status chrome
+};
+
+// Lowercase, filesystem-safe name for a role — used to locate role-specific
+// SD card font files. Defined in BaseTheme.cpp.
+const char* fontRoleName(FontRole role);
+
 // Default theme implementation (Classic Theme)
 // Additional themes can inherit from this and override methods as needed
 
@@ -171,6 +191,20 @@ constexpr ThemeMetrics values = {.batteryWidth = 15,
 class BaseTheme {
  public:
   virtual ~BaseTheme() = default;
+
+  // Short, stable name used to locate theme-specific SD card font files
+  // under `/.fonts/themes/<themeName()>/`. Lowercase, no spaces. Each
+  // concrete theme overrides; the default returns "base".
+  virtual const char* themeName() const { return "base"; }
+
+  // Maps a semantic role to a concrete font ID for use with drawText/etc.
+  // Themes override to express their typographic choices. The default
+  // returns the firmware's built-in UI fonts (sans-serif).
+  //
+  // Themes that want SD-card progressive enhancement check the
+  // ThemeFontRegistry first (see folio/FolioTheme.cpp for the pattern) and
+  // fall back to embedded faces when no SD override is installed.
+  virtual int getFontForRole(FontRole role) const;
 
   // Component drawing methods
   void drawProgressBar(const GfxRenderer& renderer, Rect rect, size_t current, size_t total) const;

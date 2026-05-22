@@ -23,6 +23,40 @@ constexpr int subtitleY = 738;
 
 }  // namespace
 
+const char* fontRoleName(FontRole role) {
+  switch (role) {
+    case FontRole::Title:
+      return "title";
+    case FontRole::Heading:
+      return "heading";
+    case FontRole::Body:
+      return "body";
+    case FontRole::Caption:
+      return "caption";
+    case FontRole::Accent:
+      return "accent";
+  }
+  return "body";
+}
+
+int BaseTheme::getFontForRole(FontRole role) const {
+  // Default fallbacks use the firmware's built-in UI faces (sans-serif).
+  // Themes that want different typography override.
+  switch (role) {
+    case FontRole::Title:
+      return UI_12_FONT_ID;
+    case FontRole::Heading:
+      return UI_12_FONT_ID;
+    case FontRole::Body:
+      return UI_10_FONT_ID;
+    case FontRole::Caption:
+      return SMALL_FONT_ID;
+    case FontRole::Accent:
+      return SMALL_FONT_ID;
+  }
+  return UI_10_FONT_ID;
+}
+
 void BaseTheme::drawBatteryOutline(const GfxRenderer& renderer, int x, int y, int battWidth, int rectHeight) {
   // Top line
   renderer.drawLine(x + 1, y, x + battWidth - 3, y);

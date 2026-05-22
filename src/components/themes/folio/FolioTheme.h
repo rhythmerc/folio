@@ -81,6 +81,14 @@ constexpr ThemeMetrics values = {.batteryWidth = 16,
 
 class FolioTheme : public BaseTheme {
  public:
+  // Used to locate `/.fonts/themes/folio/<role>.cpfont` files.
+  const char* themeName() const override { return "folio"; }
+
+  // Maps semantic font roles to Noto Serif sizes. Checks the SD-card theme
+  // font registry first so users can drop in a smaller-than-NOTOSERIF_10
+  // (e.g. an 8-pt face) for the Caption role without re-flashing.
+  int getFontForRole(FontRole role) const override;
+
   // Header with 3px inner bottom border, bold-serif title, italic-serif subtitle.
   void drawHeader(const GfxRenderer& renderer, Rect rect, const char* title,
                   const char* subtitle = nullptr) const override;

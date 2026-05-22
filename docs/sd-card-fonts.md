@@ -102,3 +102,62 @@ To convert your own TrueType/OpenType fonts:
 Combine presets with commas: `--intervals latin-ext,greek,cyrillic`
 
 Install custom fonts via WiFi upload or manual SD card copy.
+
+## Theme role fonts (progressive enhancement)
+
+Themes expose font *roles* — semantic names like `title`, `heading`, `body`,
+`caption`, `accent` — instead of hard-coded font IDs. Each theme picks an
+embedded face per role by default. Users can drop role-specific `.cpfont`
+files on the SD card to override those defaults without re-flashing.
+
+### File layout
+
+    SD Card Root/
+    └── .fonts/
+        └── themes/
+            └── folio/
+                ├── caption.cpfont      ← Folio uses for author labels, subtitles, etc.
+                ├── accent.cpfont       ← Folio italic accents
+                └── title.cpfont        ← Folio big display title
+
+The directory name under `themes/` matches the theme's name (`base`,
+`folio`, etc.). The file basename matches the role name (`title`,
+`heading`, `body`, `caption`, `accent`).
+
+Files in `/.fonts/themes/<theme>/` and `/fonts/themes/<theme>/` are both
+scanned at boot. The hidden root wins on collision.
+
+### When to use this
+
+- Match the prototype's typography at sizes the firmware doesn't ship
+  (e.g. an 8-pt serif for the Library's author labels).
+- Try a different display face for `title` without recompiling.
+- Localize a single role to a script-specific face (CJK title) while
+  keeping the rest of the theme's embedded fonts.
+
+### Creating a theme role font
+
+Use the same `fontconvert_sdcard.py` script as for reader fonts. Convert at
+a single size — the file basename determines the role, not the family
+name. Example for an 8-pt Folio caption:
+
+    python3 lib/EpdFont/scripts/fontconvert_sdcard.py \
+      --regular NotoSerif-Regular.ttf \
+      --italic NotoSerif-Italic.ttf \
+      --bold NotoSerif-Bold.ttf \
+      --bolditalic NotoSerif-BoldItalic.ttf \
+      --intervals latin-ext \
+      --sizes 8 \
+      --name FolioCaption \
+      --output-dir ./out/
+
+Then rename `FolioCaption_8.cpfont` to `caption.cpfont` and copy to
+`/.fonts/themes/folio/`. On the next boot the file will be discovered and
+Folio's Caption role will resolve to it instead of NOTOSERIF_10.
+
+### Memory cost
+
+Each loaded role font carries the usual SdCardFont overhead (~10–30 KB of
+kern tables and glyph caches). The registry never auto-loads — it only
+loads files the user has explicitly placed on the SD card. Plan for at
+most 1–2 roles per theme to stay within the 380 KB device budget.

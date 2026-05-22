@@ -8,6 +8,7 @@
 #include <string>
 
 #include "CrossPointSettings.h"
+#include "ThemeFontRegistry.h"
 #include "fontIds.h"
 
 namespace {
@@ -20,6 +21,34 @@ constexpr int FOLIO_HEADER_BOTTOM_BORDER = 3;
 constexpr int X4_BUTTON_POSITIONS[] = {25, 130, 245, 350};
 constexpr int X3_BUTTON_POSITIONS[] = {38, 154, 268, 384};
 }  // namespace
+
+// ---- Font role mapping ------------------------------------------------------
+
+int FolioTheme::getFontForRole(FontRole role) const {
+  // Prefer an SD-installed face if the user has dropped one in
+  // /.fonts/themes/folio/<role>.cpfont. The registry's lookup is a tiny
+  // vector scan (≤ 5 entries per theme), so this is cheap to call per
+  // drawText invocation.
+  const int sdId = THEME_FONTS.getRoleFont(themeName(), role);
+  if (sdId != 0) return sdId;
+
+  // Embedded fallbacks — Noto Serif at the four embedded sizes. Smaller
+  // sizes (e.g. NOTOSERIF_8 for Caption) require an SD install since the
+  // firmware doesn't ship them.
+  switch (role) {
+    case FontRole::Title:
+      return NOTOSERIF_18_FONT_ID;
+    case FontRole::Heading:
+      return NOTOSERIF_16_FONT_ID;
+    case FontRole::Body:
+      return NOTOSERIF_12_FONT_ID;
+    case FontRole::Caption:
+      return NOTOSERIF_10_FONT_ID;
+    case FontRole::Accent:
+      return NOTOSERIF_10_FONT_ID;
+  }
+  return NOTOSERIF_12_FONT_ID;
+}
 
 // ---- Static helpers ---------------------------------------------------------
 
