@@ -24,22 +24,29 @@ constexpr int X3_BUTTON_POSITIONS[] = {38, 154, 268, 384};
 
 // ---- Font role mapping ------------------------------------------------------
 
-int FolioTheme::getFontForRole(FontRole role) const {
+int FolioTheme::getFontForRole(FontRole role) const { return resolveFontRole(role); }
+
+int FolioTheme::resolveFontRole(FontRole role) {
   // Prefer an SD-installed face if the user has dropped one in
   // /.fonts/themes/folio/<role>.cpfont. The registry's lookup is a tiny
   // vector scan (≤ 5 entries per theme), so this is cheap to call per
   // drawText invocation.
-  const int sdId = THEME_FONTS.getRoleFont(themeName(), role);
+  const int sdId = THEME_FONTS.getRoleFont("folio", role);
   if (sdId != 0) return sdId;
 
-  // Embedded fallbacks — Noto Serif at the four embedded sizes. Smaller
-  // sizes (e.g. NOTOSERIF_8 for Caption) require an SD install since the
-  // firmware doesn't ship them.
+  // Embedded fallbacks. The smaller roles (Body/Caption/Accent) are sized
+  // for prototype fidelity via SD overrides — NOTOSERIF_10 is the closest
+  // embedded match but visually larger than the prototype's 11–16 px range.
+  // Install /.fonts/themes/folio/<role>.cpfont to get the intended sizing.
+  //
+  // Title / Heading map to NOTOSERIF_14 (em ≈ 29 px), which matches the
+  // prototype's 28 / 30 px CSS sizes far better than the older _16/_18
+  // choice and stays within the embedded font set.
   switch (role) {
     case FontRole::Title:
-      return NOTOSERIF_18_FONT_ID;
+      return NOTOSERIF_14_FONT_ID;
     case FontRole::Heading:
-      return NOTOSERIF_16_FONT_ID;
+      return NOTOSERIF_14_FONT_ID;
     case FontRole::Body:
       return NOTOSERIF_12_FONT_ID;
     case FontRole::Caption:
@@ -92,13 +99,11 @@ void FolioTheme::drawCornerBrackets(const GfxRenderer& renderer, Rect rect, int 
 }
 
 void FolioTheme::drawSelectionFrame(const GfxRenderer& renderer, Rect rect) {
+  // 1-bit e-ink can't reproduce the prototype's 5% opacity diagonal hatch
+  // legibly — even at sparse spacing it reads as rough shading. Outline +
+  // corner brackets carry the selection on their own.
   renderer.drawRect(rect.x, rect.y, rect.width, rect.height);
   drawCornerBrackets(renderer, rect);
-  // Inset the hatch so the diagonal lines don't visually merge with the
-  // corner brackets or the outer outline.
-  if (rect.width > 4 && rect.height > 4) {
-    drawDiagonalHatch(renderer, Rect{rect.x + 2, rect.y + 2, rect.width - 4, rect.height - 4});
-  }
 }
 
 void FolioTheme::drawFolioButtonHint(const GfxRenderer& renderer, int x, int y, int buttonWidth, int buttonHeight,
@@ -106,11 +111,16 @@ void FolioTheme::drawFolioButtonHint(const GfxRenderer& renderer, int x, int y, 
   // 1px outline rectangle — no fill, so the paper background shows through.
   renderer.drawRect(x, y, buttonWidth, buttonHeight);
 
+  // Use the Body role so an SD-installed /.fonts/themes/folio/body.cpfont
+  // takes effect on the button labels too. Falls back to NOTOSERIF_12 when
+  // no override is installed.
+  const int bodyFont = resolveFontRole(FontRole::Body);
+
   // Anchor the rule at a fixed clearance from the button bottom (instead of
   // a flex offset from the text baseline) so it never falls under the X4
   // bezel, regardless of the font's vertical metrics.
   constexpr int ruleClearanceFromBottom = 12;
-  const int lineHeight = renderer.getLineHeight(NOTOSERIF_12_FONT_ID);
+  const int lineHeight = renderer.getLineHeight(bodyFont);
   const int ruleY = y + buttonHeight - ruleClearanceFromBottom;
 
   // Center the label vertically in the area above the rule (with a small
@@ -119,9 +129,9 @@ void FolioTheme::drawFolioButtonHint(const GfxRenderer& renderer, int x, int y, 
   const int textBlockBottom = ruleY - textToRuleGap;
   const int textY = y + (textBlockBottom - y - lineHeight) / 2;
 
-  const int textWidth = renderer.getTextWidth(NOTOSERIF_12_FONT_ID, label, EpdFontFamily::ITALIC);
+  const int textWidth = renderer.getTextWidth(bodyFont, label, EpdFontFamily::ITALIC);
   const int textX = x + (buttonWidth - textWidth) / 2;
-  renderer.drawText(NOTOSERIF_12_FONT_ID, textX, textY, label, true, EpdFontFamily::ITALIC);
+  renderer.drawText(bodyFont, textX, textY, label, true, EpdFontFamily::ITALIC);
 
   const int ruleX = x + (buttonWidth - FOLIO_BUTTON_HINT_RULE_WIDTH) / 2;
   renderer.drawLine(ruleX, ruleY, ruleX + FOLIO_BUTTON_HINT_RULE_WIDTH - 1, ruleY);

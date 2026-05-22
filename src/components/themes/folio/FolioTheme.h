@@ -66,7 +66,10 @@ constexpr ThemeMetrics values = {.batteryWidth = 16,
                                  .popupFrameThickness = 2,
                                  .popupCornerRadius = 0,
                                  .popupTextBold = false,
-                                 .popupTextInverted = false,
+                                 // Non-rounded popup → white interior. Need
+                                 // black text on top, so popupTextInverted=true
+                                 // (matches BaseTheme's non-rounded popup).
+                                 .popupTextInverted = true,
                                  .popupTextBaselineOffsetY = -2,
                                  .popupProgressBarHeight = 4,
                                  .popupProgressDrawOutline = false,
@@ -88,6 +91,11 @@ class FolioTheme : public BaseTheme {
   // font registry first so users can drop in a smaller-than-NOTOSERIF_10
   // (e.g. an 8-pt face) for the Caption role without re-flashing.
   int getFontForRole(FontRole role) const override;
+
+  // Static delegate of the same logic — lets LibraryActivity (which renders
+  // in Folio's visual language regardless of the active theme) resolve role
+  // fonts without instantiating or holding a theme pointer.
+  static int resolveFontRole(FontRole role);
 
   // Header with 3px inner bottom border, bold-serif title, italic-serif subtitle.
   void drawHeader(const GfxRenderer& renderer, Rect rect, const char* title,
@@ -116,7 +124,9 @@ class FolioTheme : public BaseTheme {
   // depending on Folio being the active theme.
 
   // 45° hatch (lines from top-left to bottom-right). Lines clipped to rect.
-  static void drawDiagonalHatch(const GfxRenderer& renderer, Rect rect, int spacingPx = 7);
+  // Default spacing is sparser than the prototype's 7-px (which used 5%
+  // opacity) so the same tonal hint reads correctly on 1-bit e-ink.
+  static void drawDiagonalHatch(const GfxRenderer& renderer, Rect rect, int spacingPx = 12);
 
   // Four corner brackets at the corners of rect (TL/TR/BL/BR).
   static void drawCornerBrackets(const GfxRenderer& renderer, Rect rect, int armPx = 8, int strokePx = 2);

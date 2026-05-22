@@ -44,6 +44,13 @@ class ThemeFontRegistry {
   // "font not found" convention.
   int getRoleFont(const char* themeName, FontRole role) const;
 
+  // Unregister every loaded role font from the renderer and drop the
+  // backing SdCardFont instances. Releases the ~50 KB of resident font
+  // intervals + kerning tables that load() keeps in RAM per face. After
+  // calling, getRoleFont() returns 0 for every role until discover() is
+  // called again. Used by activities that want to claim that RAM on exit.
+  void unloadAll(GfxRenderer& renderer);
+
  private:
   struct LoadedRoleFont {
     std::string themeName;
@@ -59,7 +66,8 @@ class ThemeFontRegistry {
   ThemeFontRegistry(const ThemeFontRegistry&) = delete;
   ThemeFontRegistry& operator=(const ThemeFontRegistry&) = delete;
 
-  // Unregister all loaded role fonts from the renderer and drop them.
+  // Internal helper shared by discover() (which calls it before scanning)
+  // and the public unloadAll() (used by activities on exit).
   void clear(GfxRenderer& renderer);
 
   // Try to load one file under (themeName, roleName). Returns true on success.

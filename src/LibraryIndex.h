@@ -68,6 +68,12 @@ class LibraryIndex {
   // Called by LibraryActivity after returning from the reader.
   void refreshProgress(const std::string& path);
 
+  // Drop the in-memory books vector and release its storage. The on-disk
+  // /.crosspoint/library.bin is preserved. The next loadFromFile() call
+  // repopulates the index. Used by LibraryActivity::onExit() to release
+  // ~25 KB of heap to whatever activity comes next.
+  void unload();
+
  private:
   LibraryIndex() = default;
   bool saveToFile() const;

@@ -328,6 +328,12 @@ const LibraryBook* LibraryIndex::getAt(int page, int slot, int perPage) const {
   return &books[idx];
 }
 
+void LibraryIndex::unload() {
+  books.clear();
+  books.shrink_to_fit();
+  loaded = false;
+}
+
 void LibraryIndex::refreshProgress(const std::string& path) {
   const uint32_t h = hashPath(path);
   auto it = std::find_if(books.begin(), books.end(),

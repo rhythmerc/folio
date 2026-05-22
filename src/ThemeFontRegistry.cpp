@@ -108,6 +108,11 @@ bool ThemeFontRegistry::loadRoleFile(GfxRenderer& renderer, const std::string& t
   return true;
 }
 
+void ThemeFontRegistry::unloadAll(GfxRenderer& renderer) {
+  clear(renderer);
+  loaded_.shrink_to_fit();
+}
+
 int ThemeFontRegistry::getRoleFont(const char* themeName, FontRole role) const {
   if (themeName == nullptr) return 0;
   for (const auto& lf : loaded_) {
