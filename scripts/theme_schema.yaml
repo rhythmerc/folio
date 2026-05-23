@@ -1,0 +1,230 @@
+# Theme data schema — single source of truth for ThemeData struct, enums,
+# Folio defaults, and JSON parser generation.
+#
+# Run: python scripts/gen_theme.py
+# Generated files:
+#   src/components/themes/ThemeData.generated.h
+#   src/components/themes/ThemeDefaults.generated.h
+#   src/ThemeJsonParser.generated.cpp
+
+# Types defined elsewhere whose JSON string mappings the parser needs.
+# The generator emits their EnumEntry tables but NOT their enum definitions.
+external_types:
+  EpdFontFamily::Style:
+    include: <EpdFontFamily.h>
+    table_name: kFontStyles
+    variants:
+      - { json: "regular",     cpp: "EpdFontFamily::REGULAR" }
+      - { json: "bold",        cpp: "EpdFontFamily::BOLD" }
+      - { json: "italic",      cpp: "EpdFontFamily::ITALIC" }
+      - { json: "bold-italic", cpp: "EpdFontFamily::BOLD_ITALIC" }
+
+  FontRole:
+    include: '"components/themes/BaseTheme.h"'
+    table_name: kFontRoleStyles
+    variants:
+      - { json: "title",          cpp: "FontRole::Title" }
+      - { json: "heading",        cpp: "FontRole::Heading" }
+      - { json: "body",           cpp: "FontRole::Body" }
+      - { json: "caption",        cpp: "FontRole::Caption" }
+      - { json: "accent",         cpp: "FontRole::Accent" }
+      - { json: "body-compact",   cpp: "FontRole::BodyCompact" }
+      - { json: "caption-compact", cpp: "FontRole::CaptionCompact" }
+      - { json: "accent-compact", cpp: "FontRole::AccentCompact" }
+
+# Theme-owned enums. Generator emits `enum class X : uint8_t { ... };`
+enums:
+  HeaderStyle:
+    - { name: CenteredTitle,       json: "centered-title" }
+    - { name: LeftAlignedWithRule,  json: "left-aligned-with-rule" }
+    - { name: LeftAlignedBordered, json: "left-aligned-bordered" }
+    - { name: LeftAlignedPlain,    json: "left-aligned-plain" }
+
+  SelectionStyle:
+    - { name: SolidFill,        json: "solid-fill" }
+    - { name: RoundedFill,      json: "rounded-fill" }
+    - { name: RoundedRowAlways, json: "rounded-row-always" }
+    - { name: LayeredFrame,     json: "layered-frame" }
+
+  CoverStyle:
+    - { name: Default,     json: "default" }
+    - { name: Card,        json: "card" }
+    - { name: CardRounded, json: "card-rounded" }
+
+  ButtonHintsStyle:
+    - { name: Boxed,         json: "boxed" }
+    - { name: Hairline,      json: "hairline" }
+    - { name: RoundedFilled, json: "rounded-filled" }
+    - { name: PairedGroups,  json: "paired-groups" }
+
+  SideButtonHintsStyle:
+    - { name: Sharp,   json: "sharp" }
+    - { name: Rounded, json: "rounded" }
+
+  TabBarStyle:
+    - { name: Underline,       json: "underline" }
+    - { name: DitheredRounded, json: "dithered-rounded" }
+    - { name: SlotRounded,     json: "slot-rounded" }
+
+  ScrollIndicatorStyle:
+    - { name: Arrows,    json: "arrows" }
+    - { name: Thumb,     json: "thumb" }
+    - { name: LineThumb, json: "line-thumb" }
+
+  BatteryStyle:
+    - { name: Solid,     json: "solid" }
+    - { name: Segmented, json: "segmented" }
+
+# ThemeData struct members in declaration order.
+# Each entry is either:
+#   - A nested struct group:  { group: name, fields: [...], children: {...} }
+#   - A top-level field:      { cpp: name, type: T, default: V }
+# "json" defaults to "cpp" when omitted. "default" is the Folio value.
+struct:
+  - group: header
+    struct_name: Header
+    fields:
+      - { cpp: style,              type: HeaderStyle,          default: "HeaderStyle::LeftAlignedBordered" }
+      - { cpp: titleStyle,         type: EpdFontFamily::Style, default: "EpdFontFamily::BOLD" }
+      - { cpp: subtitleStyle,      type: EpdFontFamily::Style, default: "EpdFontFamily::ITALIC" }
+      - { cpp: bottomBorderHeight, type: int,                  default: 3 }
+      - { cpp: height,             type: int,                  default: 89 }
+      - { cpp: fontRole,           type: FontRole,             default: "FontRole::Title" }
+
+  - group: selection
+    struct_name: Selection
+    fields:
+      - { cpp: style,        type: SelectionStyle, default: "SelectionStyle::LayeredFrame" }
+      - { cpp: cornerRadius, type: int,            default: 0 }
+      - { cpp: textInverted, type: bool,           default: false }
+
+  - group: cover
+    struct_name: Cover
+    fields:
+      - { cpp: style,        type: CoverStyle, default: "CoverStyle::Default" }
+      - { cpp: cornerRadius, type: int,        default: 0 }
+
+  - group: list
+    struct_name: List
+    fields:
+      - { cpp: subtitleStyle,        type: EpdFontFamily::Style, default: "EpdFontFamily::ITALIC" }
+      - { cpp: buttonMenuLabelStyle, type: EpdFontFamily::Style, default: "EpdFontFamily::REGULAR" }
+      - { cpp: rowHeight,            type: int,                  default: 40 }
+      - { cpp: rowHeightWithSubtitle, type: int,                 default: 60 }
+      - { cpp: menuRowHeight,        type: int,                  default: 56 }
+      - { cpp: menuSpacing,          type: int,                  default: 14 }
+
+  # Top-level style dispatchers (interleaved between nested structs)
+  - { cpp: buttonHintsStyle,     type: ButtonHintsStyle,     default: "ButtonHintsStyle::Hairline" }
+  - { cpp: sideButtonHintsStyle, type: SideButtonHintsStyle, default: "SideButtonHintsStyle::Sharp" }
+  - { cpp: scrollIndicatorStyle, type: ScrollIndicatorStyle, default: "ScrollIndicatorStyle::Arrows" }
+  - { cpp: batteryStyle,         type: BatteryStyle,         default: "BatteryStyle::Solid" }
+
+  - group: layout
+    struct_name: Layout
+    fields:
+      - { cpp: topPadding,        type: int, default: 5 }
+      - { cpp: verticalSpacing,   type: int, default: 10 }
+      - { cpp: contentSidePadding, type: int, default: 18 }
+
+  - group: battery
+    struct_name: Battery
+    fields:
+      - { cpp: width,     type: int, default: 16 }
+      - { cpp: height,    type: int, default: 12 }
+      - { cpp: barHeight, type: int, default: 40 }
+
+  - group: buttonHints
+    struct_name: ButtonHints
+    fields:
+      - { cpp: height,    type: int, default: 40 }
+      - { cpp: sideWidth, type: int, default: 30 }
+
+  - group: tabBar
+    struct_name: TabBar
+    fields:
+      - { cpp: spacing,  type: int,         default: 20 }
+      - { cpp: height,   type: int,         default: 50 }
+      - { cpp: style,    type: TabBarStyle,  default: "TabBarStyle::Underline" }
+      - { cpp: fontRole, type: FontRole,     default: "FontRole::Body" }
+
+  - group: scrollBar
+    struct_name: ScrollBar
+    fields:
+      - { cpp: width,       type: int, default: 4 }
+      - { cpp: rightOffset, type: int, default: 5 }
+
+  - group: home
+    struct_name: Home
+    fields:
+      - { cpp: topPadding,            type: int,  default: 56 }
+      - { cpp: coverHeight,           type: int,  default: 226 }
+      - { cpp: coverTileHeight,       type: int,  default: 242 }
+      - { cpp: recentBooksCount,      type: int,  default: 1 }
+      - { cpp: continueReadingInMenu, type: bool, default: false }
+      - { cpp: menuTopOffset,         type: int,  default: 16 }
+
+  - group: progressBar
+    struct_name: ProgressBar
+    fields:
+      - { cpp: height,    type: int, default: 16 }
+      - { cpp: marginTop, type: int, default: 1 }
+
+  - group: statusBar
+    struct_name: StatusBar
+    fields:
+      - { cpp: horizontalMargin, type: int, default: 5 }
+      - { cpp: verticalMargin,   type: int, default: 19 }
+
+  - group: keyboard
+    struct_name: Keyboard
+    fields:
+      - { cpp: keyWidth,                          type: int,  default: 31 }
+      - { cpp: keyHeight,                         type: int,  default: 40 }
+      - { cpp: keySpacing,                        type: int,  default: 0 }
+      - { cpp: bottomKeyHeight,                   type: int,  default: 35 }
+      - { cpp: bottomKeySpacing,                  type: int,  default: 5 }
+      - { cpp: bottomAligned,                     type: bool, default: true }
+      - { cpp: centeredText,                      type: bool, default: false }
+      - { cpp: verticalOffset,                    type: int,  default: -7 }
+      - { cpp: textFieldWidthPercent,             type: int,  default: 85 }
+      - { cpp: widthPercent,                      type: int,  default: 90 }
+      - { cpp: keyCornerRadius,                   type: int,  default: 0 }
+      - { cpp: fillUnselected,                    type: bool, default: false }
+      - { cpp: outlineAllUnselected,              type: bool, default: false }
+      - { cpp: drawSpecialOutlineWhenUnselected,  type: bool, default: true }
+      - { cpp: secondaryLabelRightPadding,        type: int,  default: 1 }
+      - { cpp: secondaryLabelTopPadding,          type: int,  default: 0 }
+      - { cpp: minArrowHeadSize,                  type: int,  default: 0 }
+
+  - group: popup
+    struct_name: Popup
+    fields:
+      - { cpp: topOffsetRatio,     type: float, default: "0.165f" }
+      - { cpp: marginX,           type: int,   default: 16 }
+      - { cpp: marginY,           type: int,   default: 12 }
+      - { cpp: frameThickness,    type: int,   default: 2 }
+      - { cpp: cornerRadius,      type: int,   default: 0 }
+      - { cpp: textBold,          type: bool,  default: false }
+      - { cpp: textInverted,      type: bool,  default: true }
+      - { cpp: textBaselineOffsetY, type: int,  default: -2 }
+    children:
+      - group: progress
+        struct_name: Progress
+        fields:
+          - { cpp: barHeight,       type: int,  default: 4 }
+          - { cpp: drawOutline,     type: bool, default: false }
+          - { cpp: clampPercent,    type: bool, default: false }
+          - { cpp: fillInverted,    type: bool, default: false }
+          - { cpp: outlineInverted, type: bool, default: false }
+
+  - group: textField
+    struct_name: TextField
+    fields:
+      - { cpp: horizontalPadding, type: int, default: 6 }
+      - { cpp: normalThickness,   type: int, default: 1 }
+      - { cpp: cursorThickness,   type: int, default: 3 }
+      - { cpp: lineEndOffset,     type: int, default: 0 }
+
+  # Trailing top-level field
+  - { cpp: showsFileIcons, type: bool, default: false }
