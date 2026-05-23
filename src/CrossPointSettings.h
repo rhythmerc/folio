@@ -148,9 +148,11 @@ class CrossPointSettings {
     LONG_PRESS_BUTTON_BEHAVIOR_COUNT
   };
 
-  // UI Theme. Slot 2 was previously LYRA_3_COVERS (now removed). Persisted
-  // values >= UI_THEME_COUNT are treated as CLASSIC.
-  enum UI_THEME { CLASSIC = 0, LYRA = 1, ROUNDEDRAFF = 2, FOLIO = 3, UI_THEME_COUNT };
+  // UI Theme. Folio is the only built-in theme; all others are SD card
+  // .cptheme bundles identified by sdThemeName.
+  // Legacy enum values (CLASSIC=0, LYRA=1, ROUNDEDRAFF=2, FOLIO=3) are
+  // migrated on settings load — see JsonSettingsIO.cpp.
+  enum UI_THEME { FOLIO = 0, SD_THEME = 1, UI_THEME_COUNT };
 
   // Image rendering in EPUB reader
   enum IMAGE_RENDERING { IMAGES_DISPLAY = 0, IMAGES_PLACEHOLDER = 1, IMAGES_SUPPRESS = 2, IMAGE_RENDERING_COUNT };
@@ -228,8 +230,10 @@ class CrossPointSettings {
   uint8_t hideBatteryPercentage = HIDE_NEVER;
   // Long-press page turn button behavior
   uint8_t longPressButtonBehavior = OFF;
-  // UI Theme
-  uint8_t uiTheme = LYRA;
+  // UI Theme (FOLIO or SD_THEME)
+  uint8_t uiTheme = FOLIO;
+  // SD theme id (non-empty when uiTheme == SD_THEME)
+  char sdThemeName[32] = "";
   // Sunlight fading compensation
   uint8_t fadingFix = 0;
   // Use book's embedded CSS styles for EPUB rendering (1 = enabled, 0 = disabled)

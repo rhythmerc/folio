@@ -1,0 +1,131 @@
+id: lyra
+name: Lyra
+version: 1
+
+header:
+  style: left-aligned-with-rule
+  titleStyle: bold
+  subtitleStyle: regular
+  bottomBorderHeight: 0
+  height: 84
+
+selection:
+  style: rounded-fill
+  cornerRadius: 6
+  textInverted: false
+
+cover:
+  style: card
+  cornerRadius: 0
+
+list:
+  subtitleStyle: regular
+  buttonMenuLabelStyle: regular
+  rowHeight: 40
+  rowHeightWithSubtitle: 60
+  menuRowHeight: 64
+  menuSpacing: 8
+
+buttonHintsStyle: rounded-filled
+sideButtonHintsStyle: rounded
+tabBarStyle: dithered-rounded
+scrollIndicatorStyle: line-thumb
+batteryStyle: segmented
+showsFileIcons: true
+
+layout:
+  topPadding: 5
+  verticalSpacing: 16
+  contentSidePadding: 20
+
+battery:
+  width: 16
+  height: 12
+  barHeight: 40
+
+buttonHints:
+  height: 40
+  sideWidth: 30
+
+tabBar:
+  spacing: 8
+  height: 40
+
+scrollBar:
+  width: 4
+  rightOffset: 5
+
+home:
+  topPadding: 56
+  coverHeight: 226
+  coverTileHeight: 242
+  recentBooksCount: 1
+  continueReadingInMenu: false
+  menuTopOffset: 16
+
+progressBar:
+  height: 16
+  marginTop: 1
+
+statusBar:
+  horizontalMargin: 5
+  verticalMargin: 19
+
+keyboard:
+  keyWidth: 31
+  keyHeight: 40
+  keySpacing: 0
+  bottomKeyHeight: 35
+  bottomKeySpacing: 5
+  bottomAligned: true
+  centeredText: false
+  verticalOffset: -7
+  textFieldWidthPercent: 85
+  widthPercent: 90
+  keyCornerRadius: 6
+  fillUnselected: false
+  outlineAllUnselected: false
+  drawSpecialOutlineWhenUnselected: true
+  secondaryLabelRightPadding: 1
+  secondaryLabelTopPadding: 0
+  minArrowHeadSize: 0
+
+popup:
+  topOffsetRatio: 0.165
+  marginX: 16
+  marginY: 12
+  frameThickness: 2
+  cornerRadius: 6
+  textBold: false
+  textInverted: false
+  textBaselineOffsetY: -2
+  progress:
+    barHeight: 4
+    drawOutline: false
+    clampPercent: false
+    fillInverted: false
+    outlineInverted: false
+
+textField:
+  horizontalPadding: 6
+  normalThickness: 1
+  cursorThickness: 3
+  lineEndOffset: 0
+
+fonts:
+  title:
+    builtin: ui-12
+  heading:
+    builtin: ui-12
+  body:
+    builtin: ui-10
+  caption:
+    builtin: small
+  accent:
+    builtin: small
+  body-compact:
+    builtin: small
+  caption-compact:
+    builtin: small
+  accent-compact:
+    builtin: small

@@ -25,6 +25,7 @@
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
+#include "SdThemeLoader.h"
 #include "ThemeFontRegistry.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
@@ -397,6 +398,9 @@ void setup() {
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   KOREADER_STORE.loadFromFile();
   OPDS_STORE.loadFromFile();
+  // Discover SD card themes before loading the active theme so the theme
+  // loader can find .cptheme bundles referenced in settings.
+  SD_THEMES.discoverThemes();
   // Renderer-taking reload also discovers SD theme fonts for the active
   // theme (replaces the standalone THEME_FONTS.discover() that used to live
   // up in setupFonts).

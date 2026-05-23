@@ -12,6 +12,7 @@
 
 #include "CrossPointSettings.h"
 #include "KOReaderCredentialStore.h"
+#include "SdThemeLoader.h"
 #include "activities/settings/SettingsActivity.h"
 
 // Build the font family setting dynamically. When registry is non-null, SD card fonts
@@ -91,6 +92,57 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
   return s;
 }
 
+// Build the theme setting dynamically. When loader is non-null and has discovered
+// SD themes, they are appended after the built-in Folio entry.
+inline SettingInfo buildThemeSetting(const SdThemeLoader* loader) {
+  std::vector<std::string> allLabels;
+  allLabels.push_back(I18N.get(StrId::STR_THEME_FOLIO));
+
+  std::vector<std::string> sdThemeIds;
+  if (loader) {
+    const auto& themes = loader->getDiscoveredThemes();
+    sdThemeIds.reserve(themes.size());
+    for (const auto& t : themes) {
+      allLabels.push_back(t.name);
+      sdThemeIds.push_back(t.id);
+    }
+  }
+
+  SettingInfo s;
+  s.nameId = StrId::STR_UI_THEME;
+  s.type = SettingType::ENUM;
+  s.enumStringValues = std::move(allLabels);
+  s.key = "uiTheme";
+  s.category = StrId::STR_CAT_DISPLAY;
+
+  s.valueGetter = [sdThemeIds]() -> uint8_t {
+    if (SETTINGS.uiTheme == CrossPointSettings::SD_THEME && SETTINGS.sdThemeName[0] != '\0') {
+      for (int i = 0; i < static_cast<int>(sdThemeIds.size()); i++) {
+        if (sdThemeIds[i] == SETTINGS.sdThemeName) {
+          return static_cast<uint8_t>(1 + i);
+        }
+      }
+    }
+    return 0;
+  };
+
+  s.valueSetter = [sdThemeIds](uint8_t v) {
+    if (v == 0) {
+      SETTINGS.uiTheme = CrossPointSettings::FOLIO;
+      SETTINGS.sdThemeName[0] = '\0';
+    } else {
+      const int sdIdx = v - 1;
+      if (sdIdx < static_cast<int>(sdThemeIds.size())) {
+        SETTINGS.uiTheme = CrossPointSettings::SD_THEME;
+        strncpy(SETTINGS.sdThemeName, sdThemeIds[sdIdx].c_str(), sizeof(SETTINGS.sdThemeName) - 1);
+        SETTINGS.sdThemeName[sizeof(SETTINGS.sdThemeName) - 1] = '\0';
+      }
+    }
+  };
+
+  return s;
+}
+
 // Shared settings list used by both the device settings UI and the web settings API.
 // Each entry has a key (for JSON API) and category (for grouping).
 // ACTION-type entries and entries without a key are device-only.
@@ -100,7 +152,10 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
 // SdCardFontRegistry is supplied AND has SD card fonts installed, the
 // font-family entry is replaced in a per-call copy with a registry-aware
 // version. Callers without SD fonts pay only a vector copy.
-inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* registry = nullptr) {
+// When a SdThemeLoader is supplied with discovered themes, the theme
+// picker entry is similarly replaced with a dynamic version.
+inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* registry = nullptr,
+                                                const SdThemeLoader* themeLoader = nullptr) {
   static const std::vector<SettingInfo> baseList = [] {
     std::vector<SettingInfo> v = {
         // --- Display ---
@@ -124,8 +179,7 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
             {StrId::STR_PAGES_1, StrId::STR_PAGES_5, StrId::STR_PAGES_10, StrId::STR_PAGES_15, StrId::STR_PAGES_30},
             "refreshFrequency", StrId::STR_CAT_DISPLAY),
         SettingInfo::Enum(StrId::STR_UI_THEME, &CrossPointSettings::uiTheme,
-                          {StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_ROUNDEDRAFF,
-                           StrId::STR_THEME_FOLIO},
+                          {StrId::STR_THEME_FOLIO},
                           "uiTheme", StrId::STR_CAT_DISPLAY),
         SettingInfo::Toggle(StrId::STR_SUNLIGHT_FADING_FIX, &CrossPointSettings::fadingFix, "fadingFix",
                             StrId::STR_CAT_DISPLAY),
@@ -271,6 +325,12 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
     auto it = std::find_if(v.begin(), v.end(), [](const SettingInfo& s) { return s.nameId == StrId::STR_FONT_FAMILY; });
     if (it != v.end()) {
       *it = buildFontFamilySetting(registry);
+    }
+  }
+  if (themeLoader && !themeLoader->getDiscoveredThemes().empty()) {
+    auto it = std::find_if(v.begin(), v.end(), [](const SettingInfo& s) { return s.nameId == StrId::STR_UI_THEME; });
+    if (it != v.end()) {
+      *it = buildThemeSetting(themeLoader);
     }
   }
   return v;

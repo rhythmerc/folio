@@ -6,6 +6,7 @@
 
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "SdThemeLoader.h"
 #include "ThemeFontRegistry.h"
 #include "components/themes/BaseTheme.h"
 #include "components/themes/ThemeData.h"
@@ -28,32 +29,30 @@ void UITheme::reload(GfxRenderer& renderer) {
 }
 
 void UITheme::setTheme(CrossPointSettings::UI_THEME type, GfxRenderer& renderer) {
-  setTheme(type);
-  // Reconcile SD theme fonts with the new active theme. setActiveTheme is a
-  // no-op when the id hasn't changed, so this is cheap on repeated calls
-  // (e.g. settings exit when the user didn't touch the theme picker).
+  if (type == CrossPointSettings::SD_THEME && SETTINGS.sdThemeName[0] != '\0') {
+    if (SD_THEMES.loadTheme(SETTINGS.sdThemeName, renderer)) {
+      const ThemeData* sdData = SD_THEMES.getData();
+      if (!currentTheme) {
+        currentTheme = std::make_unique<BaseTheme>(sdData);
+      } else {
+        currentTheme->setData(sdData);
+      }
+      THEME_FONTS.setActiveTheme(renderer, sdData->id);
+      return;
+    }
+    LOG_ERR("UI", "SD theme '%s' failed to load; falling back to Folio", SETTINGS.sdThemeName);
+  } else {
+    SD_THEMES.unloadTheme(renderer);
+  }
+
+  setTheme(CrossPointSettings::FOLIO);
   THEME_FONTS.setActiveTheme(renderer, currentTheme->getData()->id);
 }
 
 void UITheme::setTheme(CrossPointSettings::UI_THEME type) {
-  const ThemeData* selected = &BuiltinThemes::Classic;
-  switch (type) {
-    case CrossPointSettings::UI_THEME::CLASSIC:
-      LOG_DBG("UI", "Using Classic theme");
-      selected = &BuiltinThemes::Classic;
-      break;
-    case CrossPointSettings::UI_THEME::LYRA:
-      LOG_DBG("UI", "Using Lyra theme");
-      selected = &BuiltinThemes::Lyra;
-      break;
-    case CrossPointSettings::UI_THEME::ROUNDEDRAFF:
-      LOG_DBG("UI", "Using RoundedRaff theme");
-      selected = &BuiltinThemes::RoundedRaff;
-      break;
-    case CrossPointSettings::UI_THEME::FOLIO:
-      LOG_DBG("UI", "Using Folio theme");
-      selected = &BuiltinThemes::Folio;
-      break;
+  const ThemeData* selected = &BuiltinThemes::Folio;
+  if (type == CrossPointSettings::SD_THEME && SD_THEMES.isLoaded()) {
+    selected = SD_THEMES.getData();
   }
   if (!currentTheme) {
     currentTheme = std::make_unique<BaseTheme>(selected);

@@ -1,0 +1,131 @@
+id: classic
+name: Classic
+version: 1
+
+header:
+  style: centered-title
+  titleStyle: bold
+  subtitleStyle: regular
+  bottomBorderHeight: 0
+  height: 45
+
+selection:
+  style: solid-fill
+  cornerRadius: 0
+  textInverted: true
+
+cover:
+  style: default
+  cornerRadius: 0
+
+list:
+  subtitleStyle: regular
+  buttonMenuLabelStyle: regular
+  rowHeight: 30
+  rowHeightWithSubtitle: 50
+  menuRowHeight: 45
+  menuSpacing: 8
+
+buttonHintsStyle: boxed
+sideButtonHintsStyle: sharp
+tabBarStyle: underline
+scrollIndicatorStyle: arrows
+batteryStyle: solid
+showsFileIcons: false
+
+layout:
+  topPadding: 5
+  verticalSpacing: 10
+  contentSidePadding: 20
+
+battery:
+  width: 15
+  height: 12
+  barHeight: 20
+
+buttonHints:
+  height: 40
+  sideWidth: 30
+
+tabBar:
+  spacing: 10
+  height: 50
+
+scrollBar:
+  width: 4
+  rightOffset: 5
+
+home:
+  topPadding: 40
+  coverHeight: 400
+  coverTileHeight: 400
+  recentBooksCount: 1
+  continueReadingInMenu: false
+  menuTopOffset: 10
+
+progressBar:
+  height: 16
+  marginTop: 1
+
+statusBar:
+  horizontalMargin: 5
+  verticalMargin: 19
+
+keyboard:
+  keyWidth: 22
+  keyHeight: 40
+  keySpacing: 0
+  bottomKeyHeight: 35
+  bottomKeySpacing: 5
+  bottomAligned: true
+  centeredText: false
+  verticalOffset: -13
+  textFieldWidthPercent: 85
+  widthPercent: 90
+  keyCornerRadius: 0
+  fillUnselected: false
+  outlineAllUnselected: false
+  drawSpecialOutlineWhenUnselected: true
+  secondaryLabelRightPadding: 1
+  secondaryLabelTopPadding: 0
+  minArrowHeadSize: 0
+
+popup:
+  topOffsetRatio: 0.075
+  marginX: 15
+  marginY: 15
+  frameThickness: 2
+  cornerRadius: 0
+  textBold: true
+  textInverted: true
+  textBaselineOffsetY: -2
+  progress:
+    barHeight: 4
+    drawOutline: false
+    clampPercent: false
+    fillInverted: true
+    outlineInverted: true
+
+textField:
+  horizontalPadding: 6
+  normalThickness: 1
+  cursorThickness: 3
+  lineEndOffset: 0
+
+fonts:
+  title:
+    builtin: ui-12
+  heading:
+    builtin: ui-12
+  body:
+    builtin: ui-10
+  caption:
+    builtin: small
+  accent:
+    builtin: small
+  body-compact:
+    builtin: small
+  caption-compact:
+    builtin: small
+  accent-compact:
+    builtin: small

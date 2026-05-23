@@ -267,8 +267,5 @@ struct ThemeData {
 // Built-in themes. Defined as static constexpr in BaseTheme.cpp so they live
 // entirely in flash. Themes are picked by UITheme::setTheme().
 namespace BuiltinThemes {
-extern const ThemeData Classic;
 extern const ThemeData Folio;
-extern const ThemeData Lyra;
-extern const ThemeData RoundedRaff;
 }  // namespace BuiltinThemes
