@@ -5,6 +5,7 @@
 
 #include <cstring>
 
+#include "components/themes/BaseTheme.h"
 #include "components/themes/ThemeData.h"
 #include "fontIds.h"
 
@@ -82,6 +83,16 @@ constexpr EnumEntry kFontStyles[] = {
     {"bold-italic", static_cast<uint8_t>(EpdFontFamily::BOLD_ITALIC)},
 };
 
+constexpr EnumEntry kFontRoleStyles[] = {
+    {"title", static_cast<uint8_t>(FontRole::Title)},
+    {"heading", static_cast<uint8_t>(FontRole::Heading)},
+    {"body", static_cast<uint8_t>(FontRole::Body)},
+    {"caption", static_cast<uint8_t>(FontRole::Caption)},
+    {"accent", static_cast<uint8_t>(FontRole::Accent)},
+    {"body-compact", static_cast<uint8_t>(FontRole::BodyCompact)},
+    {"accent-compact", static_cast<uint8_t>(FontRole::AccentCompact)},
+};
+
 EpdFontFamily::Style parseFontStyle(const char* str, EpdFontFamily::Style fallback) {
   return parseEnum(str, kFontStyles, fallback);
 }
@@ -94,6 +105,9 @@ struct BuiltinFontEntry {
 };
 
 constexpr BuiltinFontEntry kBuiltinFonts[] = {
+    {"notoserif-5", NOTOSERIF_5_FONT_ID},
+    {"notoserif-6", NOTOSERIF_6_FONT_ID},
+    {"notoserif-8", NOTOSERIF_8_FONT_ID},
     {"notoserif-10", NOTOSERIF_10_FONT_ID},
     {"notoserif-12", NOTOSERIF_12_FONT_ID},
     {"notoserif-14", NOTOSERIF_14_FONT_ID},
@@ -103,10 +117,6 @@ constexpr BuiltinFontEntry kBuiltinFonts[] = {
     {"notosans-14", NOTOSANS_14_FONT_ID},
     {"notosans-16", NOTOSANS_16_FONT_ID},
     {"notosans-18", NOTOSANS_18_FONT_ID},
-    {"opendyslexic-8", OPENDYSLEXIC_8_FONT_ID},
-    {"opendyslexic-10", OPENDYSLEXIC_10_FONT_ID},
-    {"opendyslexic-12", OPENDYSLEXIC_12_FONT_ID},
-    {"opendyslexic-14", OPENDYSLEXIC_14_FONT_ID},
     {"ui-10", UI_10_FONT_ID},
     {"ui-12", UI_12_FONT_ID},
     {"small", SMALL_FONT_ID},
@@ -222,8 +232,6 @@ bool parseThemeJson(const char* json, size_t len, ThemeData& out,
                                    kButtonHintsStyles, out.buttonHintsStyle);
   out.sideButtonHintsStyle = parseEnum(doc["sideButtonHintsStyle"] | static_cast<const char*>(nullptr),
                                        kSideButtonHintsStyles, out.sideButtonHintsStyle);
-  out.tabBarStyle = parseEnum(doc["tabBarStyle"] | static_cast<const char*>(nullptr),
-                              kTabBarStyles, out.tabBarStyle);
   out.scrollIndicatorStyle = parseEnum(doc["scrollIndicatorStyle"] | static_cast<const char*>(nullptr),
                                        kScrollIndicatorStyles, out.scrollIndicatorStyle);
   out.batteryStyle = parseEnum(doc["batteryStyle"] | static_cast<const char*>(nullptr),
@@ -258,6 +266,11 @@ bool parseThemeJson(const char* json, size_t len, ThemeData& out,
   if (!tb.isNull()) {
     out.tabBar.spacing = tb["spacing"] | out.tabBar.spacing;
     out.tabBar.height = tb["height"] | out.tabBar.height;
+    out.tabBar.style = parseEnum(tb["style"] | static_cast<const char*>(nullptr),
+                              kTabBarStyles, out.tabBar.style);
+    out.tabBar.fontRole = parseEnum(tb["fontRole"] | static_cast<const char*>(nullptr),
+                              kFontRoleStyles, out.tabBar.fontRole);
+
   }
 
   // ─── ScrollBar ──────────────────────────────────────────────────

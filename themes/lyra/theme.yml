@@ -28,7 +28,6 @@ list:
 
 buttonHintsStyle: rounded-filled
 sideButtonHintsStyle: rounded
-tabBarStyle: dithered-rounded
 scrollIndicatorStyle: line-thumb
 batteryStyle: segmented
 showsFileIcons: true
@@ -50,6 +49,7 @@ buttonHints:
 tabBar:
   spacing: 8
   height: 40
+  style: dithered-rounded
 
 scrollBar:
   width: 4

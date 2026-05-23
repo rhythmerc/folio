@@ -28,7 +28,6 @@ list:
 
 buttonHintsStyle: boxed
 sideButtonHintsStyle: sharp
-tabBarStyle: underline
 scrollIndicatorStyle: arrows
 batteryStyle: solid
 showsFileIcons: false
@@ -50,6 +49,7 @@ buttonHints:
 tabBar:
   spacing: 10
   height: 50
+  style: underline
 
 scrollBar:
   width: 4

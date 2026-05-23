@@ -82,12 +82,12 @@ const ThemeData Folio = {
     .id = "folio",
     .fonts = {.titleId = NOTOSERIF_14_FONT_ID,
               .headingId = NOTOSERIF_14_FONT_ID,
-              .bodyId = NOTOSERIF_12_FONT_ID,
+              .bodyId = NOTOSERIF_10_FONT_ID,
               .captionId = NOTOSERIF_10_FONT_ID,
               .accentId = NOTOSERIF_10_FONT_ID,
-              .bodyIdCompact = 0,
-              .captionIdCompact = 0,
-              .accentIdCompact = 0},
+              .bodyIdCompact = NOTOSERIF_8_FONT_ID,
+              .captionIdCompact = NOTOSERIF_6_FONT_ID,
+              .accentIdCompact = NOTOSERIF_5_FONT_ID},
     .header = {.style = HeaderStyle::LeftAlignedBordered,
                .titleStyle = EpdFontFamily::BOLD,
                .subtitleStyle = EpdFontFamily::ITALIC,
@@ -96,20 +96,24 @@ const ThemeData Folio = {
     .selection = {.style = SelectionStyle::LayeredFrame, .cornerRadius = 0, .textInverted = false},
     .cover = {.style = CoverStyle::Default, .cornerRadius = 0},
     .list = {.subtitleStyle = EpdFontFamily::ITALIC,
-             .buttonMenuLabelStyle = EpdFontFamily::BOLD,
+             .buttonMenuLabelStyle = EpdFontFamily::REGULAR,
              .rowHeight = 40,
              .rowHeightWithSubtitle = 60,
              .menuRowHeight = 56,
              .menuSpacing = 14},
     .buttonHintsStyle = ButtonHintsStyle::Hairline,
     .sideButtonHintsStyle = SideButtonHintsStyle::Sharp,
-    .tabBarStyle = TabBarStyle::Underline,
     .scrollIndicatorStyle = ScrollIndicatorStyle::Arrows,
     .batteryStyle = BatteryStyle::Solid,
     .layout = {.topPadding = 5, .verticalSpacing = 10, .contentSidePadding = 18},
     .battery = {.width = 16, .height = 12, .barHeight = 40},
     .buttonHints = {.height = 40, .sideWidth = 30},
-    .tabBar = {.spacing = 8, .height = 40},
+    .tabBar = {
+      .spacing = 20, 
+      .height = 50,
+      .style = TabBarStyle::Underline,
+      .fontRole = FontRole::Body,
+    },
     .scrollBar = {.width = 4, .rightOffset = 5},
     .home = {.topPadding = 56,
              .coverHeight = 226,
@@ -822,9 +826,10 @@ void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char
 void BaseTheme::drawTabBar(const GfxRenderer& renderer, const Rect rect, const std::vector<TabInfo>& tabs,
                            bool selected) const {
   const auto& m = *data;
-  const int tabFont = getFontForRole(FontRole::Title);
 
-  switch (data->tabBarStyle) {
+  int tabFont = getFontForRole(data->tabBar.fontRole);
+
+  switch (data->tabBar.style) {
     case TabBarStyle::Underline: {
       constexpr int underlineHeight = 2;
       constexpr int underlineGap = 4;

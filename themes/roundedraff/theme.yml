@@ -28,7 +28,6 @@ list:
 
 buttonHintsStyle: paired-groups
 sideButtonHintsStyle: sharp
-tabBarStyle: slot-rounded
 scrollIndicatorStyle: thumb
 batteryStyle: solid
 showsFileIcons: false
@@ -50,6 +49,7 @@ buttonHints:
 tabBar:
   spacing: 10
   height: 50
+  style: slot-rounded
 
 scrollBar:
   width: 4

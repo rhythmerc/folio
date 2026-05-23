@@ -301,6 +301,7 @@ float CrossPointSettings::getReaderLineCompression() const {
           return 1.0f;
       }
   }
+  return 0.95f;
 }
 
 unsigned long CrossPointSettings::getSleepTimeoutMs() const {
@@ -374,14 +375,14 @@ int CrossPointSettings::getReaderFontId() const {
     case OPENDYSLEXIC:
       switch (fontSize) {
         case SMALL:
-          return OPENDYSLEXIC_8_FONT_ID;
+          return NOTOSERIF_10_FONT_ID;
         case MEDIUM:
         default:
-          return OPENDYSLEXIC_10_FONT_ID;
+          return NOTOSERIF_14_FONT_ID;
         case LARGE:
-          return OPENDYSLEXIC_12_FONT_ID;
+          return NOTOSERIF_16_FONT_ID;
         case EXTRA_LARGE:
-          return OPENDYSLEXIC_14_FONT_ID;
+          return NOTOSERIF_18_FONT_ID;
       }
   }
 }

@@ -131,6 +131,7 @@ struct ThemeData {
     EpdFontFamily::Style subtitleStyle;  // REGULAR or ITALIC depending on theme
     int bottomBorderHeight;              // LeftAlignedBordered: 3 (Folio). 0 otherwise.
     int height;
+    FontRole fontRole; // optional override
   } header;
 
   // ─── Selection (style + corner radius + content text color) ──────
@@ -164,7 +165,6 @@ struct ThemeData {
   // ─── Stylistic dispatchers ──────────────────────────────────────
   ButtonHintsStyle buttonHintsStyle;
   SideButtonHintsStyle sideButtonHintsStyle;
-  TabBarStyle tabBarStyle;
   ScrollIndicatorStyle scrollIndicatorStyle;
   BatteryStyle batteryStyle;
 
@@ -189,6 +189,8 @@ struct ThemeData {
   struct TabBar {
     int spacing;
     int height;
+    TabBarStyle style;
+    FontRole fontRole;
   } tabBar;
 
   struct ScrollBar {
