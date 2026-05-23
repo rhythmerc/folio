@@ -140,11 +140,11 @@ void ClockOffsetActivity::loop() {
 void ClockOffsetActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_CLOCK_UTC_OFFSET));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_CLOCK_UTC_OFFSET));
 
   // Build the offset string. Use a generous font and centre it.
   char offsetBuf[16];

@@ -409,13 +409,13 @@ void LibraryActivity::renderHeader() {
   // Battery icon top-right. Delegates to whichever theme is active —
   // intentional, the battery is one of the few elements LibraryActivity
   // happily inherits from the user's chosen theme.
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   constexpr int maxBatteryWidth = 80;
-  renderer.fillRect(renderer.getScreenWidth() - maxBatteryWidth, 5, maxBatteryWidth, metrics.battery.height + 10, false);
+  renderer.fillRect(renderer.getScreenWidth() - maxBatteryWidth, 5, maxBatteryWidth, td.battery.height + 10, false);
   const bool showBatteryPct =
       SETTINGS.hideBatteryPercentage != CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_ALWAYS;
-  const int batteryX = renderer.getScreenWidth() - 12 - metrics.battery.width;
-  GUI.drawBatteryRight(renderer, Rect{batteryX, 5, metrics.battery.width, metrics.battery.height}, showBatteryPct);
+  const int batteryX = renderer.getScreenWidth() - 12 - td.battery.width;
+  GUI.drawBatteryRight(renderer, Rect{batteryX, 5, td.battery.width, td.battery.height}, showBatteryPct);
 
   // Title and subtitle — match FolioTheme::drawHeader's positions so the
   // Library reads identically whether or not Folio is the active theme.

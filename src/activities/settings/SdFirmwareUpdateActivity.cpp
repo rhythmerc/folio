@@ -200,14 +200,14 @@ void SdFirmwareUpdateActivity::loop() {
 }
 
 void SdFirmwareUpdateActivity::render(RenderLock&&) {
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
 
   const char* headerText = recoveryMode ? tr(STR_RECOVERY_MODE) : tr(STR_SD_FIRMWARE_UPDATE);
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, headerText);
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, headerText);
 
   const auto lineHeight = renderer.getLineHeight(UI_10_FONT_ID);
   const auto top = (pageHeight - lineHeight) / 2;
@@ -224,23 +224,23 @@ void SdFirmwareUpdateActivity::render(RenderLock&&) {
 
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_UPDATING), true, EpdFontFamily::BOLD);
 
-    int y = top + lineHeight + metrics.layout.verticalSpacing;
+    int y = top + lineHeight + td.layout.verticalSpacing;
     GUI.drawProgressBar(
         renderer,
-        Rect{metrics.layout.contentSidePadding, y, pageWidth - metrics.layout.contentSidePadding * 2, metrics.progressBar.height},
+        Rect{td.layout.contentSidePadding, y, pageWidth - td.layout.contentSidePadding * 2, td.progressBar.height},
         static_cast<int>(pct), 100);
-    y += metrics.progressBar.height + metrics.layout.verticalSpacing;
+    y += td.progressBar.height + td.layout.verticalSpacing;
     // Percent label is drawn by BaseTheme::drawProgressBar; this slot is left intentionally empty
     // so the do-not-power-off line below stays at the same Y as before.
-    y += lineHeight + metrics.layout.verticalSpacing;
+    y += lineHeight + td.layout.verticalSpacing;
     renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_FIRMWARE_UPDATE_DO_NOT_POWER_OFF));
   } else if (state == State::SUCCESS) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_UPDATE_COMPLETE), true, EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, top + lineHeight + metrics.layout.verticalSpacing, tr(STR_RESTARTING_HINT));
+    renderer.drawCenteredText(UI_10_FONT_ID, top + lineHeight + td.layout.verticalSpacing, tr(STR_RESTARTING_HINT));
   } else if (state == State::FAILED) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_UPDATE_FAILED), true, EpdFontFamily::BOLD);
     if (!errorMessage.empty()) {
-      renderer.drawCenteredText(UI_10_FONT_ID, top + lineHeight + metrics.layout.verticalSpacing, errorMessage.c_str());
+      renderer.drawCenteredText(UI_10_FONT_ID, top + lineHeight + td.layout.verticalSpacing, errorMessage.c_str());
     }
     const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

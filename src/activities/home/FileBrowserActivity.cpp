@@ -115,7 +115,7 @@ void FileBrowserActivity::loop() {
     return;
   }
 
-  const int pathReserved = renderer.getLineHeight(SMALL_FONT_ID) + UITheme::getInstance().getMetrics().layout.verticalSpacing;
+  const int pathReserved = renderer.getLineHeight(SMALL_FONT_ID) + GUI.getData()->layout.verticalSpacing;
   const int pageItems = UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false, pathReserved);
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
@@ -265,22 +265,22 @@ void FileBrowserActivity::render(RenderLock&&) {
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
 
   std::string folderName =
       (mode == Mode::PickFirmware)
           ? std::string(tr(STR_SELECT_FIRMWARE_FILE))
           : ((basepath == "/") ? std::string(tr(STR_SD_CARD)) : basepath.substr(basepath.rfind('/') + 1));
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, folderName.c_str());
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, folderName.c_str());
 
   const int pathLineHeight = renderer.getLineHeight(SMALL_FONT_ID);
-  const int pathReserved = pathLineHeight + metrics.layout.verticalSpacing;
-  const int contentTop = metrics.layout.topPadding + metrics.header.height + metrics.layout.verticalSpacing;
+  const int pathReserved = pathLineHeight + td.layout.verticalSpacing;
+  const int contentTop = td.layout.topPadding + td.header.height + td.layout.verticalSpacing;
   const int contentHeight =
-      pageHeight - contentTop - metrics.buttonHints.height - metrics.layout.verticalSpacing - pathReserved;
+      pageHeight - contentTop - td.buttonHints.height - td.layout.verticalSpacing - pathReserved;
   if (files.empty()) {
     const char* emptyMsg = (mode == Mode::PickFirmware) ? tr(STR_NO_BIN_FILES) : tr(STR_NO_FILES_FOUND);
-    renderer.drawText(UI_10_FONT_ID, metrics.layout.contentSidePadding, contentTop + 20, emptyMsg);
+    renderer.drawText(UI_10_FONT_ID, td.layout.contentSidePadding, contentTop + 20, emptyMsg);
   } else {
     GUI.drawList(
         renderer, Rect{0, contentTop, pageWidth, contentHeight}, files.size(), selectorIndex,
@@ -291,10 +291,10 @@ void FileBrowserActivity::render(RenderLock&&) {
 
   // Full path display
   {
-    const int pathY = pageHeight - metrics.buttonHints.height - metrics.layout.verticalSpacing - pathLineHeight;
-    const int separatorY = pathY - metrics.layout.verticalSpacing / 2;
+    const int pathY = pageHeight - td.buttonHints.height - td.layout.verticalSpacing - pathLineHeight;
+    const int separatorY = pathY - td.layout.verticalSpacing / 2;
     renderer.drawLine(0, separatorY, pageWidth - 1, separatorY, 3, true);
-    const int pathMaxWidth = pageWidth - metrics.layout.contentSidePadding * 2;
+    const int pathMaxWidth = pageWidth - td.layout.contentSidePadding * 2;
     // Left-truncate so the deepest directory is always visible
     const char* pathStr = basepath.c_str();
     const char* pathDisplay = pathStr;
@@ -313,7 +313,7 @@ void FileBrowserActivity::render(RenderLock&&) {
       snprintf(leftTruncBuf, sizeof(leftTruncBuf), "%s%s", ellipsis, p);
       pathDisplay = leftTruncBuf;
     }
-    renderer.drawText(SMALL_FONT_ID, metrics.layout.contentSidePadding, pathY, pathDisplay);
+    renderer.drawText(SMALL_FONT_ID, td.layout.contentSidePadding, pathY, pathDisplay);
   }
 
   // Help text

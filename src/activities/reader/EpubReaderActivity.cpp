@@ -693,7 +693,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       (statusBarHeight == 0 || statusBarHeight == UITheme::getInstance().getProgressBarHeight())) {
     orientedMarginBottom +=
         std::max(SETTINGS.screenMargin,
-                 static_cast<uint8_t>(statusBarHeight + UITheme::getInstance().getMetrics().statusBar.verticalMargin));
+                 static_cast<uint8_t>(statusBarHeight + GUI.getData()->statusBar.verticalMargin));
   } else {
     orientedMarginBottom += std::max(SETTINGS.screenMargin, statusBarHeight);
   }
@@ -975,7 +975,7 @@ void EpubReaderActivity::renderStatusBar() const {
 
     // offsets text if no status bar or progress bar only
     if (statusBarHeight == 0 || statusBarHeight == UITheme::getInstance().getProgressBarHeight()) {
-      textYOffset += UITheme::getInstance().getMetrics().statusBar.verticalMargin;
+      textYOffset += GUI.getData()->statusBar.verticalMargin;
     }
 
   } else if (SETTINGS.statusBarTitle == CrossPointSettings::STATUS_BAR_TITLE::CHAPTER_TITLE) {

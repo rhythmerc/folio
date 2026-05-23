@@ -126,16 +126,16 @@ void RecentBooksActivity::render(RenderLock&&) {
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_MENU_RECENT_BOOKS));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_MENU_RECENT_BOOKS));
 
-  const int contentTop = metrics.layout.topPadding + metrics.header.height + metrics.layout.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHints.height - metrics.layout.verticalSpacing;
+  const int contentTop = td.layout.topPadding + td.header.height + td.layout.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - td.buttonHints.height - td.layout.verticalSpacing;
 
   // Recent tab
   if (recentBooks.empty()) {
-    renderer.drawText(UI_10_FONT_ID, metrics.layout.contentSidePadding, contentTop + 20, tr(STR_NO_RECENT_BOOKS));
+    renderer.drawText(UI_10_FONT_ID, td.layout.contentSidePadding, contentTop + 20, tr(STR_NO_RECENT_BOOKS));
   } else {
     GUI.drawList(
         renderer, Rect{0, contentTop, pageWidth, contentHeight}, recentBooks.size(), selectorIndex,

@@ -295,9 +295,9 @@ void SettingsActivity::render(RenderLock&&) {
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_SETTINGS_TITLE),
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_SETTINGS_TITLE),
                  CROSSPOINT_VERSION);
 
   std::vector<TabInfo> tabs;
@@ -305,15 +305,15 @@ void SettingsActivity::render(RenderLock&&) {
   for (int i = 0; i < categoryCount; i++) {
     tabs.push_back({I18N.get(categoryNames[i]), selectedCategoryIndex == i});
   }
-  GUI.drawTabBar(renderer, Rect{0, metrics.layout.topPadding + metrics.header.height, pageWidth, metrics.tabBar.height}, tabs,
+  GUI.drawTabBar(renderer, Rect{0, td.layout.topPadding + td.header.height, pageWidth, td.tabBar.height}, tabs,
                  selectedSettingIndex == 0);
 
   const auto& settings = *currentSettings;
   GUI.drawList(
       renderer,
-      Rect{0, metrics.layout.topPadding + metrics.header.height + metrics.tabBar.height + metrics.layout.verticalSpacing, pageWidth,
-           pageHeight - (metrics.layout.topPadding + metrics.header.height + metrics.tabBar.height + metrics.buttonHints.height +
-                         metrics.layout.verticalSpacing * 2)},
+      Rect{0, td.layout.topPadding + td.header.height + td.tabBar.height + td.layout.verticalSpacing, pageWidth,
+           pageHeight - (td.layout.topPadding + td.header.height + td.tabBar.height + td.buttonHints.height +
+                         td.layout.verticalSpacing * 2)},
       settingsCount, selectedSettingIndex - 1,
       [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
       [&settings](int i) {

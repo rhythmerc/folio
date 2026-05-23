@@ -15,9 +15,6 @@ class UITheme {
   UITheme();
   static UITheme& getInstance() { return instance; }
 
-  // Metrics come from the active ThemeData. Cheap pointer dereference — no
-  // per-call lookup or copy.
-  const ThemeMetrics& getMetrics() const { return currentTheme->getData()->metrics; }
   const BaseTheme& getTheme() const { return *currentTheme; }
   Rect getScreenSafeArea(const GfxRenderer& renderer, bool hasFrontButtonHints = false,
                          bool hasSideButtonHints = false);

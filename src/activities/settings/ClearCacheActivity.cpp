@@ -20,13 +20,13 @@ void ClearCacheActivity::onEnter() {
 void ClearCacheActivity::onExit() { Activity::onExit(); }
 
 void ClearCacheActivity::render(RenderLock&&) {
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_CLEAR_READING_CACHE));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_CLEAR_READING_CACHE));
 
   if (state == WARNING) {
     renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 60, tr(STR_CLEAR_CACHE_WARNING_1), true);

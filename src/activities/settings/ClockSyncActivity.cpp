@@ -66,13 +66,13 @@ void ClockSyncActivity::loop() {
 }
 
 void ClockSyncActivity::render(RenderLock&&) {
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_CLOCK_SYNC));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_CLOCK_SYNC));
 
   const int midY = pageHeight / 2;
 

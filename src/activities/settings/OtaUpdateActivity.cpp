@@ -79,13 +79,13 @@ void OtaUpdateActivity::onExit() {
 }
 
 void OtaUpdateActivity::render(RenderLock&&) {
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_UPDATE));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_UPDATE));
   const auto height = renderer.getLineHeight(UI_10_FONT_ID);
   const auto top = (pageHeight - height) / 2;
 
@@ -104,9 +104,9 @@ void OtaUpdateActivity::render(RenderLock&&) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_CHECKING_UPDATE));
   } else if (state == WAITING_CONFIRMATION) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_NEW_UPDATE), true, EpdFontFamily::BOLD);
-    renderer.drawText(UI_10_FONT_ID, metrics.layout.contentSidePadding, top + height + metrics.layout.verticalSpacing,
+    renderer.drawText(UI_10_FONT_ID, td.layout.contentSidePadding, top + height + td.layout.verticalSpacing,
                       (std::string(tr(STR_CURRENT_VERSION)) + CROSSPOINT_VERSION).c_str());
-    renderer.drawText(UI_10_FONT_ID, metrics.layout.contentSidePadding, top + height * 2 + metrics.layout.verticalSpacing * 2,
+    renderer.drawText(UI_10_FONT_ID, td.layout.contentSidePadding, top + height * 2 + td.layout.verticalSpacing * 2,
                       (std::string(tr(STR_NEW_VERSION)) + updater.getLatestVersion()).c_str());
 
     const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), tr(STR_UPDATE), "", "");
@@ -114,16 +114,16 @@ void OtaUpdateActivity::render(RenderLock&&) {
   } else if (state == UPDATE_IN_PROGRESS) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_UPDATING));
 
-    int y = top + height + metrics.layout.verticalSpacing;
+    int y = top + height + td.layout.verticalSpacing;
     GUI.drawProgressBar(
         renderer,
-        Rect{metrics.layout.contentSidePadding, y, pageWidth - metrics.layout.contentSidePadding * 2, metrics.progressBar.height},
+        Rect{td.layout.contentSidePadding, y, pageWidth - td.layout.contentSidePadding * 2, td.progressBar.height},
         static_cast<int>(updaterProgress * 100), 100);
 
-    y += metrics.progressBar.height + metrics.layout.verticalSpacing;
+    y += td.progressBar.height + td.layout.verticalSpacing;
     // Percent label is drawn by BaseTheme::drawProgressBar; this slot is left intentionally empty
     // so the bytes line below stays at the same Y it was at when the activity drew its own percent.
-    y += height + metrics.layout.verticalSpacing;
+    y += height + td.layout.verticalSpacing;
     renderer.drawCenteredText(
         UI_10_FONT_ID, y,
         (std::to_string(updater.getProcessedSize()) + " / " + std::to_string(updater.getTotalSize())).c_str());
@@ -137,7 +137,7 @@ void OtaUpdateActivity::render(RenderLock&&) {
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else if (state == FINISHED) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_UPDATE_COMPLETE), true, EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, top + height + metrics.layout.verticalSpacing, tr(STR_POWER_ON_HINT));
+    renderer.drawCenteredText(UI_10_FONT_ID, top + height + td.layout.verticalSpacing, tr(STR_POWER_ON_HINT));
   }
 
   renderer.displayBuffer();

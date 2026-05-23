@@ -105,12 +105,12 @@ void FontSelectionActivity::render(RenderLock&&) {
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_FONT_FAMILY));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_FONT_FAMILY));
 
-  const int contentTop = metrics.layout.topPadding + metrics.header.height + metrics.layout.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHints.height - metrics.layout.verticalSpacing;
+  const int contentTop = td.layout.topPadding + td.header.height + td.layout.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - td.buttonHints.height - td.layout.verticalSpacing;
 
   // Determine which font index is currently active (to mark as "Selected")
   int currentFontIndex = 0;

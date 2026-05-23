@@ -484,51 +484,50 @@ void WifiSelectionActivity::render(RenderLock&&) {
 
   renderer.clearScreen();
 
-  auto& theme = UITheme::getInstance();
-  auto metrics = theme.getMetrics();
-  Rect screen = theme.getScreenSafeArea(renderer, true, false);
+  const auto* td = GUI.getData();
+  Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
 
   // Draw header
   char countStr[32];
   snprintf(countStr, sizeof(countStr), tr(STR_NETWORKS_FOUND), networks.size());
-  GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.layout.topPadding, screen.width, metrics.header.height},
+  GUI.drawHeader(renderer, Rect{screen.x, screen.y + td->layout.topPadding, screen.width, td->header.height},
                  tr(STR_WIFI_NETWORKS), countStr);
   GUI.drawSubHeader(
       renderer,
-      Rect{screen.x, screen.y + metrics.layout.topPadding + metrics.header.height, screen.width, metrics.tabBar.height},
+      Rect{screen.x, screen.y + td->layout.topPadding + td->header.height, screen.width, td->tabBar.height},
       cachedMacAddress.c_str());
 
   switch (state) {
     case WifiSelectionState::AUTO_CONNECTING:
-      renderConnecting(&screen, &metrics);
+      renderConnecting(&screen, td);
       break;
     case WifiSelectionState::SCANNING:
-      renderConnecting(&screen, &metrics);  // Reuse connecting screen with different message
+      renderConnecting(&screen, td);  // Reuse connecting screen with different message
       break;
     case WifiSelectionState::NETWORK_LIST:
-      renderNetworkList(&screen, &metrics);
+      renderNetworkList(&screen, td);
       break;
     case WifiSelectionState::CONNECTING:
-      renderConnecting(&screen, &metrics);
+      renderConnecting(&screen, td);
       break;
     case WifiSelectionState::CONNECTED:
-      renderConnected(&screen, &metrics);
+      renderConnected(&screen, td);
       break;
     case WifiSelectionState::SAVE_PROMPT:
-      renderSavePrompt(&screen, &metrics);
+      renderSavePrompt(&screen, td);
       break;
     case WifiSelectionState::CONNECTION_FAILED:
-      renderConnectionFailed(&screen, &metrics);
+      renderConnectionFailed(&screen, td);
       break;
     case WifiSelectionState::FORGET_PROMPT:
-      renderForgetPrompt(&screen, &metrics);
+      renderForgetPrompt(&screen, td);
       break;
   }
 
   renderer.displayBuffer();
 }
 
-void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeMetrics* metrics) const {
+void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeData* td) const {
   if (networks.empty()) {
     // No networks found or scan failed
     const auto height = renderer.getLineHeight(UI_10_FONT_ID);
@@ -537,8 +536,8 @@ void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeMet
     UITheme::drawCenteredText(renderer, *screen, SMALL_FONT_ID, top + height + 10, tr(STR_PRESS_OK_SCAN));
   } else {
     int contentTop =
-        screen->y + metrics->layout.topPadding + metrics->header.height + metrics->tabBar.height + metrics->layout.verticalSpacing;
-    int contentHeight = screen->height - contentTop - metrics->layout.verticalSpacing * 2;
+        screen->y + td->layout.topPadding + td->header.height + td->tabBar.height + td->layout.verticalSpacing;
+    int contentHeight = screen->height - contentTop - td->layout.verticalSpacing * 2;
     GUI.drawList(
         renderer, Rect{screen->x, contentTop, screen->width, contentHeight}, static_cast<int>(networks.size()),
         selectedNetworkIndex, [this](int index) { return networks[index].ssid; }, nullptr, nullptr,
@@ -550,7 +549,7 @@ void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeMet
   }
 
   GUI.drawHelpText(renderer,
-                   Rect{screen->x, screen->y + screen->height - metrics->layout.contentSidePadding - 15, screen->width, 20},
+                   Rect{screen->x, screen->y + screen->height - td->layout.contentSidePadding - 15, screen->width, 20},
                    tr(STR_NETWORK_LEGEND));
 
   const bool hasSavedPassword = !networks.empty() && networks[selectedNetworkIndex].hasSavedPassword;
@@ -560,7 +559,7 @@ void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeMet
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
-void WifiSelectionActivity::renderConnecting(const Rect* screen, const ThemeMetrics* metrics) const {
+void WifiSelectionActivity::renderConnecting(const Rect* screen, const ThemeData* td) const {
   const auto height = renderer.getLineHeight(UI_10_FONT_ID);
   const auto top = screen->y + (screen->height - height) / 2;
 
@@ -578,7 +577,7 @@ void WifiSelectionActivity::renderConnecting(const Rect* screen, const ThemeMetr
   }
 }
 
-void WifiSelectionActivity::renderConnected(const Rect* screen, const ThemeMetrics* metrics) const {
+void WifiSelectionActivity::renderConnected(const Rect* screen, const ThemeData* td) const {
   const auto height = renderer.getLineHeight(UI_10_FONT_ID);
   const auto top = screen->y + (screen->height - height * 4) / 2;
 
@@ -598,7 +597,7 @@ void WifiSelectionActivity::renderConnected(const Rect* screen, const ThemeMetri
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
-void WifiSelectionActivity::renderSavePrompt(const Rect* screen, const ThemeMetrics* metrics) const {
+void WifiSelectionActivity::renderSavePrompt(const Rect* screen, const ThemeData* td) const {
   const auto height = renderer.getLineHeight(UI_10_FONT_ID);
   const auto top = screen->y + (screen->height - height * 3) / 2;
 
@@ -640,7 +639,7 @@ void WifiSelectionActivity::renderSavePrompt(const Rect* screen, const ThemeMetr
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
-void WifiSelectionActivity::renderConnectionFailed(const Rect* screen, const ThemeMetrics* metrics) const {
+void WifiSelectionActivity::renderConnectionFailed(const Rect* screen, const ThemeData* td) const {
   const auto height = renderer.getLineHeight(UI_10_FONT_ID);
   const auto top = screen->y + (screen->height - height * 2) / 2;
 
@@ -653,7 +652,7 @@ void WifiSelectionActivity::renderConnectionFailed(const Rect* screen, const The
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
-void WifiSelectionActivity::renderForgetPrompt(const Rect* screen, const ThemeMetrics* metrics) const {
+void WifiSelectionActivity::renderForgetPrompt(const Rect* screen, const ThemeData* td) const {
   const auto height = renderer.getLineHeight(UI_10_FONT_ID);
   const auto top = screen->y + (screen->height - height * 3) / 2;
 

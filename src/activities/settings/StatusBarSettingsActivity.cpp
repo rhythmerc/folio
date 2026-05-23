@@ -197,14 +197,14 @@ void StatusBarSettingsActivity::handleSelection() {
 void StatusBarSettingsActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
-  auto metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_CUSTOMISE_STATUS_BAR));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_CUSTOMISE_STATUS_BAR));
 
-  const int contentTop = metrics.layout.topPadding + metrics.header.height + metrics.layout.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHints.height - metrics.layout.verticalSpacing * 2;
+  const int contentTop = td.layout.topPadding + td.header.height + td.layout.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - td.buttonHints.height - td.layout.verticalSpacing * 2;
   GUI.drawList(
       renderer, Rect{0, contentTop, pageWidth, contentHeight}, visibleItemCount, static_cast<int>(selectedIndex),
       [](int index) { return std::string(I18N.get(menuNames[index])); }, nullptr, nullptr,
@@ -253,7 +253,7 @@ void StatusBarSettingsActivity::render(RenderLock&&) {
 
   GUI.drawStatusBar(renderer, 75, 8, 32, title, verticalPreviewPadding);
 
-  renderer.drawText(UI_10_FONT_ID, metrics.layout.contentSidePadding,
+  renderer.drawText(UI_10_FONT_ID, td.layout.contentSidePadding,
                     renderer.getScreenHeight() - UITheme::getInstance().getStatusBarHeight() - verticalPreviewPadding -
                         verticalPreviewTextPadding,
                     tr(STR_PREVIEW));

@@ -10,7 +10,7 @@
 #include "util/ButtonNavigator.h"
 
 struct Rect;
-struct ThemeMetrics;
+struct ThemeData;
 
 // Structure to hold WiFi network information
 struct WifiNetworkInfo {
@@ -83,13 +83,13 @@ class WifiSelectionActivity final : public Activity {
   static constexpr unsigned long CONNECTION_TIMEOUT_MS = 15000;
   unsigned long connectionStartTime = 0;
 
-  void renderNetworkList(const Rect* screen, const ThemeMetrics* metrics) const;
-  void renderPasswordEntry(const Rect* screen, const ThemeMetrics* metrics) const;
-  void renderConnecting(const Rect* screen, const ThemeMetrics* metrics) const;
-  void renderConnected(const Rect* screen, const ThemeMetrics* metrics) const;
-  void renderSavePrompt(const Rect* screen, const ThemeMetrics* metrics) const;
-  void renderConnectionFailed(const Rect* screen, const ThemeMetrics* metrics) const;
-  void renderForgetPrompt(const Rect* screen, const ThemeMetrics* metrics) const;
+  void renderNetworkList(const Rect* screen, const ThemeData* td) const;
+  void renderPasswordEntry(const Rect* screen, const ThemeData* td) const;
+  void renderConnecting(const Rect* screen, const ThemeData* td) const;
+  void renderConnected(const Rect* screen, const ThemeData* td) const;
+  void renderSavePrompt(const Rect* screen, const ThemeData* td) const;
+  void renderConnectionFailed(const Rect* screen, const ThemeData* td) const;
+  void renderForgetPrompt(const Rect* screen, const ThemeData* td) const;
 
   void startWifiScan();
   void processWifiScanResults();

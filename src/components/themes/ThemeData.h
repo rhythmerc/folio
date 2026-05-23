@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "BaseTheme.h"  // for ThemeMetrics, FontRole, UIIcon
+#include "BaseTheme.h"  // for FontRole, UIIcon
 
 // Declarative theme specification.
 //
@@ -124,12 +124,13 @@ struct ThemeData {
     int accentIdCompact;
   } fonts;
 
-  // ─── Header (style + title/subtitle text styles + inner border) ──
+  // ─── Header ─────────────────────────────────────────────────────
   struct Header {
     HeaderStyle style;
     EpdFontFamily::Style titleStyle;     // BOLD by default
     EpdFontFamily::Style subtitleStyle;  // REGULAR or ITALIC depending on theme
     int bottomBorderHeight;              // LeftAlignedBordered: 3 (Folio). 0 otherwise.
+    int height;
   } header;
 
   // ─── Selection (style + corner radius + content text color) ──────
@@ -154,17 +155,110 @@ struct ThemeData {
   struct List {
     EpdFontFamily::Style subtitleStyle;        // ITALIC for Folio, REGULAR elsewhere
     EpdFontFamily::Style buttonMenuLabelStyle; // BOLD for Folio/RoundedRaff
+    int rowHeight;
+    int rowHeightWithSubtitle;
+    int menuRowHeight;
+    int menuSpacing;
   } list;
 
-  // ─── Stylistic dispatchers with no additional config (yet) ───────
+  // ─── Stylistic dispatchers ──────────────────────────────────────
   ButtonHintsStyle buttonHintsStyle;
   SideButtonHintsStyle sideButtonHintsStyle;
   TabBarStyle tabBarStyle;
   ScrollIndicatorStyle scrollIndicatorStyle;
   BatteryStyle batteryStyle;
 
-  // ─── Sizes / paddings (grouped by element inside ThemeMetrics) ───
-  ThemeMetrics metrics;
+  // ─── Layout ─────────────────────────────────────────────────────
+  struct Layout {
+    int topPadding;
+    int verticalSpacing;
+    int contentSidePadding;
+  } layout;
+
+  struct Battery {
+    int width;
+    int height;
+    int barHeight;
+  } battery;
+
+  struct ButtonHints {
+    int height;
+    int sideWidth;
+  } buttonHints;
+
+  struct TabBar {
+    int spacing;
+    int height;
+  } tabBar;
+
+  struct ScrollBar {
+    int width;
+    int rightOffset;
+  } scrollBar;
+
+  struct Home {
+    int topPadding;
+    int coverHeight;
+    int coverTileHeight;
+    int recentBooksCount;
+    bool continueReadingInMenu;
+    int menuTopOffset;
+  } home;
+
+  struct ProgressBar {
+    int height;
+    int marginTop;
+  } progressBar;
+
+  struct StatusBar {
+    int horizontalMargin;
+    int verticalMargin;
+  } statusBar;
+
+  struct Keyboard {
+    int keyWidth;
+    int keyHeight;
+    int keySpacing;
+    int bottomKeyHeight;
+    int bottomKeySpacing;
+    bool bottomAligned;
+    bool centeredText;
+    int verticalOffset;
+    int textFieldWidthPercent;
+    int widthPercent;
+    int keyCornerRadius;
+    bool fillUnselected;
+    bool outlineAllUnselected;
+    bool drawSpecialOutlineWhenUnselected;
+    int secondaryLabelRightPadding;
+    int secondaryLabelTopPadding;
+    int minArrowHeadSize;
+  } keyboard;
+
+  struct Popup {
+    float topOffsetRatio;
+    int marginX;
+    int marginY;
+    int frameThickness;
+    int cornerRadius;
+    bool textBold;
+    bool textInverted;
+    int textBaselineOffsetY;
+    struct Progress {
+      int barHeight;
+      bool drawOutline;
+      bool clampPercent;
+      bool fillInverted;
+      bool outlineInverted;
+    } progress;
+  } popup;
+
+  struct TextField {
+    int horizontalPadding;
+    int normalThickness;
+    int cursorThickness;
+    int lineEndOffset;
+  } textField;
 
   // ─── Misc presentation flags ─────────────────────────────────────
   bool showsFileIcons;

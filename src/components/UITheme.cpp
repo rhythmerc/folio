@@ -64,17 +64,17 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type) {
 
 int UITheme::getNumberOfItemsPerPage(const GfxRenderer& renderer, bool hasHeader, bool hasTabBar, bool hasButtonHints,
                                      bool hasSubtitle, int extraReservedHeight) {
-  const ThemeMetrics& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *UITheme::getInstance().getTheme().getData();
   auto orientation = renderer.getOrientation();
-  int reservedHeight = metrics.layout.topPadding;
-  if (hasHeader) reservedHeight += metrics.header.height + metrics.layout.verticalSpacing;
-  if (hasTabBar) reservedHeight += metrics.tabBar.height;
+  int reservedHeight = td.layout.topPadding;
+  if (hasHeader) reservedHeight += td.header.height + td.layout.verticalSpacing;
+  if (hasTabBar) reservedHeight += td.tabBar.height;
   if (hasButtonHints && orientation != GfxRenderer::Orientation::LandscapeClockwise &&
       orientation != GfxRenderer::Orientation::LandscapeCounterClockwise) {
-    reservedHeight += metrics.layout.verticalSpacing + metrics.buttonHints.height;
+    reservedHeight += td.layout.verticalSpacing + td.buttonHints.height;
   }
   const int availableHeight = renderer.getScreenHeight() - reservedHeight - extraReservedHeight;
-  const int rowHeight = hasSubtitle ? metrics.list.rowHeightWithSubtitle : metrics.list.rowHeight;
+  const int rowHeight = hasSubtitle ? td.list.rowHeightWithSubtitle : td.list.rowHeight;
   return availableHeight / rowHeight;
 }
 
@@ -83,25 +83,25 @@ Rect UITheme::getScreenSafeArea(const GfxRenderer& renderer, bool hasFrontButton
   const int screenWidth = renderer.getScreenWidth();
   const int screenHeight = renderer.getScreenHeight();
   Rect safeArea = Rect{0, 0, screenWidth, screenHeight};
-  const ThemeMetrics& metrics = getMetrics();
+  const auto& td = *currentTheme->getData();
   switch (orientation) {
     case GfxRenderer::Orientation::Portrait:
-      if (hasFrontButtonHints) safeArea.height -= metrics.buttonHints.height;
+      if (hasFrontButtonHints) safeArea.height -= td.buttonHints.height;
       break;
     case GfxRenderer::Orientation::LandscapeClockwise:
       if (hasFrontButtonHints) {
-        safeArea.x += metrics.buttonHints.height;
-        safeArea.width -= metrics.buttonHints.height;
+        safeArea.x += td.buttonHints.height;
+        safeArea.width -= td.buttonHints.height;
       }
       break;
     case GfxRenderer::Orientation::PortraitInverted:
       if (hasFrontButtonHints) {
-        safeArea.y += metrics.buttonHints.height;
-        safeArea.height -= metrics.buttonHints.height;
+        safeArea.y += td.buttonHints.height;
+        safeArea.height -= td.buttonHints.height;
       }
       break;
     case GfxRenderer::Orientation::LandscapeCounterClockwise:
-      if (hasFrontButtonHints) safeArea.width -= metrics.buttonHints.height;
+      if (hasFrontButtonHints) safeArea.width -= td.buttonHints.height;
       break;
   }
   return safeArea;
@@ -124,21 +124,21 @@ UIIcon UITheme::getFileIcon(const std::string& filename) {
 }
 
 int UITheme::getStatusBarHeight() {
-  const ThemeMetrics& metrics = getInstance().getMetrics();
+  const auto& td = *getInstance().getTheme().getData();
   const bool showStatusBar = SETTINGS.statusBarChapterPageCount || SETTINGS.statusBarBookProgressPercentage ||
                              SETTINGS.statusBarTitle != CrossPointSettings::STATUS_BAR_TITLE::HIDE_TITLE ||
                              SETTINGS.statusBarBattery;
   const bool showProgressBar =
       SETTINGS.statusBarProgressBar != CrossPointSettings::STATUS_BAR_PROGRESS_BAR::HIDE_PROGRESS;
-  return (showStatusBar ? (metrics.statusBar.verticalMargin) : 0) +
-         (showProgressBar ? (((SETTINGS.statusBarProgressBarThickness + 1) * 2) + metrics.progressBar.marginTop) : 0);
+  return (showStatusBar ? (td.statusBar.verticalMargin) : 0) +
+         (showProgressBar ? (((SETTINGS.statusBarProgressBarThickness + 1) * 2) + td.progressBar.marginTop) : 0);
 }
 
 int UITheme::getProgressBarHeight() {
-  const ThemeMetrics& metrics = getInstance().getMetrics();
+  const auto& td = *getInstance().getTheme().getData();
   const bool showProgressBar =
       SETTINGS.statusBarProgressBar != CrossPointSettings::STATUS_BAR_PROGRESS_BAR::HIDE_PROGRESS;
-  return (showProgressBar ? (((SETTINGS.statusBarProgressBarThickness + 1) * 2) + metrics.progressBar.marginTop) : 0);
+  return (showProgressBar ? (((SETTINGS.statusBarProgressBarThickness + 1) * 2) + td.progressBar.marginTop) : 0);
 }
 
 void UITheme::drawCenteredText(const GfxRenderer& renderer, Rect screen, int fontId, int y, const char* text,

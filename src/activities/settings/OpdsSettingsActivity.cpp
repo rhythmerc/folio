@@ -171,18 +171,18 @@ void OpdsSettingsActivity::handleSelection() {
 void OpdsSettingsActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
   // Reuse STR_OPDS_BROWSER as the "edit existing server" title.
   // New server creation uses STR_ADD_SERVER.
   const char* header = isNewServer ? tr(STR_ADD_SERVER) : tr(STR_OPDS_BROWSER);
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, header);
-  GUI.drawSubHeader(renderer, Rect{0, metrics.layout.topPadding + metrics.header.height, pageWidth, metrics.tabBar.height},
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, header);
+  GUI.drawSubHeader(renderer, Rect{0, td.layout.topPadding + td.header.height, pageWidth, td.tabBar.height},
                     tr(STR_CALIBRE_URL_HINT));
 
-  const int contentTop = metrics.layout.topPadding + metrics.header.height + metrics.layout.verticalSpacing + metrics.tabBar.height;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHints.height - metrics.layout.verticalSpacing * 2;
+  const int contentTop = td.layout.topPadding + td.header.height + td.layout.verticalSpacing + td.tabBar.height;
+  const int contentHeight = pageHeight - contentTop - td.buttonHints.height - td.layout.verticalSpacing * 2;
   const int menuItems = getMenuItemCount();
 
   const StrId fieldNames[] = {StrId::STR_SERVER_NAME, StrId::STR_OPDS_SERVER_URL, StrId::STR_USERNAME,

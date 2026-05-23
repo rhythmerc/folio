@@ -58,14 +58,13 @@ void EpubReaderPercentSelectionActivity::loop() {
 void EpubReaderPercentSelectionActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
-  auto& theme = UITheme::getInstance();
-  auto metrics = theme.getMetrics();
-  Rect screen = theme.getScreenSafeArea(renderer, true, false);
+  const auto& td = *GUI.getData();
+  Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
 
-  GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.layout.topPadding, screen.width, metrics.header.height},
+  GUI.drawHeader(renderer, Rect{screen.x, screen.y + td.layout.topPadding, screen.width, td.header.height},
                  tr(STR_GO_TO_PERCENT));
 
-  const int contentTop = screen.y + metrics.layout.topPadding + metrics.header.height + metrics.layout.verticalSpacing * 4;
+  const int contentTop = screen.y + td.layout.topPadding + td.header.height + td.layout.verticalSpacing * 4;
 
   const std::string percentText = std::to_string(percent) + "%";
   UITheme::drawCenteredText(renderer, screen, UI_12_FONT_ID, contentTop, percentText.c_str(), true,
@@ -75,7 +74,7 @@ void EpubReaderPercentSelectionActivity::render(RenderLock&&) {
   constexpr int barWidth = 360;
   constexpr int barHeight = 16;
   const int barX = screen.x + (screen.width - barWidth) / 2;
-  const int barY = contentTop + metrics.layout.verticalSpacing * 2;
+  const int barY = contentTop + td.layout.verticalSpacing * 2;
 
   renderer.drawRect(barX, barY, barWidth, barHeight);
 

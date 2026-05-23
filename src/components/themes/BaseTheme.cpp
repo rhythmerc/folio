@@ -91,61 +91,65 @@ const ThemeData Classic = {
     .header = {.style = HeaderStyle::CenteredTitle,
                .titleStyle = EpdFontFamily::BOLD,
                .subtitleStyle = EpdFontFamily::REGULAR,
-               .bottomBorderHeight = 0},
+               .bottomBorderHeight = 0,
+               .height = 45},
     .selection = {.style = SelectionStyle::SolidFill, .cornerRadius = 0, .textInverted = true},
     .cover = {.style = CoverStyle::Default, .cornerRadius = 0},
-    .list = {.subtitleStyle = EpdFontFamily::REGULAR, .buttonMenuLabelStyle = EpdFontFamily::REGULAR},
+    .list = {.subtitleStyle = EpdFontFamily::REGULAR,
+             .buttonMenuLabelStyle = EpdFontFamily::REGULAR,
+             .rowHeight = 30,
+             .rowHeightWithSubtitle = 50,
+             .menuRowHeight = 45,
+             .menuSpacing = 8},
     .buttonHintsStyle = ButtonHintsStyle::Boxed,
     .sideButtonHintsStyle = SideButtonHintsStyle::Sharp,
     .tabBarStyle = TabBarStyle::Underline,
     .scrollIndicatorStyle = ScrollIndicatorStyle::Arrows,
     .batteryStyle = BatteryStyle::Solid,
-    .metrics = {.layout = {.topPadding = 5, .verticalSpacing = 10, .contentSidePadding = 20},
-                .battery = {.width = 15, .height = 12, .barHeight = 20},
-                .header = {.height = 45},
-                .buttonHints = {.height = 40, .sideWidth = 30},
-                .list = {.rowHeight = 30, .rowHeightWithSubtitle = 50, .menuRowHeight = 45, .menuSpacing = 8},
-                .tabBar = {.spacing = 10, .height = 50},
-                .scrollBar = {.width = 4, .rightOffset = 5},
-                .home = {.topPadding = 40,
-                         .coverHeight = 400,
-                         .coverTileHeight = 400,
-                         .recentBooksCount = 1,
-                         .continueReadingInMenu = false,
-                         .menuTopOffset = 10},
-                .progressBar = {.height = 16, .marginTop = 1},
-                .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
-                .keyboard = {.keyWidth = 22,
-                             .keyHeight = 40,
-                             .keySpacing = 0,
-                             .bottomKeyHeight = 35,
-                             .bottomKeySpacing = 5,
-                             .bottomAligned = true,
-                             .centeredText = false,
-                             .verticalOffset = -13,
-                             .textFieldWidthPercent = 85,
-                             .widthPercent = 90,
-                             .keyCornerRadius = 0,
-                             .fillUnselected = false,
-                             .outlineAllUnselected = false,
-                             .drawSpecialOutlineWhenUnselected = true,
-                             .secondaryLabelRightPadding = 1,
-                             .secondaryLabelTopPadding = 0,
-                             .minArrowHeadSize = 0},
-                .popup = {.topOffsetRatio = 0.075f,
-                          .marginX = 15,
-                          .marginY = 15,
-                          .frameThickness = 2,
-                          .cornerRadius = 0,
-                          .textBold = true,
-                          .textInverted = true,
-                          .textBaselineOffsetY = -2,
-                          .progress = {.barHeight = 4,
-                                       .drawOutline = false,
-                                       .clampPercent = false,
-                                       .fillInverted = true,
-                                       .outlineInverted = true}},
-                .textField = {.horizontalPadding = 6, .normalThickness = 1, .cursorThickness = 3, .lineEndOffset = 0}},
+    .layout = {.topPadding = 5, .verticalSpacing = 10, .contentSidePadding = 20},
+    .battery = {.width = 15, .height = 12, .barHeight = 20},
+    .buttonHints = {.height = 40, .sideWidth = 30},
+    .tabBar = {.spacing = 10, .height = 50},
+    .scrollBar = {.width = 4, .rightOffset = 5},
+    .home = {.topPadding = 40,
+             .coverHeight = 400,
+             .coverTileHeight = 400,
+             .recentBooksCount = 1,
+             .continueReadingInMenu = false,
+             .menuTopOffset = 10},
+    .progressBar = {.height = 16, .marginTop = 1},
+    .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
+    .keyboard = {.keyWidth = 22,
+                 .keyHeight = 40,
+                 .keySpacing = 0,
+                 .bottomKeyHeight = 35,
+                 .bottomKeySpacing = 5,
+                 .bottomAligned = true,
+                 .centeredText = false,
+                 .verticalOffset = -13,
+                 .textFieldWidthPercent = 85,
+                 .widthPercent = 90,
+                 .keyCornerRadius = 0,
+                 .fillUnselected = false,
+                 .outlineAllUnselected = false,
+                 .drawSpecialOutlineWhenUnselected = true,
+                 .secondaryLabelRightPadding = 1,
+                 .secondaryLabelTopPadding = 0,
+                 .minArrowHeadSize = 0},
+    .popup = {.topOffsetRatio = 0.075f,
+              .marginX = 15,
+              .marginY = 15,
+              .frameThickness = 2,
+              .cornerRadius = 0,
+              .textBold = true,
+              .textInverted = true,
+              .textBaselineOffsetY = -2,
+              .progress = {.barHeight = 4,
+                           .drawOutline = false,
+                           .clampPercent = false,
+                           .fillInverted = true,
+                           .outlineInverted = true}},
+    .textField = {.horizontalPadding = 6, .normalThickness = 1, .cursorThickness = 3, .lineEndOffset = 0},
     .showsFileIcons = false,
 };
 
@@ -162,62 +166,65 @@ const ThemeData Folio = {
     .header = {.style = HeaderStyle::LeftAlignedBordered,
                .titleStyle = EpdFontFamily::BOLD,
                .subtitleStyle = EpdFontFamily::ITALIC,
-               // 89-px header with a 3-px inner bottom border drawn inside it.
-               .bottomBorderHeight = 3},
+               .bottomBorderHeight = 3,
+               .height = 89},
     .selection = {.style = SelectionStyle::LayeredFrame, .cornerRadius = 0, .textInverted = false},
     .cover = {.style = CoverStyle::Default, .cornerRadius = 0},
-    .list = {.subtitleStyle = EpdFontFamily::ITALIC, .buttonMenuLabelStyle = EpdFontFamily::BOLD},
+    .list = {.subtitleStyle = EpdFontFamily::ITALIC,
+             .buttonMenuLabelStyle = EpdFontFamily::BOLD,
+             .rowHeight = 40,
+             .rowHeightWithSubtitle = 60,
+             .menuRowHeight = 56,
+             .menuSpacing = 14},
     .buttonHintsStyle = ButtonHintsStyle::Hairline,
     .sideButtonHintsStyle = SideButtonHintsStyle::Sharp,
     .tabBarStyle = TabBarStyle::Underline,
     .scrollIndicatorStyle = ScrollIndicatorStyle::Arrows,
     .batteryStyle = BatteryStyle::Solid,
-    .metrics = {.layout = {.topPadding = 5, .verticalSpacing = 10, .contentSidePadding = 18},
-                .battery = {.width = 16, .height = 12, .barHeight = 40},
-                .header = {.height = 89},
-                .buttonHints = {.height = 40, .sideWidth = 30},
-                .list = {.rowHeight = 40, .rowHeightWithSubtitle = 60, .menuRowHeight = 56, .menuSpacing = 14},
-                .tabBar = {.spacing = 8, .height = 40},
-                .scrollBar = {.width = 4, .rightOffset = 5},
-                .home = {.topPadding = 56,
-                         .coverHeight = 226,
-                         .coverTileHeight = 242,
-                         .recentBooksCount = 1,
-                         .continueReadingInMenu = false,
-                         .menuTopOffset = 16},
-                .progressBar = {.height = 16, .marginTop = 1},
-                .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
-                .keyboard = {.keyWidth = 31,
-                             .keyHeight = 40,
-                             .keySpacing = 0,
-                             .bottomKeyHeight = 35,
-                             .bottomKeySpacing = 5,
-                             .bottomAligned = true,
-                             .centeredText = false,
-                             .verticalOffset = -7,
-                             .textFieldWidthPercent = 85,
-                             .widthPercent = 90,
-                             .keyCornerRadius = 0,
-                             .fillUnselected = false,
-                             .outlineAllUnselected = false,
-                             .drawSpecialOutlineWhenUnselected = true,
-                             .secondaryLabelRightPadding = 1,
-                             .secondaryLabelTopPadding = 0,
-                             .minArrowHeadSize = 0},
-                .popup = {.topOffsetRatio = 0.165f,
-                          .marginX = 16,
-                          .marginY = 12,
-                          .frameThickness = 2,
-                          .cornerRadius = 0,
-                          .textBold = false,
-                          .textInverted = true,
-                          .textBaselineOffsetY = -2,
-                          .progress = {.barHeight = 4,
-                                       .drawOutline = false,
-                                       .clampPercent = false,
-                                       .fillInverted = false,
-                                       .outlineInverted = false}},
-                .textField = {.horizontalPadding = 6, .normalThickness = 1, .cursorThickness = 3, .lineEndOffset = 0}},
+    .layout = {.topPadding = 5, .verticalSpacing = 10, .contentSidePadding = 18},
+    .battery = {.width = 16, .height = 12, .barHeight = 40},
+    .buttonHints = {.height = 40, .sideWidth = 30},
+    .tabBar = {.spacing = 8, .height = 40},
+    .scrollBar = {.width = 4, .rightOffset = 5},
+    .home = {.topPadding = 56,
+             .coverHeight = 226,
+             .coverTileHeight = 242,
+             .recentBooksCount = 1,
+             .continueReadingInMenu = false,
+             .menuTopOffset = 16},
+    .progressBar = {.height = 16, .marginTop = 1},
+    .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
+    .keyboard = {.keyWidth = 31,
+                 .keyHeight = 40,
+                 .keySpacing = 0,
+                 .bottomKeyHeight = 35,
+                 .bottomKeySpacing = 5,
+                 .bottomAligned = true,
+                 .centeredText = false,
+                 .verticalOffset = -7,
+                 .textFieldWidthPercent = 85,
+                 .widthPercent = 90,
+                 .keyCornerRadius = 0,
+                 .fillUnselected = false,
+                 .outlineAllUnselected = false,
+                 .drawSpecialOutlineWhenUnselected = true,
+                 .secondaryLabelRightPadding = 1,
+                 .secondaryLabelTopPadding = 0,
+                 .minArrowHeadSize = 0},
+    .popup = {.topOffsetRatio = 0.165f,
+              .marginX = 16,
+              .marginY = 12,
+              .frameThickness = 2,
+              .cornerRadius = 0,
+              .textBold = false,
+              .textInverted = true,
+              .textBaselineOffsetY = -2,
+              .progress = {.barHeight = 4,
+                           .drawOutline = false,
+                           .clampPercent = false,
+                           .fillInverted = false,
+                           .outlineInverted = false}},
+    .textField = {.horizontalPadding = 6, .normalThickness = 1, .cursorThickness = 3, .lineEndOffset = 0},
     .showsFileIcons = false,
 };
 
@@ -234,61 +241,65 @@ const ThemeData Lyra = {
     .header = {.style = HeaderStyle::LeftAlignedWithRule,
                .titleStyle = EpdFontFamily::BOLD,
                .subtitleStyle = EpdFontFamily::REGULAR,
-               .bottomBorderHeight = 0},
+               .bottomBorderHeight = 0,
+               .height = 84},
     .selection = {.style = SelectionStyle::RoundedFill, .cornerRadius = 6, .textInverted = false},
     .cover = {.style = CoverStyle::Card, .cornerRadius = 0},
-    .list = {.subtitleStyle = EpdFontFamily::REGULAR, .buttonMenuLabelStyle = EpdFontFamily::REGULAR},
+    .list = {.subtitleStyle = EpdFontFamily::REGULAR,
+             .buttonMenuLabelStyle = EpdFontFamily::REGULAR,
+             .rowHeight = 40,
+             .rowHeightWithSubtitle = 60,
+             .menuRowHeight = 64,
+             .menuSpacing = 8},
     .buttonHintsStyle = ButtonHintsStyle::RoundedFilled,
     .sideButtonHintsStyle = SideButtonHintsStyle::Rounded,
     .tabBarStyle = TabBarStyle::DitheredRounded,
     .scrollIndicatorStyle = ScrollIndicatorStyle::LineThumb,
     .batteryStyle = BatteryStyle::Segmented,
-    .metrics = {.layout = {.topPadding = 5, .verticalSpacing = 16, .contentSidePadding = 20},
-                .battery = {.width = 16, .height = 12, .barHeight = 40},
-                .header = {.height = 84},
-                .buttonHints = {.height = 40, .sideWidth = 30},
-                .list = {.rowHeight = 40, .rowHeightWithSubtitle = 60, .menuRowHeight = 64, .menuSpacing = 8},
-                .tabBar = {.spacing = 8, .height = 40},
-                .scrollBar = {.width = 4, .rightOffset = 5},
-                .home = {.topPadding = 56,
-                         .coverHeight = 226,
-                         .coverTileHeight = 242,
-                         .recentBooksCount = 1,
-                         .continueReadingInMenu = false,
-                         .menuTopOffset = 16},
-                .progressBar = {.height = 16, .marginTop = 1},
-                .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
-                .keyboard = {.keyWidth = 31,
-                             .keyHeight = 40,
-                             .keySpacing = 0,
-                             .bottomKeyHeight = 35,
-                             .bottomKeySpacing = 5,
-                             .bottomAligned = true,
-                             .centeredText = false,
-                             .verticalOffset = -7,
-                             .textFieldWidthPercent = 85,
-                             .widthPercent = 90,
-                             .keyCornerRadius = 6,
-                             .fillUnselected = false,
-                             .outlineAllUnselected = false,
-                             .drawSpecialOutlineWhenUnselected = true,
-                             .secondaryLabelRightPadding = 1,
-                             .secondaryLabelTopPadding = 0,
-                             .minArrowHeadSize = 0},
-                .popup = {.topOffsetRatio = 0.165f,
-                          .marginX = 16,
-                          .marginY = 12,
-                          .frameThickness = 2,
-                          .cornerRadius = 6,
-                          .textBold = false,
-                          .textInverted = false,
-                          .textBaselineOffsetY = -2,
-                          .progress = {.barHeight = 4,
-                                       .drawOutline = false,
-                                       .clampPercent = false,
-                                       .fillInverted = false,
-                                       .outlineInverted = false}},
-                .textField = {.horizontalPadding = 6, .normalThickness = 1, .cursorThickness = 3, .lineEndOffset = 0}},
+    .layout = {.topPadding = 5, .verticalSpacing = 16, .contentSidePadding = 20},
+    .battery = {.width = 16, .height = 12, .barHeight = 40},
+    .buttonHints = {.height = 40, .sideWidth = 30},
+    .tabBar = {.spacing = 8, .height = 40},
+    .scrollBar = {.width = 4, .rightOffset = 5},
+    .home = {.topPadding = 56,
+             .coverHeight = 226,
+             .coverTileHeight = 242,
+             .recentBooksCount = 1,
+             .continueReadingInMenu = false,
+             .menuTopOffset = 16},
+    .progressBar = {.height = 16, .marginTop = 1},
+    .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
+    .keyboard = {.keyWidth = 31,
+                 .keyHeight = 40,
+                 .keySpacing = 0,
+                 .bottomKeyHeight = 35,
+                 .bottomKeySpacing = 5,
+                 .bottomAligned = true,
+                 .centeredText = false,
+                 .verticalOffset = -7,
+                 .textFieldWidthPercent = 85,
+                 .widthPercent = 90,
+                 .keyCornerRadius = 6,
+                 .fillUnselected = false,
+                 .outlineAllUnselected = false,
+                 .drawSpecialOutlineWhenUnselected = true,
+                 .secondaryLabelRightPadding = 1,
+                 .secondaryLabelTopPadding = 0,
+                 .minArrowHeadSize = 0},
+    .popup = {.topOffsetRatio = 0.165f,
+              .marginX = 16,
+              .marginY = 12,
+              .frameThickness = 2,
+              .cornerRadius = 6,
+              .textBold = false,
+              .textInverted = false,
+              .textBaselineOffsetY = -2,
+              .progress = {.barHeight = 4,
+                           .drawOutline = false,
+                           .clampPercent = false,
+                           .fillInverted = false,
+                           .outlineInverted = false}},
+    .textField = {.horizontalPadding = 6, .normalThickness = 1, .cursorThickness = 3, .lineEndOffset = 0},
     .showsFileIcons = true,
 };
 
@@ -305,62 +316,65 @@ const ThemeData RoundedRaff = {
     .header = {.style = HeaderStyle::LeftAlignedPlain,
                .titleStyle = EpdFontFamily::BOLD,
                .subtitleStyle = EpdFontFamily::REGULAR,
-               .bottomBorderHeight = 0},
+               .bottomBorderHeight = 0,
+               .height = 45},
     .selection = {.style = SelectionStyle::RoundedRowAlways, .cornerRadius = 20, .textInverted = true},
     .cover = {.style = CoverStyle::CardRounded, .cornerRadius = 18},
-    .list = {.subtitleStyle = EpdFontFamily::REGULAR, .buttonMenuLabelStyle = EpdFontFamily::BOLD},
+    .list = {.subtitleStyle = EpdFontFamily::REGULAR,
+             .buttonMenuLabelStyle = EpdFontFamily::BOLD,
+             .rowHeight = 42,
+             .rowHeightWithSubtitle = 69,
+             .menuRowHeight = 42,
+             .menuSpacing = 6},
     .buttonHintsStyle = ButtonHintsStyle::PairedGroups,
     .sideButtonHintsStyle = SideButtonHintsStyle::Sharp,
     .tabBarStyle = TabBarStyle::SlotRounded,
     .scrollIndicatorStyle = ScrollIndicatorStyle::Thumb,
     .batteryStyle = BatteryStyle::Solid,
-    .metrics = {.layout = {.topPadding = 0, .verticalSpacing = 10, .contentSidePadding = 20},
-                .battery = {.width = 15, .height = 12, .barHeight = 20},
-                .header = {.height = 45},
-                .buttonHints = {.height = 40, .sideWidth = 30},
-                .list = {.rowHeight = 42, .rowHeightWithSubtitle = 69, .menuRowHeight = 42, .menuSpacing = 6},
-                .tabBar = {.spacing = 10, .height = 50},
-                .scrollBar = {.width = 4, .rightOffset = 5},
-                .home = {.topPadding = 55,
-                         .coverHeight = 300,
-                         .coverTileHeight = 350,
-                         .recentBooksCount = 1,
-                         .continueReadingInMenu = true,
-                         .menuTopOffset = 20},
-                .progressBar = {.height = 16, .marginTop = 1},
-                .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
-                .keyboard = {.keyWidth = 22,
-                             .keyHeight = 30,
-                             .keySpacing = 10,
-                             .bottomKeyHeight = 30,
-                             .bottomKeySpacing = 5,
-                             .bottomAligned = true,
-                             .centeredText = false,
-                             .verticalOffset = 0,
-                             .textFieldWidthPercent = 85,
-                             .widthPercent = 90,
-                             .keyCornerRadius = 10,
-                             .fillUnselected = true,
-                             .outlineAllUnselected = true,
-                             .drawSpecialOutlineWhenUnselected = true,
-                             .secondaryLabelRightPadding = 3,
-                             .secondaryLabelTopPadding = 1,
-                             .minArrowHeadSize = 1},
-                .popup = {.topOffsetRatio = 0.12f,
-                          .marginX = 20,
-                          .marginY = 14,
-                          .frameThickness = 2,
-                          .cornerRadius = 18,
-                          .textBold = true,
-                          .textInverted = false,
-                          .textBaselineOffsetY = -2,
-                          .progress = {.barHeight = 4,
-                                       .drawOutline = true,
-                                       .clampPercent = true,
-                                       .fillInverted = false,
-                                       .outlineInverted = false}},
-                .textField = {
-                    .horizontalPadding = 8, .normalThickness = 2, .cursorThickness = 3, .lineEndOffset = -1}},
+    .layout = {.topPadding = 0, .verticalSpacing = 10, .contentSidePadding = 20},
+    .battery = {.width = 15, .height = 12, .barHeight = 20},
+    .buttonHints = {.height = 40, .sideWidth = 30},
+    .tabBar = {.spacing = 10, .height = 50},
+    .scrollBar = {.width = 4, .rightOffset = 5},
+    .home = {.topPadding = 55,
+             .coverHeight = 300,
+             .coverTileHeight = 350,
+             .recentBooksCount = 1,
+             .continueReadingInMenu = true,
+             .menuTopOffset = 20},
+    .progressBar = {.height = 16, .marginTop = 1},
+    .statusBar = {.horizontalMargin = 5, .verticalMargin = 19},
+    .keyboard = {.keyWidth = 22,
+                 .keyHeight = 30,
+                 .keySpacing = 10,
+                 .bottomKeyHeight = 30,
+                 .bottomKeySpacing = 5,
+                 .bottomAligned = true,
+                 .centeredText = false,
+                 .verticalOffset = 0,
+                 .textFieldWidthPercent = 85,
+                 .widthPercent = 90,
+                 .keyCornerRadius = 10,
+                 .fillUnselected = true,
+                 .outlineAllUnselected = true,
+                 .drawSpecialOutlineWhenUnselected = true,
+                 .secondaryLabelRightPadding = 3,
+                 .secondaryLabelTopPadding = 1,
+                 .minArrowHeadSize = 1},
+    .popup = {.topOffsetRatio = 0.12f,
+              .marginX = 20,
+              .marginY = 14,
+              .frameThickness = 2,
+              .cornerRadius = 18,
+              .textBold = true,
+              .textInverted = false,
+              .textBaselineOffsetY = -2,
+              .progress = {.barHeight = 4,
+                           .drawOutline = true,
+                           .clampPercent = true,
+                           .fillInverted = false,
+                           .outlineInverted = false}},
+    .textField = {.horizontalPadding = 8, .normalThickness = 2, .cursorThickness = 3, .lineEndOffset = -1},
     .showsFileIcons = false,
 };
 
@@ -543,8 +557,8 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
 
   const int pageHeight = renderer.getScreenHeight();
-  const int buttonY = data->metrics.buttonHints.height;
-  const int buttonHeight = data->metrics.buttonHints.height;
+  const int buttonY = data->buttonHints.height;
+  const int buttonHeight = data->buttonHints.height;
   const char* labels[] = {btn1, btn2, btn3, btn4};
 
   switch (data->buttonHintsStyle) {
@@ -615,7 +629,7 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
       constexpr int groupCornerRadius = 15;
       constexpr int innerEdgePadding = 16;
       const int pageWidth = renderer.getScreenWidth();
-      const int hintHeight = data->metrics.buttonHints.height - 10;
+      const int hintHeight = data->buttonHints.height - 10;
       const int groupWidth = (pageWidth - sidePadding * 2 - groupGap) / 2;
       const int hintY = pageHeight - hintHeight - bottomMargin;
       const int textY = hintY + (hintHeight - renderer.getLineHeight(SMALL_FONT_ID)) / 2;
@@ -655,7 +669,7 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
 
 void BaseTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const {
   const int screenWidth = renderer.getScreenWidth();
-  const int buttonWidth = data->metrics.buttonHints.sideWidth;
+  const int buttonWidth = data->buttonHints.sideWidth;
   const bool rounded = data->sideButtonHintsStyle == SideButtonHintsStyle::Rounded;
   constexpr int roundedCornerRadius = 6;
   // Lyra uses a slightly taller side button + 0 margin; Sharp uses a 4-px
@@ -871,7 +885,7 @@ void BaseTheme::drawSelectionFrame(const GfxRenderer& renderer, Rect rect) {
 // ============================================================================
 
 void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* title, const char* subtitle) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int titleFont = getFontForRole(FontRole::Title);
   const int captionFont = getFontForRole(FontRole::Caption);
   const bool hasTitle = title != nullptr && title[0] != '\0';
@@ -1007,7 +1021,7 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
 }
 
 void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char* label, const char* rightLabel) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int titleFont = getFontForRole(FontRole::Title);
   int currentX = rect.x + m.layout.contentSidePadding;
   int rightSpace = m.layout.contentSidePadding;
@@ -1032,7 +1046,7 @@ void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char
 
 void BaseTheme::drawTabBar(const GfxRenderer& renderer, const Rect rect, const std::vector<TabInfo>& tabs,
                            bool selected) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int tabFont = getFontForRole(FontRole::Title);
 
   switch (data->tabBarStyle) {
@@ -1137,8 +1151,8 @@ void drawScrollIndicator(const ThemeData& data, const GfxRenderer& renderer, Rec
       break;
     }
     case ScrollIndicatorStyle::Thumb: {
-      const int barW = data.metrics.scrollBar.width;
-      const int barX = rect.x + rect.width - data.metrics.scrollBar.rightOffset - barW;
+      const int barW = data.scrollBar.width;
+      const int barX = rect.x + rect.width - data.scrollBar.rightOffset - barW;
       const int barY = rect.y;
       const int barH = rect.height;
       const int thumbH = std::max(10, (barH * pageItems) / itemCount);
@@ -1150,8 +1164,8 @@ void drawScrollIndicator(const ThemeData& data, const GfxRenderer& renderer, Rec
       break;
     }
     case ScrollIndicatorStyle::LineThumb: {
-      const int barW = data.metrics.scrollBar.width;
-      const int barX = rect.x + rect.width - data.metrics.scrollBar.rightOffset;
+      const int barW = data.scrollBar.width;
+      const int barX = rect.x + rect.width - data.scrollBar.rightOffset;
       const int barY = rect.y;
       const int barH = rect.height;
       const int totalPages = (itemCount + pageItems - 1) / pageItems;
@@ -1173,7 +1187,7 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
                          const std::function<UIIcon(int index)>& rowIcon,
                          const std::function<std::string(int index)>& rowValue, bool highlightValue,
                          const std::function<bool(int index)>& rowDimmed) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int bodyFont = getFontForRole(FontRole::Body);
   const int captionFont = getFontForRole(FontRole::Caption);
   const bool hasSubtitle = static_cast<bool>(rowSubtitle);
@@ -1347,7 +1361,7 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
 void BaseTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
                                const std::function<std::string(int index)>& buttonLabel,
                                const std::function<UIIcon(int index)>& rowIcon) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int labelFont = getFontForRole(FontRole::Heading);
   const int rowH = m.list.menuRowHeight;
   const int rowStep = rowH + m.list.menuSpacing;
@@ -1428,7 +1442,7 @@ void BaseTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
 // ============================================================================
 
 Rect BaseTheme::drawPopup(const GfxRenderer& renderer, const char* message) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int marginX = m.popup.marginX;
   const int marginY = m.popup.marginY;
   const int frameThickness = m.popup.frameThickness;
@@ -1457,7 +1471,7 @@ Rect BaseTheme::drawPopup(const GfxRenderer& renderer, const char* message) cons
 }
 
 void BaseTheme::fillPopupProgress(const GfxRenderer& renderer, const Rect& layout, const int progress) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int barHeight = m.popup.progress.barHeight;
   const int barWidth = std::max(0, layout.width - m.popup.marginX * 2);
   const int barX = layout.x + (layout.width - barWidth) / 2;
@@ -1484,7 +1498,7 @@ void BaseTheme::fillPopupProgress(const GfxRenderer& renderer, const Rect& layou
 void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, const int currentPage,
                               const int pageCount, std::string title, const int paddingBottom,
                               const int textYOffset) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
   renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
                                    &orientedMarginLeft);
@@ -1573,7 +1587,7 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
 // ============================================================================
 
 void BaseTheme::drawHelpText(const GfxRenderer& renderer, Rect rect, const char* label) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   auto truncated =
       renderer.truncatedText(SMALL_FONT_ID, label, rect.width - m.layout.contentSidePadding * 2, EpdFontFamily::REGULAR);
   renderer.drawCenteredText(SMALL_FONT_ID, rect.y, truncated.c_str());
@@ -1581,7 +1595,7 @@ void BaseTheme::drawHelpText(const GfxRenderer& renderer, Rect rect, const char*
 
 void BaseTheme::drawTextField(const GfxRenderer& renderer, Rect rect, const int textWidth, bool cursorMode,
                               int contentStartX, int contentWidth) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int lineHeight = renderer.getLineHeight(UI_12_FONT_ID);
   const int lineY = rect.y + rect.height + lineHeight + m.layout.verticalSpacing;
   const int thickness = cursorMode ? m.textField.cursorThickness : m.textField.normalThickness;
@@ -1598,7 +1612,7 @@ void BaseTheme::drawTextField(const GfxRenderer& renderer, Rect rect, const int 
 void BaseTheme::drawKeyboardKey(const GfxRenderer& renderer, Rect rect, const char* label, const bool isSelected,
                                 const char* secondaryLabel, const KeyboardKeyType keyType,
                                 const bool inactiveSelection) const {
-  const auto& m = data->metrics;
+  const auto& m = *data;
   const int cr = m.keyboard.keyCornerRadius;
   const bool isSpecialKey = keyType == KeyboardKeyType::Shift || keyType == KeyboardKeyType::Mode ||
                             keyType == KeyboardKeyType::Del || keyType == KeyboardKeyType::Space ||
@@ -1698,7 +1712,7 @@ void drawDefaultCover(GfxRenderer& renderer, Rect rect, const ThemeData& data,
                       const std::vector<RecentBook>& recentBooks, int selectorIndex, bool& coverRendered,
                       bool& coverBufferStored, bool& bufferRestored,
                       const std::function<bool()>& storeCoverBuffer) {
-  const auto& m = data.metrics;
+  const auto& m = data;
   const bool hasContinueReading = !recentBooks.empty();
   const bool bookSelected = hasContinueReading && selectorIndex == 0;
   const int baseHeight = rect.height;
@@ -1827,7 +1841,7 @@ void drawCardCover(GfxRenderer& renderer, Rect rect, const ThemeData& data,
                    const std::vector<RecentBook>& recentBooks, int selectorIndex, bool& coverRendered,
                    bool& coverBufferStored, bool& /*bufferRestored*/,
                    const std::function<bool()>& storeCoverBuffer) {
-  const auto& m = data.metrics;
+  const auto& m = data;
   const bool rounded = data.cover.style == CoverStyle::CardRounded;
   const int coverRadius = data.cover.cornerRadius;
   const int rowRadius = data.selection.cornerRadius;

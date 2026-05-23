@@ -28,15 +28,15 @@ void CrashActivity::loop() {
 void CrashActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& td = *GUI.getData();
   const auto pageWidth = renderer.getScreenWidth();
-  const auto contentWidth = pageWidth - 2 * metrics.layout.contentSidePadding;
-  const auto x = metrics.layout.contentSidePadding;
+  const auto contentWidth = pageWidth - 2 * td.layout.contentSidePadding;
+  const auto x = td.layout.contentSidePadding;
   const auto lineHeight = renderer.getLineHeight(UI_10_FONT_ID);
 
-  GUI.drawHeader(renderer, Rect{0, metrics.layout.topPadding, pageWidth, metrics.header.height}, tr(STR_CRASH_TITLE));
+  GUI.drawHeader(renderer, Rect{0, td.layout.topPadding, pageWidth, td.header.height}, tr(STR_CRASH_TITLE));
 
-  int y = metrics.layout.topPadding + metrics.header.height + metrics.layout.verticalSpacing;
+  int y = td.layout.topPadding + td.header.height + td.layout.verticalSpacing;
 
   auto descLines = renderer.wrappedText(UI_10_FONT_ID, tr(STR_CRASH_DESCRIPTION), contentWidth, 10);
   for (const auto& line : descLines) {
@@ -44,9 +44,9 @@ void CrashActivity::render(RenderLock&&) {
     y += lineHeight;
   }
 
-  y += metrics.layout.verticalSpacing * 2;
+  y += td.layout.verticalSpacing * 2;
   renderer.drawText(UI_10_FONT_ID, x, y, tr(STR_CRASH_REASON));
-  y += lineHeight + metrics.layout.verticalSpacing;
+  y += lineHeight + td.layout.verticalSpacing;
 
   auto panicLines = renderer.wrappedText(UI_10_FONT_ID, panicMessage.c_str(), contentWidth, 5);
   for (const auto& line : panicLines) {
