@@ -15,7 +15,6 @@
 #include "I18n.h"
 #include "RecentBooksStore.h"
 #include "ThemeFontRegistry.h"
-#include "ThemeData.h"
 #include "components/UITheme.h"
 #include "components/icons/book.h"
 #include "components/icons/book24.h"
