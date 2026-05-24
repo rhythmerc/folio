@@ -513,17 +513,20 @@ void LibraryActivity::renderBookTile(int slotIndex, const LibraryBook& book, boo
   const int coverAreaW = cell.width;
   const int coverY = cell.y + TILE_PAD_TOP;
 
+  const auto& lib = GUI.getData()->library;
+
   // Default frame for the title-only fallback (no thumb on disk).
   int frameX = cell.x + (cell.width - COVER_W) / 2;
   int frameY = coverY;
   int frameW = COVER_W;
   int frameH = COVER_H;
 
-  bool drewCover = false;
   const std::string thumbPath =
       std::string("/.crosspoint/epub_") + std::to_string(book.pathHash) + "/thumb_144.bmp";
   int bmpW = 0, bmpH = 0;
-  if (renderer.getCachedBitmapDimensions(thumbPath.c_str(), &bmpW, &bmpH) && bmpW > 0 && bmpH > 0) {
+  const bool haveThumb =
+      renderer.getCachedBitmapDimensions(thumbPath.c_str(), &bmpW, &bmpH) && bmpW > 0 && bmpH > 0;
+  if (haveThumb) {
     // Fit-to-box against (cell.width × COVER_H), preserving aspect.
     float scale = 1.0f;
     if (bmpW > coverAreaW) scale = static_cast<float>(coverAreaW) / static_cast<float>(bmpW);
@@ -537,17 +540,31 @@ void LibraryActivity::renderBookTile(int slotIndex, const LibraryBook& book, boo
     frameY = coverY + (COVER_H - drawnH) / 2;
     frameW = drawnW;
     frameH = drawnH;
-    // Clear just the bitmap rect to white. drawCachedBitmap only writes
-    // black pixels; the white substrate keeps the selection background
-    // (Lyra / Classic / RoundedRaff) showing in the slot margins around
-    // the cover.
-    renderer.fillRect(frameX, frameY, frameW, frameH, false);
+  }
+
+  // Drop shadow first — the white substrate fill below overpaints the part
+  // underneath the cover, leaving only the offset L-shape visible. Drawing
+  // a full rounded rect (vs. two offset lines) means the shadow's curve
+  // naturally matches the cover's when coverBorderRadius > 0.
+  if (lib.coverDropShadowOffsetX > 0 || lib.coverDropShadowOffsetY > 0) {
+    renderer.fillRoundedRect(frameX + lib.coverDropShadowOffsetX, frameY + lib.coverDropShadowOffsetY,
+                             frameW, frameH, lib.coverBorderRadius,
+                             invertText ? Color::White : Color::Black);
+  }
+
+  // White substrate. drawCachedBitmap only writes black pixels, so the white
+  // fill keeps the selection background showing in the slot margins around
+  // the cover — and overpaints the shadow rect everywhere except the
+  // offset L-shape poking out the bottom-right.
+  renderer.fillRect(frameX, frameY, frameW, frameH, false);
+
+  bool drewCover = false;
+  if (haveThumb) {
     drewCover = renderer.drawCachedBitmap(thumbPath.c_str(), frameX, frameY, frameW, frameH);
   }
   if (!drewCover) {
-    // Fallback: title-only "cover" — outlined rectangle with the first
-    // line of the title centered inside.
-    renderer.fillRect(frameX, frameY, frameW, frameH, false);
+    // Fallback: title-only "cover" — first line of the title centered inside
+    // the (already-filled) frame.
     const std::string trunc =
         renderer.truncatedText(captionFont, book.title.c_str(), COVER_W - 12, EpdFontFamily::BOLD);
     const int tw = renderer.getTextWidth(captionFont, trunc.c_str(), EpdFontFamily::BOLD);
@@ -555,10 +572,21 @@ void LibraryActivity::renderBookTile(int slotIndex, const LibraryBook& book, boo
                       trunc.c_str(), true, EpdFontFamily::BOLD);
   }
 
-  // 1 px outer border + 1 px offset drop shadow on the cover (Folio motif).
-  renderer.drawRect(frameX, frameY, frameW, frameH, !invertText);
-  renderer.drawLine(frameX + 1, frameY + frameH, frameX + frameW, frameY + frameH, !invertText);
-  renderer.drawLine(frameX + frameW, frameY + 1, frameX + frameW, frameY + frameH, !invertText);
+  // Clip the (square) bitmap to the rounded shape — drawCachedBitmap paints
+  // black into the corner pixels outside the curve, which would poke past
+  // the rounded border. Mask color is the backdrop: black when the selection
+  // inverts text (dark fill behind the tile), white otherwise.
+  if (lib.coverBorderRadius > 0) {
+    renderer.maskRoundedRectOutsideCorners(frameX, frameY, frameW, frameH, lib.coverBorderRadius,
+                                           invertText ? Color::Black : Color::White);
+  }
+
+  // Border last, on top of the bitmap. drawRoundedRect with radius 0
+  // degenerates to a plain rectangle, preserving Folio's square look.
+  if (lib.coverBorderWidth > 0) {
+    renderer.drawRoundedRect(frameX, frameY, frameW, frameH, lib.coverBorderWidth, lib.coverBorderRadius,
+                             !invertText);
+  }
 
   // ---- Text area (fixed-height, title + author centered vertically) -----
   // Card height is fixed (see TILE_CONTENT_H), so the title + author block

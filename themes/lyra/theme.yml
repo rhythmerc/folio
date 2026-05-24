@@ -91,6 +91,9 @@ keyboard:
   minArrowHeadSize: 0
 
 library:
+  coverBorderRadius: 3
+  coverDropShadowOffsetX: 2
+  coverDropShadowOffsetY: 2
   pageIndicatorShape: rounded-rect 
   pageIndicatorSize: 16
   pageIndicatorCornerRadius: 2

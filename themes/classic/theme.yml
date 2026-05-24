@@ -90,6 +90,10 @@ keyboard:
   secondaryLabelTopPadding: 0
   minArrowHeadSize: 0
 
+library:
+  coverDropShadowOffsetX: 0
+  coverDropShadowOffsetY: 0
+
 popup:
   topOffsetRatio: 0.075
   marginX: 15

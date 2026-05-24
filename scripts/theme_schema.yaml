@@ -237,6 +237,10 @@ struct:
       - { cpp: pageIndicatorFillSelected,    type: Color,          default: Color::Black }
       - { cpp: pageIndicatorCornerRadius,    type: int,            default: 3 }
       - { cpp: pageIndicatorGap,             type: int,            default: 10 }
+      - { cpp: coverBorderRadius,            type: int,            default: 0 }
+      - { cpp: coverBorderWidth,             type: int,            default: 1 }
+      - { cpp: coverDropShadowOffsetX,       type: int,            default: 3 }
+      - { cpp: coverDropShadowOffsetY,       type: int,            default: 3 }
 
   - group: popup
     struct_name: Popup
