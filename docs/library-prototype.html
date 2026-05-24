@@ -57,16 +57,12 @@
   }
 
   /* Header — 89px tall with a 3px inner bottom border --------------------- */
-  /* No status row, no breadcrumb — just title + italic subtitle + battery. */
   .header {
     height: 89px;
     border-bottom: 3px solid var(--ink);
     padding: 0 18px;
     position: relative;
   }
-  /* Battery (Folio: BatteryStyle::Solid) — outlined cell with horizontal */
-  /* fill bar + 2-px terminal nub. Sits flush top-right, no percentage    */
-  /* text rendered here (Library doesn't paint one in the current code).  */
   .battery {
     position: absolute;
     top: 11px;
@@ -143,7 +139,7 @@
     align-items: start;
     height: 100%;
   }
-  .shelf[hidden] { display: none; }
+  .book.page-hidden { display: none; }
 
   /* Book tile — fixed content height so the selection frame and inter-tile */
   /* spacing read the same for every card regardless of title length /      */
@@ -153,50 +149,25 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* TILE_PAD_TOP = 4 in the device: the cover sits 4 px below the cell  */
-    /* top so the layered frame (which extends 8 px past the content) ends */
-    /* up only 4 px above the cell top — leaving the visible breathing     */
-    /* room between the header band and the selection frame.               */
     padding-top: 4px;
   }
 
-  /* Folio's LayeredFrame selection: outer 2-px ink rect + 1-px paper gap   */
-  /* + inner 2-px ink rect + corner brackets (TL + BR, 8-px arms, 2-px      */
-  /* stroke). No background fill — paper stays paper.                       */
-  /*                                                                        */
-  /* Device geometry (LibraryActivity.cpp): the frame is positioned         */
-  /* outside the tile content by kFrameInsetX = 3 horizontally and          */
-  /* kFrameInsetY = 8 vertically, so the cover/progress have visible        */
-  /* breathing room from the layered border.                                */
+  /* Folio's LayeredFrame selection (book tile) --------------------------- */
   .book.selected .frame {
     position: absolute;
-    /* Top is -4 (not -8) because the cover sits 4 px inside .book via      */
-    /* padding-top, so the visible 8-px gap between frame and cover top is  */
-    /* split 4 (padding) + 4 (negative offset). Bottom is -8 since there's  */
-    /* no padding-bottom on .book — the progress bar ends at .book.bottom.  */
     top: -4px;
     bottom: -8px;
     left: -3px;
     right: -3px;
     pointer-events: none;
   }
-  .menu-item.selected .frame {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-  .book.selected .frame::before,
-  .menu-item.selected .frame::before {
-    /* Outer 2-px ink border */
+  .book.selected .frame::before {
     content: "";
     position: absolute;
     inset: 0;
     border: 2px solid var(--ink);
   }
-  .book.selected .frame::after,
-  .menu-item.selected .frame::after {
-    /* Inner 2-px ink border, 1 px paper gap between this and the outer */
-    /* border (the gap is just background showing through).             */
+  .book.selected .frame::after {
     content: "";
     position: absolute;
     inset: 3px;
@@ -208,8 +179,6 @@
     height: 8px;
     pointer-events: none;
   }
-  /* Brackets sit 1 px inside the frame's outer ink corner (matches the   */
-  /* device's drawCornerBrackets: rx+1, ry+1 / rect.right-strokePx, etc.) */
   .book.selected .corner.tl {
     top: -3px; left: -2px;
     border-top: 2px solid var(--ink);
@@ -220,24 +189,10 @@
     border-bottom: 2px solid var(--ink);
     border-right: 2px solid var(--ink);
   }
-  .menu-item.selected .corner.tl {
-    top: 1px; left: 1px;
-    border-top: 2px solid var(--ink);
-    border-left: 2px solid var(--ink);
-  }
-  .menu-item.selected .corner.br {
-    bottom: 1px; right: 1px;
-    border-bottom: 2px solid var(--ink);
-    border-right: 2px solid var(--ink);
-  }
   .book .frame,
-  .book .corner,
-  .menu-item .frame,
-  .menu-item .corner { display: none; }
+  .book .corner { display: none; }
   .book.selected .frame,
-  .book.selected .corner,
-  .menu-item.selected .frame,
-  .menu-item.selected .corner { display: block; }
+  .book.selected .corner { display: block; }
 
   /* Cover — 80 × 120 (Folio's COVER_W × COVER_H) + 1-px drop shadow ------ */
   .cover {
@@ -250,8 +205,7 @@
     box-shadow: 1px 1px 0 var(--ink);
   }
 
-  /* Book text block — reserved 60-px area (TILE_TEXT_AREA_H), title +      */
-  /* author centered vertically inside.                                     */
+  /* Book text block — reserved 60-px area (TILE_TEXT_AREA_H) ------------- */
   .book-text {
     width: 100%;
     height: 60px;
@@ -280,8 +234,7 @@
     opacity: 0.85;
   }
 
-  /* Progress bar — 80 px wide (matches cover), anchored at the bottom     */
-  /* of the reserved text area so every row aligns horizontally.            */
+  /* Progress bar --------------------------------------------------------- */
   .progress {
     margin-top: 3px;
     width: 80px;
@@ -298,8 +251,7 @@
   }
   .progress.unread { visibility: hidden; }
 
-  /* Right-side page rail — square ticks (Folio's Library.pageIndicator).  */
-  /* Rotated "page X / total" sits at the rail bottom.                     */
+  /* Right-side page rail ------------------------------------------------- */
   .rail {
     display: flex;
     flex-direction: column;
@@ -326,11 +278,7 @@
     letter-spacing: 0.6px;
   }
 
-  /* Footer — Folio Hairline button hints.                                 */
-  /* X coordinates and width still match BaseTheme::drawButtonHints (X4    */
-  /* portrait): x = 25, 130, 245, 350 | button = 106 × 40.                 */
-  /* Each hint is outline-only (no fill); label is italic, centered, with  */
-  /* a 22-px horizontal rule beneath.                                      */
+  /* Footer — Folio Hairline button hints. -------------------------------- */
   .footer {
     position: absolute;
     bottom: 0; left: 0; right: 0;
@@ -363,89 +311,85 @@
     width: 22px;
     height: 0;
     border-top: 1px solid var(--ink);
-    /* Anchor rule 12 px from the button's bottom edge */
     position: absolute;
     bottom: 12px;
   }
   .btn:disabled,
   .btn.hidden { visibility: hidden; }
+  .btn.dimmed { opacity: 0.35; }
   .btn-1 { left: 25px; }
   .btn-2 { left: 130px; }
   .btn-3 { left: 245px; }
   .btn-4 { left: 350px; }
 
   /* ---------------------------------------------------------------------- */
-  /*  Menu view — replaces the content area when open                      */
-  /*  Three items: roman numeral + bold title + 30-px rule + italic meta.   */
+  /*  Popup menu — cascading panels anchored to the bottom-left of content. */
+  /*  Pops "up" from the Menu button hint. Each panel is a paper-coloured   */
+  /*  block with a 2-px ink border and a hard offset shadow (matches the    */
+  /*  cover-tile shadow vocabulary).                                        */
   /* ---------------------------------------------------------------------- */
-  .menu-view {
+  .popup-host {
     position: absolute;
-    inset: 0;
-    background: var(--paper);
-    background-image:
-      radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
-      radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
-    background-size: 3px 3px, 7px 7px;
-    background-position: 0 0, 1px 2px;
-    padding: 30px 30px;
+    left: 0;
+    bottom: 0;
+    z-index: 20;
     display: flex;
-    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    pointer-events: none;
   }
-  .menu-view[hidden] { display: none; }
-  .menu-list {
+  .popup-host[hidden] { display: none; }
+  .popup-list {
     list-style: none;
-    margin: 0; padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    flex: 1;
+    margin: 0;
+    padding: 4px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
+    min-width: 168px;
+    pointer-events: auto;
   }
-  .menu-item {
+  .popup-list[hidden] { display: none; }
+  .popup-item {
     position: relative;
-    padding: 14px 16px;
-    border: 1px solid transparent;
+    padding: 7px 10px;
     display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    flex: 1;
-  }
-  .menu-num {
+    align-items: center;
+    gap: 6px;
     font-family: "Iowan Old Style", "Charter", Georgia, serif;
-    font-style: italic;
-    font-weight: 500;
-    font-size: 20px;
-    letter-spacing: 0.3px;
-    min-width: 36px;
-    margin-top: 2px;
-    opacity: 0.6;
-  }
-  .menu-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  .menu-label {
-    font-family: "Iowan Old Style", "Charter", Georgia, serif;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-    line-height: 1.1;
-  }
-  .menu-rule {
-    width: 30px;
-    height: 0;
-    border-top: 1px solid var(--ink);
-    margin: 8px 0 6px;
-  }
-  .menu-meta {
     font-size: 13px;
-    font-style: italic;
-    letter-spacing: 0.2px;
-    opacity: 0.85;
+    line-height: 1.15;
+    cursor: pointer;
   }
+  .popup-item.selected {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .popup-label {
+    flex: 1;
+    white-space: nowrap;
+  }
+  .popup-hint {
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.7;
+  }
+  .popup-item.selected .popup-hint { opacity: 0.95; }
+  .popup-chev {
+    font-size: 11px;
+    opacity: 0.8;
+  }
+  .popup-dir {
+    display: inline-block;
+    width: 12px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .popup-dir.inactive { visibility: hidden; }
 
   /* ---------------------------------------------------------------------- */
-  /*  Cover designs — slightly resized to fit the new 80 × 120 frame.       */
+  /*  Cover designs — fit the 80 × 120 frame.                               */
   /* ---------------------------------------------------------------------- */
   .cover-slab {
     background: var(--ink);
@@ -608,19 +552,26 @@
 
         <h1 id="page-title">Library<span class="accent">.</span></h1>
         <div class="subtitle" id="page-subtitle">
-          Sorted by recently opened <span class="sep">·</span> 1 / 6
+          Sorted by Recently Opened ↓ <span class="sep">·</span> 1 / 2
         </div>
       </header>
 
       <!-- ===== Content ================================================ -->
       <section class="content">
 
-        <!-- Library: two pages of nine books -->
+        <!-- All 18 books in a single shelf. JS sorts the DOM order, then  -->
+        <!-- toggles .page-hidden so only the current page's 9 books       -->
+        <!-- participate in the 3×3 grid layout.                           -->
         <div class="shelf-pages">
 
-          <!-- Page 1 -->
-          <div class="shelf" data-page="1">
-            <div class="book">
+          <div class="shelf" id="shelf">
+            <!-- recency is a date proxy: higher = more recently opened.   -->
+            <!-- progress is 0-100, or -1 for unread.                       -->
+            <div class="book"
+                 data-title="Moby-Dick"
+                 data-author="Herman Melville"
+                 data-progress="42"
+                 data-recency="17">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-slab">
                 <div class="t">MOBY-<br/>DICK</div>
@@ -633,7 +584,11 @@
               <div class="progress"><i style="width: 42%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Brave New World"
+                 data-author="Aldous Huxley"
+                 data-progress="12"
+                 data-recency="16">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-wave">
                 <div class="plaque">BRAVE<br/>NEW WORLD</div>
@@ -645,7 +600,11 @@
               <div class="progress"><i style="width: 12%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Persuasion"
+                 data-author="Jane Austen"
+                 data-progress="-1"
+                 data-recency="15">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-type">
                 <div class="drop">P.</div>
@@ -662,7 +621,11 @@
               <div class="progress unread"></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Foundation"
+                 data-author="Isaac Asimov"
+                 data-progress="88"
+                 data-recency="14">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-slash">
                 <div class="label">
@@ -677,7 +640,11 @@
               <div class="progress"><i style="width: 88%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Beloved"
+                 data-author="Toni Morrison"
+                 data-progress="-1"
+                 data-recency="13">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-halftone">
                 <div class="strip">
@@ -692,7 +659,11 @@
               <div class="progress unread"></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="The Left Hand of Darkness"
+                 data-author="Ursula K. Le Guin"
+                 data-progress="64"
+                 data-recency="12">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-slab">
                 <div class="t">THE LEFT<br/>HAND OF<br/>DARKNESS</div>
@@ -705,7 +676,11 @@
               <div class="progress"><i style="width: 64%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Dune"
+                 data-author="Frank Herbert"
+                 data-progress="100"
+                 data-recency="11">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-wave">
                 <div class="plaque">DUNE</div>
@@ -717,7 +692,11 @@
               <div class="progress"><i style="width: 100%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="1984"
+                 data-author="George Orwell"
+                 data-progress="-1"
+                 data-recency="10">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-type">
                 <div class="drop">19<br/>84</div>
@@ -734,7 +713,11 @@
               <div class="progress unread"></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="The Road"
+                 data-author="Cormac McCarthy"
+                 data-progress="28"
+                 data-recency="9">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-slash">
                 <div class="label">
@@ -748,11 +731,12 @@
               </div>
               <div class="progress"><i style="width: 28%"></i></div>
             </div>
-          </div><!-- /.shelf page 1 -->
 
-          <!-- Page 2 -->
-          <div class="shelf" data-page="2" hidden>
-            <div class="book">
+            <div class="book"
+                 data-title="The Great Gatsby"
+                 data-author="F. Scott Fitzgerald"
+                 data-progress="35"
+                 data-recency="8">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-slab">
                 <div class="t">THE<br/>GREAT<br/>GATSBY</div>
@@ -765,7 +749,11 @@
               <div class="progress"><i style="width: 35%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="To Kill a Mockingbird"
+                 data-author="Harper Lee"
+                 data-progress="-1"
+                 data-recency="7">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-wave">
                 <div class="plaque">TO KILL A<br/>MOCKINGBIRD</div>
@@ -777,7 +765,11 @@
               <div class="progress unread"></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Crime and Punishment"
+                 data-author="Fyodor Dostoyevsky"
+                 data-progress="18"
+                 data-recency="6">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-type">
                 <div class="drop">C.</div>
@@ -794,7 +786,11 @@
               <div class="progress"><i style="width: 18%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Slaughterhouse-Five"
+                 data-author="Kurt Vonnegut"
+                 data-progress="76"
+                 data-recency="5">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-slash">
                 <div class="label">
@@ -809,7 +805,11 @@
               <div class="progress"><i style="width: 76%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="The Bell Jar"
+                 data-author="Sylvia Plath"
+                 data-progress="-1"
+                 data-recency="4">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-halftone">
                 <div class="strip">
@@ -824,7 +824,11 @@
               <div class="progress unread"></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Wuthering Heights"
+                 data-author="Emily Brontë"
+                 data-progress="100"
+                 data-recency="3">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-type">
                 <div class="drop">W.</div>
@@ -841,7 +845,11 @@
               <div class="progress"><i style="width: 100%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="The Sun Also Rises"
+                 data-author="Ernest Hemingway"
+                 data-progress="50"
+                 data-recency="2">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-slab">
                 <div class="t">THE SUN<br/>ALSO<br/>RISES</div>
@@ -854,7 +862,11 @@
               <div class="progress"><i style="width: 50%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="East of Eden"
+                 data-author="John Steinbeck"
+                 data-progress="22"
+                 data-recency="1">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-wave">
                 <div class="plaque">EAST OF<br/>EDEN</div>
@@ -866,7 +878,11 @@
               <div class="progress"><i style="width: 22%"></i></div>
             </div>
 
-            <div class="book">
+            <div class="book"
+                 data-title="Anna Karenina"
+                 data-author="Leo Tolstoy"
+                 data-progress="-1"
+                 data-recency="0">
               <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
               <div class="cover cover-halftone">
                 <div class="strip">
@@ -880,53 +896,60 @@
               </div>
               <div class="progress unread"></div>
             </div>
-          </div><!-- /.shelf page 2 -->
+          </div><!-- /.shelf -->
 
         </div><!-- /.shelf-pages -->
 
-        <!-- Vertical page rail on the right -->
-        <aside class="rail" aria-label="Page indicator">
-          <span class="tick current" title="Page 1"></span>
-          <span class="tick"></span>
-          <span class="tick"></span>
-          <span class="tick"></span>
-          <span class="tick"></span>
-          <span class="tick"></span>
-          <span class="count" id="page-count">1 / 6</span>
+        <!-- Vertical page rail on the right (ticks rendered by JS) -->
+        <aside class="rail" id="rail" aria-label="Page indicator">
+          <span class="count" id="page-count">1 / 2</span>
         </aside>
 
-        <!-- Menu view (overlays the content area when open) -->
-        <div class="menu-view" hidden>
-          <ul class="menu-list">
-            <li class="menu-item">
-              <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
-              <span class="menu-num">I.</span>
-              <span class="menu-content">
-                <span class="menu-label">Browse Files</span>
-                <span class="menu-rule"></span>
-                <span class="menu-meta">Wander the SD card</span>
-              </span>
+        <!-- Cascading popup menu (anchored bottom-left) ------------------ -->
+        <aside class="popup-host" id="popup" hidden>
+          <ul class="popup-list" data-level="top">
+            <li class="popup-item" data-key="sort">
+              <span class="popup-label">Sort</span>
+              <span class="popup-hint" id="sort-hint">Recent ↓</span>
+              <span class="popup-chev">▸</span>
             </li>
-            <li class="menu-item">
-              <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
-              <span class="menu-num">II.</span>
-              <span class="menu-content">
-                <span class="menu-label">File Transfer</span>
-                <span class="menu-rule"></span>
-                <span class="menu-meta">Wi-Fi &middot; OPDS &middot; web UI</span>
-              </span>
+            <li class="popup-item" data-key="files">
+              <span class="popup-label">Files</span>
+              <span class="popup-chev">▸</span>
             </li>
-            <li class="menu-item">
-              <span class="frame"></span><span class="corner tl"></span><span class="corner br"></span>
-              <span class="menu-num">III.</span>
-              <span class="menu-content">
-                <span class="menu-label">Settings</span>
-                <span class="menu-rule"></span>
-                <span class="menu-meta">Fonts &middot; sleep &middot; language</span>
-              </span>
+            <li class="popup-item" data-key="settings">
+              <span class="popup-label">Settings</span>
             </li>
           </ul>
-        </div>
+
+          <ul class="popup-list popup-sub" data-level="sort" hidden>
+            <li class="popup-item" data-sort="recent">
+              <span class="popup-label">Recently Opened</span>
+              <span class="popup-dir">↓</span>
+            </li>
+            <li class="popup-item" data-sort="title">
+              <span class="popup-label">Title</span>
+              <span class="popup-dir inactive">↑</span>
+            </li>
+            <li class="popup-item" data-sort="author">
+              <span class="popup-label">Author</span>
+              <span class="popup-dir inactive">↑</span>
+            </li>
+            <li class="popup-item" data-sort="progress">
+              <span class="popup-label">Reading Progress</span>
+              <span class="popup-dir inactive">↓</span>
+            </li>
+          </ul>
+
+          <ul class="popup-list popup-sub" data-level="files" hidden>
+            <li class="popup-item" data-key="browse">
+              <span class="popup-label">Browse</span>
+            </li>
+            <li class="popup-item" data-key="transfer">
+              <span class="popup-label">Transfer</span>
+            </li>
+          </ul>
+        </aside>
 
       </section>
 
@@ -945,92 +968,240 @@
 <script>
 (function () {
   // ----- Constants -------------------------------------------------------
-  const COLS = 3, ROWS = 3;
-  const TOTAL_PAGES = 6;       // shown in "1 / 6" — matches the seeded shelves
-  const MAX_REAL_PAGE = 2;     // only the first two pages have rendered content
-  const MENU_ITEMS = 3;
+  const COLS = 3, ROWS = 3, PAGE_SIZE = 9;
+
+  const SORT_LABELS_LONG = {
+    recent:   'Recently Opened',
+    title:    'Title',
+    author:   'Author',
+    progress: 'Reading Progress',
+  };
+  const SORT_LABELS_SHORT = {
+    recent:   'Recent',
+    title:    'Title',
+    author:   'Author',
+    progress: 'Progress',
+  };
+  const SORT_ORDER = ['recent', 'title', 'author', 'progress'];
 
   // ----- State -----------------------------------------------------------
   const state = {
-    view: 'library',           // 'library' | 'menu'
-    libraryPage: 1,            // 1..MAX_REAL_PAGE
-    librarySelected: 1,        // 0..8 — starts on "Brave New World"
-    menuSelected: 0,           // 0..MENU_ITEMS-1
+    // Popup
+    popupOpen: false,
+    popupLevel: 'top',         // 'top' | 'sort' | 'files'
+    popupSel:   { top: 0, sort: 0, files: 0 },
+
+    // Library
+    libraryPage:     1,
+    librarySelected: 0,        // 0..PAGE_SIZE-1, within the current page
+    totalPages:      1,
+
+    // Sort
+    sortField: 'recent',
+    sortDir:   { recent: 'desc', title: 'asc', author: 'asc', progress: 'desc' },
   };
 
   const $  = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+  // ----- Sort key helpers -----------------------------------------------
+  // Library convention: ignore leading "The/A/An" when sorting titles.
+  const titleKey = (t) =>
+    t.replace(/^(the|a|an)\s+/i, '').toLowerCase();
+
+  // Sort authors by surname (last whitespace-separated token).
+  const authorKey = (name) => {
+    const parts = name.trim().split(/\s+/);
+    const last  = parts[parts.length - 1] || '';
+    const rest  = parts.slice(0, -1).join(' ');
+    return (last + ' ' + rest).toLowerCase();
+  };
+
+  function compareBooks(a, b) {
+    const field = state.sortField;
+    const mult  = state.sortDir[field] === 'asc' ? 1 : -1;
+    switch (field) {
+      case 'recent':
+        return mult * (Number(a.dataset.recency) - Number(b.dataset.recency));
+      case 'title':
+        return mult * titleKey(a.dataset.title).localeCompare(titleKey(b.dataset.title));
+      case 'author':
+        return mult * authorKey(a.dataset.author).localeCompare(authorKey(b.dataset.author));
+      case 'progress':
+        return mult * (Number(a.dataset.progress) - Number(b.dataset.progress));
+    }
+    return 0;
+  }
+
   // ----- Render ----------------------------------------------------------
-  function render() {
-    const inLibrary = state.view === 'library';
+  function applySort() {
+    const shelf = $('#shelf');
+    const books = $$('.book', shelf);
 
-    // Header copy swaps based on view. Subtitle mirrors LibraryActivity's
-    //   "<sorted-by>  ·  <page> / <total>"  for the shelf,
-    //   "System & navigation"               for the menu.
-    if (inLibrary) {
-      $('#page-title').innerHTML = 'Library<span class="accent">.</span>';
-      $('#page-subtitle').innerHTML =
-        `Sorted by recently opened <span class="sep">·</span> ${state.libraryPage} / ${TOTAL_PAGES}`;
-    } else {
-      $('#page-title').innerHTML = 'Menu<span class="accent">.</span>';
-      $('#page-subtitle').innerHTML = 'System &amp; navigation';
+    // Sort the full set and reflect into DOM order.
+    books.sort(compareBooks);
+    for (const b of books) shelf.appendChild(b);
+
+    // Paginate: only the current page's 9 books are visible to the grid.
+    state.totalPages = Math.max(1, Math.ceil(books.length / PAGE_SIZE));
+    if (state.libraryPage > state.totalPages) state.libraryPage = state.totalPages;
+
+    books.forEach((b, i) => {
+      const page = Math.floor(i / PAGE_SIZE) + 1;
+      b.classList.toggle('page-hidden', page !== state.libraryPage);
+    });
+
+    const onPage = books.slice(
+      (state.libraryPage - 1) * PAGE_SIZE,
+      state.libraryPage * PAGE_SIZE,
+    );
+    if (state.librarySelected >= onPage.length) {
+      state.librarySelected = Math.max(0, onPage.length - 1);
     }
 
-    // Library — which page is showing, which book is selected
-    $$('.shelf').forEach(s => {
-      s.hidden = parseInt(s.dataset.page, 10) !== state.libraryPage;
-    });
-    $$('.book').forEach(b => b.classList.remove('selected'));
-    if (inLibrary) {
-      const shelf = $(`.shelf[data-page="${state.libraryPage}"]`);
-      const books = $$('.book', shelf);
-      const target = books[state.librarySelected];
-      if (target) target.classList.add('selected');
+    return { onPage };
+  }
+
+  function updateHeader() {
+    $('#page-title').innerHTML = 'Library<span class="accent">.</span>';
+    const label = SORT_LABELS_LONG[state.sortField];
+    const arrow = state.sortDir[state.sortField] === 'asc' ? '↑' : '↓';
+    $('#page-subtitle').innerHTML =
+      `Sorted by ${label} ${arrow}` +
+      ` <span class="sep">·</span> ${state.libraryPage} / ${state.totalPages}`;
+  }
+
+  function updateRail() {
+    const rail  = $('#rail');
+    const count = $('#page-count');
+
+    // Hide rail when there's only one page (nothing to indicate).
+    rail.hidden = state.totalPages <= 1;
+
+    // Rebuild ticks each render — total page count is dynamic.
+    $$('.rail .tick').forEach((t) => t.remove());
+    for (let i = 1; i <= state.totalPages; i++) {
+      const tick = document.createElement('span');
+      tick.className = 'tick' + (i === state.libraryPage ? ' current' : '');
+      rail.insertBefore(tick, count);
     }
+    count.textContent = `${state.libraryPage} / ${state.totalPages}`;
+  }
 
-    // Page rail (hides when in menu)
-    $$('.rail .tick').forEach((tick, i) => {
-      tick.classList.toggle('current', i + 1 === state.libraryPage);
+  function updateBookSelection(onPage) {
+    $$('.book').forEach((b) => b.classList.remove('selected'));
+    if (state.popupOpen) return;            // hide tile selection while popup is open
+    const target = onPage[state.librarySelected];
+    if (target) target.classList.add('selected');
+  }
+
+  function updatePopup() {
+    $('#popup').hidden = !state.popupOpen;
+    if (!state.popupOpen) return;
+
+    // Show only the panel(s) for the current depth.
+    $$('.popup-list').forEach((list) => {
+      const level = list.dataset.level;
+      if (level === 'top') {
+        list.hidden = false;
+      } else {
+        list.hidden = state.popupLevel !== level;
+      }
     });
-    $('#page-count').textContent = `${state.libraryPage} / ${TOTAL_PAGES}`;
-    $('.rail').hidden = !inLibrary;
 
-    // Menu — show/hide and selection
-    $('.menu-view').hidden = inLibrary;
-    $$('.menu-item').forEach((item, i) => {
-      item.classList.toggle('selected', !inLibrary && i === state.menuSelected);
+    // Refresh sort hint on the top-level Sort row.
+    const arrow = state.sortDir[state.sortField] === 'asc' ? '↑' : '↓';
+    $('#sort-hint').textContent = `${SORT_LABELS_SHORT[state.sortField]} ${arrow}`;
+
+    // Refresh direction arrows in the sort submenu (only the active row shows one).
+    $$('.popup-list[data-level="sort"] .popup-item').forEach((item) => {
+      const isActive = item.dataset.sort === state.sortField;
+      const dirSpan  = $('.popup-dir', item);
+      if (isActive) {
+        dirSpan.classList.remove('inactive');
+        dirSpan.textContent = state.sortDir[state.sortField] === 'asc' ? '↑' : '↓';
+      } else {
+        dirSpan.classList.add('inactive');
+      }
     });
 
-    // Button labels mirror LibraryActivity::renderPasses — the Menu button
-    // becomes Back inside the menu, and Left/Right hints disappear (they're
-    // no-ops in the menu view).
-    if (inLibrary) {
-      $('#btn-menu').textContent  = 'Menu';
-      $('#btn-left').textContent  = 'Left';
-      $('#btn-right').textContent = 'Right';
-      $('#btn-left').classList.remove('hidden');
-      $('#btn-right').classList.remove('hidden');
+    // Apply the selection highlight to the active panel only.
+    $$('.popup-item').forEach((item) => item.classList.remove('selected'));
+    const activeList = $(`.popup-list[data-level="${state.popupLevel}"]`);
+    const items      = $$('.popup-item', activeList);
+    const sel        = state.popupSel[state.popupLevel];
+    if (items[sel]) items[sel].classList.add('selected');
+  }
+
+  function updateFooter() {
+    const menu   = $('#btn-menu');
+    const select = $('#btn-select');
+    const left   = $('#btn-left');
+    const right  = $('#btn-right');
+
+    if (state.popupOpen) {
+      menu.textContent   = 'Close';
+      select.textContent = 'Select';
+      left.textContent   = 'Back';
+      right.textContent  = 'Enter';
+
+      const topItem = currentTopKey();
+      const hasSub  = topItem === 'sort' || topItem === 'files';
+      const inSub   = state.popupLevel !== 'top';
+
+      // Dim hints that won't do anything from the current depth.
+      left.classList.toggle('dimmed',  !inSub);
+      right.classList.toggle('dimmed', inSub || !hasSub);
     } else {
-      $('#btn-menu').textContent  = 'Back';
-      $('#btn-left').classList.add('hidden');
-      $('#btn-right').classList.add('hidden');
+      menu.textContent   = 'Menu';
+      select.textContent = 'Select';
+      left.textContent   = 'Left';
+      right.textContent  = 'Right';
+      left.classList.remove('dimmed');
+      right.classList.remove('dimmed');
     }
   }
 
-  // ----- Actions (shared by keyboard and footer buttons) -----------------
+  function render() {
+    const { onPage } = applySort();
+    updateHeader();
+    updateRail();
+    updateBookSelection(onPage);
+    updatePopup();
+    updateFooter();
+  }
+
+  // ----- Helpers ---------------------------------------------------------
+  function currentTopKey() {
+    return SORT_ORDER /* unused */ && (() => {
+      const items = $$('.popup-list[data-level="top"] .popup-item');
+      return items[state.popupSel.top]?.dataset.key || null;
+    })();
+  }
+
+  function currentPanelItems() {
+    return $$(`.popup-list[data-level="${state.popupLevel}"] .popup-item`);
+  }
+
+  // Sort field's index inside the sort submenu (used to seat the cursor on
+  // the currently active field when the user enters that panel).
+  function sortFieldIndex(field) {
+    return Math.max(0, SORT_ORDER.indexOf(field));
+  }
+
+  // ----- Actions ---------------------------------------------------------
   function moveUp() {
-    if (state.view === 'menu') {
-      state.menuSelected = Math.max(0, state.menuSelected - 1);
+    if (state.popupOpen) {
+      state.popupSel[state.popupLevel] = Math.max(0, state.popupSel[state.popupLevel] - 1);
       return render();
     }
+    // Library — same row/column page-back behaviour as before.
     const idx = state.librarySelected;
     const row = Math.floor(idx / COLS);
     const col = idx % COLS;
     if (row > 0) {
       state.librarySelected = (row - 1) * COLS + col;
     } else if (state.libraryPage > 1) {
-      // At the top row: page back, selection lands at bottom row, same column
       state.libraryPage -= 1;
       state.librarySelected = (ROWS - 1) * COLS + col;
     }
@@ -1038,8 +1209,9 @@
   }
 
   function moveDown() {
-    if (state.view === 'menu') {
-      state.menuSelected = Math.min(MENU_ITEMS - 1, state.menuSelected + 1);
+    if (state.popupOpen) {
+      const max = currentPanelItems().length - 1;
+      state.popupSel[state.popupLevel] = Math.min(max, state.popupSel[state.popupLevel] + 1);
       return render();
     }
     const idx = state.librarySelected;
@@ -1047,8 +1219,7 @@
     const col = idx % COLS;
     if (row < ROWS - 1) {
       state.librarySelected = (row + 1) * COLS + col;
-    } else if (state.libraryPage < MAX_REAL_PAGE) {
-      // At the bottom row: page forward, selection lands at top row, same column
+    } else if (state.libraryPage < state.totalPages) {
       state.libraryPage += 1;
       state.librarySelected = col;
     }
@@ -1056,7 +1227,14 @@
   }
 
   function moveLeft() {
-    if (state.view === 'menu') return;     // Left has no meaning in the menu
+    if (state.popupOpen) {
+      // Back out one level. From the top, Left is a no-op (use Menu/Close to dismiss).
+      if (state.popupLevel !== 'top') {
+        state.popupLevel = 'top';
+        render();
+      }
+      return;
+    }
     const col = state.librarySelected % COLS;
     if (col > 0) {
       state.librarySelected -= 1;
@@ -1065,7 +1243,22 @@
   }
 
   function moveRight() {
-    if (state.view === 'menu') return;
+    if (state.popupOpen) {
+      // Enter the submenu for the highlighted top-level item.
+      if (state.popupLevel === 'top') {
+        const key = currentTopKey();
+        if (key === 'sort') {
+          state.popupLevel       = 'sort';
+          state.popupSel.sort    = sortFieldIndex(state.sortField);
+          render();
+        } else if (key === 'files') {
+          state.popupLevel       = 'files';
+          state.popupSel.files   = 0;
+          render();
+        }
+      }
+      return;
+    }
     const col = state.librarySelected % COLS;
     if (col < COLS - 1) {
       state.librarySelected += 1;
@@ -1073,15 +1266,55 @@
     }
   }
 
-  function toggleMenu() {
-    state.view = state.view === 'menu' ? 'library' : 'menu';
-    if (state.view === 'menu') state.menuSelected = 0;
-    render();
+  function doSelect() {
+    if (!state.popupOpen) {
+      // Selecting a book is a no-op in this prototype.
+      return;
+    }
+    if (state.popupLevel === 'top') {
+      const key = currentTopKey();
+      if (key === 'sort') {
+        state.popupLevel    = 'sort';
+        state.popupSel.sort = sortFieldIndex(state.sortField);
+      } else if (key === 'files') {
+        state.popupLevel     = 'files';
+        state.popupSel.files = 0;
+      } else if (key === 'settings') {
+        // Leaf action — placeholder.
+        state.popupOpen = false;
+      }
+      return render();
+    }
+    if (state.popupLevel === 'sort') {
+      const items = $$('.popup-list[data-level="sort"] .popup-item');
+      const sel   = items[state.popupSel.sort];
+      const field = sel?.dataset.sort;
+      if (!field) return;
+      if (state.sortField === field) {
+        // Already active — toggle direction.
+        state.sortDir[field] = state.sortDir[field] === 'asc' ? 'desc' : 'asc';
+      } else {
+        // Promote — keep the field's last-used direction (defaults from state.sortDir).
+        state.sortField = field;
+      }
+      state.libraryPage = 1;
+      return render();
+    }
+    if (state.popupLevel === 'files') {
+      // Leaf action — close popup. (Browse / Transfer are placeholders.)
+      state.popupOpen = false;
+      return render();
+    }
   }
 
-  function doSelect() {
-    // No-op: selecting a book doesn't lead anywhere in this prototype, and
-    // the menu options are placeholder targets.
+  // Menu button: open/close popup.
+  function toggleMenu() {
+    state.popupOpen = !state.popupOpen;
+    if (state.popupOpen) {
+      state.popupLevel = 'top';
+      state.popupSel   = { top: 0, sort: 0, files: 0 };
+    }
+    render();
   }
 
   // ----- Input wiring ----------------------------------------------------
@@ -1094,14 +1327,16 @@
       case 'ArrowRight': moveRight(); break;
       case 'Enter':
       case ' ':          doSelect();  break;
-      case 'Escape':     if (state.view === 'menu') toggleMenu(); break;
-      default:           handled = false;
+      case 'Escape':
+        if (state.popupOpen) toggleMenu();
+        else handled = false;
+        break;
+      default: handled = false;
     }
     if (handled) e.preventDefault();
   });
 
-  // Footer buttons mirror the physical inputs exactly — clicking Left does
-  // the same thing as pressing ArrowLeft, etc.
+  // Footer buttons mirror the physical inputs.
   $('#btn-menu').addEventListener('click',   toggleMenu);
   $('#btn-select').addEventListener('click', doSelect);
   $('#btn-left').addEventListener('click',   moveLeft);
@@ -1109,7 +1344,7 @@
 
   // Clicking a footer button steals focus from the page; restore it so
   // arrow keys keep working without the user having to click elsewhere.
-  $$('.btn').forEach(btn => btn.addEventListener('mouseup', () => btn.blur()));
+  $$('.btn').forEach((btn) => btn.addEventListener('mouseup', () => btn.blur()));
 
   render();
 })();
