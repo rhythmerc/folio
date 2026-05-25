@@ -11,6 +11,7 @@
 #include "activities/home/FileBrowserActivity.h"
 #include "activities/util/ConfirmationActivity.h"
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 #include "fontIds.h"
 #include "network/FirmwareFlasher.h"
 
@@ -243,7 +244,7 @@ void SdFirmwareUpdateActivity::render(RenderLock&&) {
       renderer.drawCenteredText(UI_10_FONT_ID, top + lineHeight + td.layout.verticalSpacing, errorMessage.c_str());
     }
     const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else {
     // PICKING / CONFIRMING: a sub-activity is on top, nothing to draw.
     if (recoveryMode) {

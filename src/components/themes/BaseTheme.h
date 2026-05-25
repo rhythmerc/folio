@@ -74,9 +74,6 @@ class BaseTheme {
   void drawBatteryLeft(const GfxRenderer& renderer, Rect rect, bool showPercentage = true) const;
   void drawBatteryRight(const GfxRenderer& renderer, Rect rect, bool showPercentage = true) const;
   void fillBatteryIcon(const GfxRenderer& renderer, Rect rect, uint16_t percentage) const;
-  void drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
-                       const char* btn4) const;
-  void drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const;
   void drawList(const GfxRenderer& renderer, Rect rect, int itemCount, int selectedIndex,
                 const std::function<std::string(int index)>& rowTitle,
                 const std::function<std::string(int index)>& rowSubtitle = nullptr,
@@ -186,12 +183,6 @@ class BaseTheme {
   // look regardless of active theme.
   static void drawSelectionFrame(const GfxRenderer& renderer, Rect rect);
   static void drawCornerBrackets(const GfxRenderer& renderer, Rect rect, int armPx = 8, int strokePx = 2);
-
-  // Folio-style button hint: 1-px outline + italic-serif label + hairline
-  // rule below. Uses the supplied font for the label so the same primitive
-  // works whether or not a theme has SD-installed role fonts.
-  static void drawHairlineButtonHint(const GfxRenderer& renderer, int x, int y, int buttonWidth, int buttonHeight,
-                                     const char* label, int labelFontId);
 
  private:
   const ThemeData* data;

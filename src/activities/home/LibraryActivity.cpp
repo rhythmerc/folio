@@ -15,6 +15,7 @@
 #include "FontCacheManager.h"
 #include "MappedInputManager.h"
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 #include "components/themes/BaseTheme.h"
 #include "components/themes/ThemeData.generated.h"
 #include "components/themes/ThemeData.h"
@@ -516,7 +517,7 @@ void LibraryActivity::renderPasses() {
     btn4 = (!inSub && topHasSub) ? tr(STR_ENTER) : "";
   }
   const auto labels = mappedInput.mapLabels(btn1, btn2, btn3, btn4);
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void LibraryActivity::renderHeader() {

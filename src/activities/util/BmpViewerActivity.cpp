@@ -10,6 +10,7 @@
 
 #include "CrossPointSettings.h"
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 #include "fontIds.h"
 
 BmpViewerActivity::BmpViewerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string path)
@@ -112,7 +113,7 @@ void BmpViewerActivity::onEnter() {
       renderer.drawBitmap(bitmap, x, y, pageWidth, pageHeight, 0, 0);
 
       // Draw UI hints on the base layer
-      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+      ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
       // Single pass for non-grayscale images
 
       renderer.displayBuffer(HalDisplay::FAST_REFRESH);
@@ -122,7 +123,7 @@ void BmpViewerActivity::onEnter() {
       renderer.clearScreen();
       renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, "Invalid BMP File");
       const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
-      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+      ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
       renderer.displayBuffer(HalDisplay::HALF_REFRESH);
     }
 
@@ -132,7 +133,7 @@ void BmpViewerActivity::onEnter() {
     renderer.clearScreen();
     renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, "Could not open file");
     const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer(HalDisplay::HALF_REFRESH);
   }
 }

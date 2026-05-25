@@ -4,6 +4,7 @@
 
 #include "HalDisplay.h"
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 
 ConfirmationActivity::ConfirmationActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                            const std::string& heading, const std::string& body)
@@ -50,7 +51,7 @@ void ConfirmationActivity::render(RenderLock&& lock) {
 
   // Draw UI Elements
   const auto labels = mappedInput.mapLabels("", "", I18N.get(StrId::STR_CANCEL), I18N.get(StrId::STR_CONFIRM));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer(HalDisplay::RefreshMode::FAST_REFRESH);
 }

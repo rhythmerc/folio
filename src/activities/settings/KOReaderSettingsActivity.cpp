@@ -10,6 +10,7 @@
 #include "MappedInputManager.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 #include "fontIds.h"
 
 namespace {
@@ -144,7 +145,7 @@ void KOReaderSettingsActivity::render(RenderLock&&) {
 
   // Draw help text at bottom
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }

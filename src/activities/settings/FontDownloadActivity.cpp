@@ -14,6 +14,7 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/ConfirmationActivity.h"
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 #include "fontIds.h"
 #include "network/HttpDownloader.h"
 
@@ -549,7 +550,7 @@ void FontDownloadActivity::render(RenderLock&&) {
     if (families_.empty()) {
       renderer.drawCenteredText(UI_10_FONT_ID, centerY, tr(STR_NO_FONTS_AVAILABLE));
       const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
-      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+      ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     } else {
       GUI.drawList(
           renderer,
@@ -588,7 +589,7 @@ void FontDownloadActivity::render(RenderLock&&) {
                                                 : isUpdateAllRow(selectedIndex_) ? tr(STR_UPDATE)
                                                                                  : tr(STR_DOWNLOAD),
                                                 tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+      ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     }
   } else if (state_ == DOWNLOADING) {
     const auto& family = families_[downloadingFamilyIndex_];
@@ -609,11 +610,11 @@ void FontDownloadActivity::render(RenderLock&&) {
         static_cast<int>(progress * 100), 100);
 
     const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), "", "", "");
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else if (state_ == COMPLETE) {
     renderer.drawCenteredText(UI_10_FONT_ID, centerY, tr(STR_FONT_INSTALLED), true, EpdFontFamily::BOLD);
     const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else if (state_ == ERROR) {
     renderer.drawCenteredText(UI_10_FONT_ID, centerY - lineHeight, tr(STR_FONT_INSTALL_FAILED), true,
                               EpdFontFamily::BOLD);
@@ -621,7 +622,7 @@ void FontDownloadActivity::render(RenderLock&&) {
       renderer.drawCenteredText(UI_10_FONT_ID, centerY + td.layout.verticalSpacing, errorMessage_.c_str());
     }
     const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_RETRY), "", "");
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   }
 
   renderer.displayBuffer();

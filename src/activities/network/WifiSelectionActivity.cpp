@@ -13,6 +13,7 @@
 #include "WifiCredentialStore.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 #include "fontIds.h"
 
 void WifiSelectionActivity::onEnter() {
@@ -556,7 +557,7 @@ void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeDat
   const char* forgetLabel = hasSavedPassword ? tr(STR_FORGET_BUTTON) : "";
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_CONNECT), forgetLabel, tr(STR_RETRY));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void WifiSelectionActivity::renderConnecting(const Rect* screen, const ThemeData* td) const {
@@ -594,7 +595,7 @@ void WifiSelectionActivity::renderConnected(const Rect* screen, const ThemeData*
 
   // Use centralized button hints
   const auto labels = mappedInput.mapLabels("", tr(STR_DONE), "", "");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void WifiSelectionActivity::renderSavePrompt(const Rect* screen, const ThemeData* td) const {
@@ -636,7 +637,7 @@ void WifiSelectionActivity::renderSavePrompt(const Rect* screen, const ThemeData
 
   // Use centralized button hints
   const auto labels = mappedInput.mapLabels(tr(STR_CANCEL), tr(STR_SELECT), tr(STR_DIR_LEFT), tr(STR_DIR_RIGHT));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void WifiSelectionActivity::renderConnectionFailed(const Rect* screen, const ThemeData* td) const {
@@ -649,7 +650,7 @@ void WifiSelectionActivity::renderConnectionFailed(const Rect* screen, const The
 
   // Use centralized button hints
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_DONE), "", "");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void WifiSelectionActivity::renderForgetPrompt(const Rect* screen, const ThemeData* td) const {
@@ -692,7 +693,7 @@ void WifiSelectionActivity::renderForgetPrompt(const Rect* screen, const ThemeDa
 
   // Use centralized button hints
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_LEFT), tr(STR_DIR_RIGHT));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void WifiSelectionActivity::onComplete(const bool connected) {

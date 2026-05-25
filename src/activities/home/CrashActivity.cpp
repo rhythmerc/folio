@@ -5,6 +5,7 @@
 #include <I18n.h>
 
 #include "components/UITheme.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 #include "fontIds.h"
 
 void CrashActivity::onEnter() {
@@ -55,7 +56,7 @@ void CrashActivity::render(RenderLock&&) {
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }
