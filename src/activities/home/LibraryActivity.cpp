@@ -63,6 +63,9 @@ constexpr int RAIL_TICK_GAP = 10;
 constexpr int RAIL_PAD_TOP = 8;
 constexpr int RAIL_TICK_COUNT = 6;   // visual cap on the rail (extras roll off)
 
+// constexpr int RAIL_POWER_HINT_BOTTOM = 225;
+constexpr int RAIL_TOP_GAP = 10;
+
 }  // namespace
 
 Rect LibraryActivity::cellRect(int row, int col, int shelfX, int shelfY, int shelfW, int shelfH) {
@@ -287,9 +290,21 @@ void LibraryActivity::moveLeft() {
   }
 
   const int col = currentCol();
-  if (col > 0) {
+  if(col > 0) {
     librarySelected--;
     requestUpdate();
+    return;
+  }
+
+
+  for(int candidate = librarySelected + COLS - 1; candidate >= librarySelected; candidate--) {
+    if (LIBRARY_INDEX.getAt(libraryPage, candidate, PER_PAGE) == nullptr) {
+      continue;
+    }
+
+    librarySelected = candidate;
+    requestUpdate();
+    return;
   }
 }
 
@@ -299,12 +314,16 @@ void LibraryActivity::moveRight() {
   }
 
   const int col = currentCol();
-  if (col < COLS - 1) {
-    const int candidate = librarySelected + 1;
-    if (LIBRARY_INDEX.getAt(libraryPage, candidate, PER_PAGE) != nullptr) {
-      librarySelected = candidate;
-      requestUpdate();
-    }
+  if (col == COLS - 1) {
+    librarySelected -= (COLS - 1);
+    requestUpdate();
+    return;
+  }
+
+  const int candidate = librarySelected + 1;
+  if (LIBRARY_INDEX.getAt(libraryPage, candidate, PER_PAGE) != nullptr) {
+    librarySelected = candidate;
+    requestUpdate();
   }
 }
 
@@ -458,9 +477,15 @@ void LibraryActivity::renderPasses() {
     renderLibraryShelf();
     renderPageRail();
   }
+
   if (popup_.isOpen()) {
     renderPopup();
   }
+
+  // Side-rail power-button hint. Only the power slot is populated — the
+  // page-turn side buttons aren't bound in Library, so their hint slots
+  // stay empty.
+  // ButtonHints::renderSide(renderer, "", "", tr(STR_DIR_RIGHT));
 
   // Library-view footer hints. When the popup is open the cascade owns the
   // hint scheme (Close/Back, Select/Enter — see CascadingPopupMenu::renderFooterHints).
@@ -471,6 +496,14 @@ void LibraryActivity::renderPasses() {
                                               tr(STR_DIR_RIGHT));
     ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   }
+}
+
+bool LibraryActivity::handlePowerShortPress() {
+  // Short-press of the power button is bound to "move right" — mirrors the
+  // Right front-button binding (popup navigation when open, grid otherwise).
+  // Consuming the press suppresses the global FORCE_REFRESH dispatch.
+  moveRight();
+  return true;
 }
 
 void LibraryActivity::renderHeader() {
@@ -761,6 +794,9 @@ void LibraryActivity::renderPageRail() {
   const int pages = std::max(1, totalPages());
   const int screenH = renderer.getScreenHeight();
   const int railX = renderer.getScreenWidth() - CONTENT_PAD_X - RAIL_WIDTH;
+  
+  // Anchor the rail below the power-button hint slot — see RAIL_POWER_HINT_BOTTOM.
+  // const int railTop = RAIL_POWER_HINT_BOTTOM + RAIL_TOP_GAP;
   const int railTop = HEADER_HEIGHT + CONTENT_PAD_Y + RAIL_PAD_TOP;
   const int railBottom = screenH - FOOTER_HEIGHT - CONTENT_PAD_Y;
 

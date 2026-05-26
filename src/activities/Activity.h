@@ -63,21 +63,15 @@ class Activity {
   virtual bool isReaderActivity() const { return false; }
   virtual ScreenshotInfo getScreenshotInfo() const { return {}; }
 
-  // Optional per-activity power-button override.
-  //
-  // The "Short Power Button Click" setting (SETTINGS.shortPwrBtn) defines a
-  // global default behavior (Ignore / Sleep / Page-turn / Force-refresh). An
-  // activity can opt into custom behavior by overriding these hooks:
-  //
-  //   - powerButtonHint(): the label shown in the side-button hint slot for
-  //     the power button. nullptr or "" hides the hint (the default).
-  //   - handlePowerShortPress(): called from the main dispatch when the power
-  //     button is released. Return true to claim the press (the global
-  //     FORCE_REFRESH path is skipped); return false to fall through.
-  //
-  // Long-press / sleep detection is intentionally still global — only the
-  // short-press action is overridable.
-  virtual const char* powerButtonHint() const { return nullptr; }
+  // Optional per-activity power-button override. The "Short Power Button
+  // Click" setting (SETTINGS.shortPwrBtn) defines a global default behavior
+  // (Ignore / Sleep / Page-turn / Force-refresh); overriding this hook lets
+  // an activity claim the short-press for its own action. Return true to
+  // suppress the global FORCE_REFRESH path; return false to fall through.
+  // Long-press / sleep detection is intentionally still global. The
+  // side-rail hint label is the activity's concern — it already calls
+  // `ButtonHints::renderSide`, so it can pass its own power-slot label
+  // there directly.
   virtual bool handlePowerShortPress() { return false; }
 
   // Start a new activity without destroying the current one

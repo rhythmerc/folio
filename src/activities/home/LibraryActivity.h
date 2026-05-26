@@ -103,4 +103,9 @@ class LibraryActivity final : public Activity {
   void loop() override;
   void render(RenderLock&&) override;
   void declareText(TextCollector& tc) override;
+
+  // Power-button override: short-press advances selection rightward in the
+  // book grid (mirrors the front Right button). The side-rail hint label
+  // is set inline at the renderSide call site.
+  bool handlePowerShortPress() override;
 };
