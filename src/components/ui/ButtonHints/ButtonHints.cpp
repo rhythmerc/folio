@@ -154,7 +154,8 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
   renderer.setOrientation(origOrientation);
 }
 
-void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) {
+void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn,
+                             const char* powerBtn) {
   const auto& data = *GUI.getData();
   const int screenWidth = renderer.getScreenWidth();
   const int buttonWidth = data.buttonHints.sideWidth;
@@ -164,6 +165,10 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
   // bezel margin and an 80-px height for the X3 layout.
   const int buttonHeight = rounded ? 78 : 80;
   const int buttonMargin = rounded ? 0 : 4;
+  // Vertical gap between side buttons. Rounded leaves a 5-px breather; Sharp
+  // shares its inner edge so the buttons read as a single bezel-aligned pair.
+  const int sideButtonGap = rounded ? 5 : 0;
+  const bool havePower = powerBtn != nullptr && powerBtn[0] != '\0';
 
   if (gpio.deviceIsX3()) {
     constexpr int x3ButtonY = 155;
@@ -208,8 +213,18 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
   const int x = screenWidth - buttonMargin - buttonWidth;
   const char* labels[] = {topBtn, bottomBtn};
 
+  constexpr int topButtonY = 345;
+  // Power-button slot. The Xteink X4's power button sits 15 mm above the
+  // top side button's center — empirically (top→bottom) ≈ (power→top), so
+  // we mirror the side-stack spacing: the power slot's bottom edge lands
+  // `sideButtonGap` pixels above the top side button's top edge.
+  const int powerY = topButtonY - buttonHeight - sideButtonGap;
+
   if (rounded) {
-    constexpr int topButtonY = 345;
+    if (havePower) {
+      renderer.drawRoundedRect(x, powerY, buttonWidth, buttonHeight, 1, roundedCornerRadius, true, false, true, false,
+                               true);
+    }
     if (topBtn != nullptr && topBtn[0] != '\0') {
       renderer.drawRoundedRect(x, topButtonY, buttonWidth, buttonHeight, 1, roundedCornerRadius, true, false, true,
                                false, true);
@@ -217,6 +232,10 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
     if (bottomBtn != nullptr && bottomBtn[0] != '\0') {
       renderer.drawRoundedRect(x, topButtonY + buttonHeight + 5, buttonWidth, buttonHeight, 1, roundedCornerRadius,
                                true, false, true, false, true);
+    }
+    if (havePower) {
+      const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, powerBtn);
+      renderer.drawTextRotated90CW(SMALL_FONT_ID, x, powerY + 5 + (buttonHeight + textWidth) / 2, powerBtn);
     }
     for (int i = 0; i < 2; i++) {
       if (labels[i] == nullptr || labels[i][0] == '\0') continue;
@@ -228,8 +247,18 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
   }
 
   // SideButtonHintsStyle::Sharp — BaseTheme legacy frame, three connected
-  // lines so two adjacent buttons share their interior edge.
-  constexpr int topButtonY = 345;
+  // lines so two adjacent buttons share their interior edge. The power slot
+  // (when present) sits one button-height above the top side button and
+  // gets its own standalone four-sided frame — it doesn't share an edge
+  // with the page-turn pair below it.
+  if (havePower) {
+    renderer.drawRect(x, powerY, buttonWidth, buttonHeight);
+    const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, powerBtn);
+    const int textHeight = renderer.getTextHeight(SMALL_FONT_ID);
+    const int textX = x + (buttonWidth - textHeight) / 2;
+    const int textY = powerY + (buttonHeight + textWidth) / 2;
+    renderer.drawTextRotated90CW(SMALL_FONT_ID, textX, textY, powerBtn);
+  }
   if (topBtn != nullptr && topBtn[0] != '\0') {
     renderer.drawLine(x, topButtonY, x + buttonWidth - 1, topButtonY);
     renderer.drawLine(x, topButtonY, x, topButtonY + buttonHeight - 1);
