@@ -650,11 +650,15 @@ void LibraryActivity::renderBookTile(int slotIndex, const LibraryBook& book, boo
   int frameW = COVER_W;
   int frameH = COVER_H;
 
-  const std::string thumbPath =
-      std::string("/.crosspoint/epub_") + std::to_string(book.pathHash) + "/thumb_144.bmp";
+  char thumbPath[64];
+  snprintf(thumbPath, sizeof(thumbPath), "/.crosspoint/epub_%lu/thumb_144.bmp",
+           static_cast<unsigned long>(book.pathHash));
+
+  GfxRenderer::CachedBitmap* thumbHandle = renderer.lookupCachedBitmap(thumbPath);
+
   int bmpW = 0, bmpH = 0;
-  const bool haveThumb =
-      renderer.getCachedBitmapDimensions(thumbPath.c_str(), &bmpW, &bmpH) && bmpW > 0 && bmpH > 0;
+  const bool haveThumb = renderer.getCachedBitmapDimensions(thumbHandle, &bmpW, &bmpH) && bmpW > 0 && bmpH > 0;
+
   if (haveThumb) {
     // Fit-to-box against (cell.width × COVER_H), preserving aspect.
     float scale = 1.0f;
@@ -689,7 +693,7 @@ void LibraryActivity::renderBookTile(int slotIndex, const LibraryBook& book, boo
 
   bool drewCover = false;
   if (haveThumb) {
-    drewCover = renderer.drawCachedBitmap(thumbPath.c_str(), frameX, frameY, frameW, frameH);
+    drewCover = renderer.drawCachedBitmap(thumbHandle, frameX, frameY, frameW, frameH);
   }
   if (!drewCover) {
     // Fallback: title-only "cover" — first line of the title centered inside

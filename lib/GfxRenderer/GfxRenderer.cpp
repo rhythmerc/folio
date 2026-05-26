@@ -957,6 +957,9 @@ void GfxRenderer::drawBitmap1Bit(const Bitmap& bitmap, const int x, const int y,
 GfxRenderer::CachedBitmap* GfxRenderer::lookupCachedBitmap(const char* path) const {
   if (path == nullptr || path[0] == '\0') return nullptr;
 
+  // Heterogeneous lookup: find() takes the const char* directly thanks to
+  // TransparentStringHash + TransparentStringEq, so the common (hit) path
+  // doesn't construct a std::string at all.
   auto it = imageCache_.find(path);
   if (it != imageCache_.end()) {
     it->second.lastUsedTick = ++imageCacheTick_;
@@ -1038,10 +1041,14 @@ GfxRenderer::CachedBitmap* GfxRenderer::lookupCachedBitmap(const char* path) con
 }
 
 bool GfxRenderer::getCachedBitmapDimensions(const char* path, int* outWidth, int* outHeight) const {
-  CachedBitmap* entry = lookupCachedBitmap(path);
-  if (entry == nullptr) return false;
-  if (outWidth) *outWidth = entry->width;
-  if (outHeight) *outHeight = entry->height;
+  return getCachedBitmapDimensions(lookupCachedBitmap(path), outWidth, outHeight);
+}
+
+bool GfxRenderer::getCachedBitmapDimensions(const CachedBitmap* handle, int* outWidth,
+                                            int* outHeight) const {
+  if (handle == nullptr) return false;
+  if (outWidth) *outWidth = handle->width;
+  if (outHeight) *outHeight = handle->height;
   return true;
 }
 
@@ -1094,7 +1101,11 @@ void GfxRenderer::buildScaledBitmap(CachedBitmap* entry, int targetW, int target
 
 bool GfxRenderer::drawCachedBitmap(const char* path, const int x, const int y, const int maxWidth,
                                    const int maxHeight) const {
-  CachedBitmap* entry = lookupCachedBitmap(path);
+  return drawCachedBitmap(lookupCachedBitmap(path), x, y, maxWidth, maxHeight);
+}
+
+bool GfxRenderer::drawCachedBitmap(CachedBitmap* entry, const int x, const int y,
+                                   const int maxWidth, const int maxHeight) const {
   if (entry == nullptr) return false;
 
   if (fontCacheManager_ && fontCacheManager_->isScanning()) return true;

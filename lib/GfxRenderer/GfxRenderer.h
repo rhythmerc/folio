@@ -10,6 +10,8 @@ class SdCardFont;
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "Bitmap.h"
@@ -28,6 +30,35 @@ class GfxRenderer {
     LandscapeClockwise,        // 800x480 logical coordinates, rotated 180° (swap top/bottom)
     PortraitInverted,          // 480x800 logical coordinates, inverted
     LandscapeCounterClockwise  // 800x480 logical coordinates, native panel orientation
+  };
+
+  // Cached bitmap entry. Treat as an opaque handle from outside the
+  // renderer — callers obtain a pointer via lookupCachedBitmap() and
+  // reuse it across dim queries / draw calls in the same paint to spare
+  // repeated map lookups. Fields are exposed only so the struct can live
+  // in the public scope alongside its handle accessors.
+  //
+  // Cached pixel data is in the 2-bit-per-pixel packed format that
+  // Bitmap::readNextRow produces (consistent across 1/4/8 bpp sources).
+  // Stride is (width + 3) / 4 bytes; pixels buffer size = stride × height.
+  // Pixel ordering follows the bitmap's natural orientation — use
+  // `topDown` to map render Y → buffer Y.
+  struct CachedBitmap {
+    std::unique_ptr<uint8_t[]> pixels;
+    size_t pixelsBytes = 0;
+    int width = 0;
+    int height = 0;
+    bool topDown = false;
+    uint32_t lastUsedTick = 0;  // monotonic; touched on every cache lookup.
+
+    // Pre-scaled 1-bit pixel data at the most recently requested target
+    // dimensions. Built lazily on first drawCachedBitmap call; reused on
+    // subsequent paints when target size matches. 1 bit/pixel, MSB first,
+    // row-major, stride = (scaledWidth + 7) / 8.
+    std::unique_ptr<uint8_t[]> scaledPixels;
+    size_t scaledPixelsBytes = 0;
+    int scaledWidth = 0;
+    int scaledHeight = 0;
   };
 
  private:
@@ -56,38 +87,28 @@ class GfxRenderer {
   mutable FontCacheManager* fontCacheManager_ = nullptr;
 
   // ─── Image cache state ──────────────────────────────────────────────
-  // Cached pixel data is in the 2-bit-per-pixel packed format that
-  // Bitmap::readNextRow produces (consistent across 1/4/8 bpp sources).
-  // Stride is (width + 3) / 4 bytes; total pixels buffer size is stride
-  // × height. Pixel ordering follows the bitmap's natural orientation
-  // (use `topDown` to map render Y → buffer Y).
-  struct CachedBitmap {
-    std::unique_ptr<uint8_t[]> pixels;
-    size_t pixelsBytes = 0;
-    int width = 0;
-    int height = 0;
-    bool topDown = false;
-    uint32_t lastUsedTick = 0;  // monotonic; touched on every cache lookup.
-
-    // Pre-scaled 1-bit pixel data at the most recently requested target
-    // dimensions. Built lazily on first drawCachedBitmap call; reused on
-    // subsequent paints when target size matches. 1 bit/pixel, MSB first,
-    // row-major, stride = (scaledWidth+7)/8.
-    std::unique_ptr<uint8_t[]> scaledPixels;
-    size_t scaledPixelsBytes = 0;
-    int scaledWidth = 0;
-    int scaledHeight = 0;
+  // Transparent hash + key_equal so unordered_map::find(const char*) /
+  // find(string_view) doesn't construct a temporary std::string for the
+  // key — material on the Library paint path where 9 lookups/paint used to
+  // each allocate. std::hash<string_view> and std::hash<string> are
+  // guaranteed to agree on identical contents since C++17 LWG2912.
+  struct TransparentStringHash {
+    using is_transparent = void;
+    size_t operator()(const char* s) const noexcept { return std::hash<std::string_view>{}(s); }
+    size_t operator()(std::string_view s) const noexcept { return std::hash<std::string_view>{}(s); }
+    size_t operator()(const std::string& s) const noexcept { return std::hash<std::string>{}(s); }
   };
-  mutable std::map<std::string, CachedBitmap> imageCache_;
+  struct TransparentStringEq {
+    using is_transparent = void;
+    bool operator()(std::string_view a, std::string_view b) const noexcept { return a == b; }
+  };
+
+  mutable std::unordered_map<std::string, CachedBitmap, TransparentStringHash, TransparentStringEq>
+      imageCache_;
   mutable size_t imageCacheBytes_ = 0;
   mutable size_t imageCacheBudget_ = 64 * 1024;
   mutable uint32_t imageCacheTick_ = 0;
 
-  // Returns a pointer to the cached entry for `path`, reading + decoding
-  // from SD on miss. nullptr on failure (file not found, unsupported
-  // format, OOM). LRU-touches the entry; evicts as needed to fit the
-  // new entry within imageCacheBudget_.
-  CachedBitmap* lookupCachedBitmap(const char* path) const;
   void buildScaledBitmap(CachedBitmap* entry, int targetW, int targetH) const;
 
   void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, bool pixelState,
@@ -188,6 +209,7 @@ class GfxRenderer {
   // Returns the bitmap's native dimensions on success; pass nullptrs to
   // skip the dim outputs when you only care about cache priming.
   bool getCachedBitmapDimensions(const char* path, int* outWidth, int* outHeight) const;
+  bool getCachedBitmapDimensions(const CachedBitmap* handle, int* outWidth, int* outHeight) const;
 
   // Draw the BMP at `path`, scaled to fit (maxWidth × maxHeight) at top-
   // left (x, y). Reads + decodes + caches on first call for a given path;
@@ -195,6 +217,15 @@ class GfxRenderer {
   // true on success. Currently 1-bit BMPs only — higher-bpp images fall
   // through to the SD-backed drawBitmap path.
   bool drawCachedBitmap(const char* path, int x, int y, int maxWidth, int maxHeight) const;
+  bool drawCachedBitmap(CachedBitmap* handle, int x, int y, int maxWidth, int maxHeight) const;
+
+  // Look the cache up by path, decoding on miss. Returns an opaque handle
+  // suitable for reuse across getCachedBitmapDimensions + drawCachedBitmap
+  // in the same paint, sparing a second map lookup (and the temporary
+  // std::string the heterogeneous comparator would still allocate when
+  // pulled in from the LRU-evict path). nullptr on failure (file not
+  // found, unsupported format, OOM).
+  CachedBitmap* lookupCachedBitmap(const char* path) const;
 
   // Drop every cached bitmap and reclaim the RAM.
   void clearImageCache() const;
