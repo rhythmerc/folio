@@ -55,6 +55,16 @@ class FontCacheManager {
   // The FontDecompressor pointer, needed by GfxRenderer::getGlyphBitmap()
   FontDecompressor* getDecompressor() const { return fontDecompressor_; }
 
+  // Returns the underlying SdCardFont for fontId, or nullptr if fontId is
+  // not an SD card font. Used by TextCollector to dedup prewarm calls when
+  // multiple theme roles share one SdCardFont instance — the mini cache is
+  // destructive on rebuild, so two prewarms with different text would have
+  // the second clobber the first.
+  SdCardFont* findSdCardFont(int fontId) const {
+    auto it = sdCardFonts_.find(fontId);
+    return (it != sdCardFonts_.end()) ? it->second : nullptr;
+  }
+
   // RAII scope for two-pass prewarm pattern.
   //
   // Two modes:

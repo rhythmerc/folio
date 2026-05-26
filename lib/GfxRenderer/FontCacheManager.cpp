@@ -143,8 +143,31 @@ void TextCollector::use(int fontId, EpdFontFamily::Style style, const char* text
 }
 
 void TextCollector::applyTo(FontCacheManager& fcm) const {
+  // Dedup by underlying SdCardFont — multiple theme roles can be backed by
+  // the same SdCardFont when their .cpfont files match (SdThemeLoader
+  // collapses identical paths). The mini glyph cache inside SdCardFont is
+  // destructive on rebuild, so two prewarms with different text would have
+  // the second clobber the first — every glyph not in the last prewarm
+  // would then fall through to per-glyph SD reads during drawText. Merge
+  // text + styleMask per shared instance and prewarm once.
+  std::map<SdCardFont*, PerFont> bySdFont;
   for (const auto& [fontId, entry] : byFont_) {
     if (entry.styleMask == 0 || entry.text.empty()) continue;
-    fcm.prewarmCache(fontId, entry.text.c_str(), entry.styleMask);
+    SdCardFont* sdFont = fcm.findSdCardFont(fontId);
+    if (!sdFont) {
+      // Non-SD font (compressed builtin): each fontId has its own cache,
+      // so no sharing to worry about — prewarm directly.
+      fcm.prewarmCache(fontId, entry.text.c_str(), entry.styleMask);
+      continue;
+    }
+    auto& slot = bySdFont[sdFont];
+    slot.text += entry.text;
+    slot.styleMask |= entry.styleMask;
+  }
+  for (const auto& [sdFont, merged] : bySdFont) {
+    int missed = sdFont->prewarm(merged.text.c_str(), merged.styleMask);
+    if (missed > 0) {
+      LOG_DBG("FCM", "prewarmCache(SD,merged): %d glyph(s) not found (styleMask=0x%02X)", missed, merged.styleMask);
+    }
   }
 }
