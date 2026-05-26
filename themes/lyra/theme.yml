@@ -2,6 +2,11 @@ id: lyra
 name: Lyra
 version: 1
 
+BUNDLED_FONTS:
+  - name: Ubuntu
+    styles: [regular, italic, bold, bolditalic]
+    source: google-fonts
+
 header:
   style: left-aligned-with-rule
   titleStyle: bold
@@ -152,10 +157,13 @@ fonts:
   accent:
     builtin: small
   body-compact:
-    file: fonts/Ubuntu_7.cpfont
+    bundled:
+      family: Ubuntu
+      size: 7
     builtin: small
   caption-compact:
-    file: fonts/Ubuntu_7.cpfont
-    builtin: small
+    bundled:
+      name: Ubuntu
+      size: 7
   accent-compact:
     builtin: small

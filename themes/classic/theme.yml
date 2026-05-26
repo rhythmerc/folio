@@ -2,6 +2,11 @@ id: classic
 name: Classic
 version: 1
 
+BUNDLED_FONTS:
+  - name: Ubuntu
+    styles: [regular, italic, bold, bolditalic]
+    source: google-fonts
+
 header:
   style: centered-title
   titleStyle: bold
@@ -128,10 +133,14 @@ fonts:
   accent:
     builtin: small
   body-compact:
-    file: fonts/Ubuntu_7.cpfont
+    bundled:
+      family: Ubuntu
+      size: 7
     builtin: small
   caption-compact:
-    file: fonts/Ubuntu_7.cpfont
+    bundled:
+      family: Ubuntu
+      size: 7
     builtin: small
   accent-compact:
     builtin: small

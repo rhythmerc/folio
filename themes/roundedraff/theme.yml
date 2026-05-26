@@ -2,6 +2,14 @@ id: roundedraff
 name: RoundedRaff
 version: 1
 
+BUNDLED_FONTS:
+  - name: Comfortaa
+    styles: [regular, bold]
+    source: google-fonts
+  - name: Nunito
+    styles: [italic, bold]
+    source: google-fonts
+
 header:
   style: left-aligned-plain
   titleStyle: bold
@@ -140,19 +148,42 @@ textField:
 
 fonts:
   title:
+    bundled:
+      family: Comfortaa
+      size: 12
     builtin: ui-12
   heading:
+    bundled:
+      family: Comfortaa
+      size: 12
     builtin: ui-12
   body:
-    builtin: ui-12
+    bundled:
+      family: Comfortaa
+      size: 10
+    builtin: ui-10
   caption:
+    bundled:
+      family: Comfortaa
+      size: 9 
     builtin: small
   accent:
+    bundled:
+      family: Comfortaa
+      size: 9
     builtin: small
   body-compact:
-    builtin: ui-10
+    bundled:
+      family: Comfortaa
+      size: 7
+    builtin: small 
   caption-compact:
-    file: fonts/Ubuntu_7.cpfont
+    bundled:
+      family: Nunito
+      size: 7
     builtin: small
   accent-compact:
+    bundled:
+      family: Comfortaa
+      size: 7
     builtin: small
