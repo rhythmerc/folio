@@ -438,6 +438,7 @@ void setup() {
                                                         : BootResume::Splash;
 
   setupDisplayAndFonts(resume != BootResume::Splash);
+  LOG_INF("MEM", "stage=builtins-loaded free=%u maxAlloc=%u", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
   switch (resume) {
     case BootResume::Silent:
@@ -472,6 +473,7 @@ void setup() {
   // and the reader routing below run AFTER this, so the next activity sees
   // the fully-loaded theme.
   UI_THEMES.discoverThemes();
+  LOG_INF("MEM", "stage=themes-discovered free=%u maxAlloc=%u", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
   // Lazy theme-font restoration: the EPUB reader evicts SD theme fonts on
   // entry to free heap for grayscale BW buffer allocation. The next activity
   // that draws using a theme role triggers an on-demand reload via this hook.
@@ -484,6 +486,7 @@ void setup() {
   // off-UI-subset characters that show up in book titles and metadata.
   renderer.setGlyphFallbackFont(NOTOSANS_14_FONT_ID);
   UITheme::getInstance().reload(renderer);
+  LOG_INF("MEM", "stage=theme-loaded free=%u maxAlloc=%u", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
   if (recoveryFirmwareMode) {
     // Skip normal home/reader routing: jump straight into the SD firmware picker.
