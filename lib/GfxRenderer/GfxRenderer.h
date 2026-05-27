@@ -74,12 +74,25 @@ class GfxRenderer {
   uint16_t panelWidthBytes = HalDisplay::DISPLAY_WIDTH_BYTES;
   uint32_t frameBufferSize = HalDisplay::BUFFER_SIZE;
   std::vector<uint8_t*> bwBufferChunks;
-  std::map<int, EpdFontFamily> fontMap;
+  // Mutable because the font miss handler (used by SdThemeLoader for lazy
+  // theme-font restoration after the reader evicts) populates the map from
+  // const lookup paths like getTextWidth() / getLineHeight(). Same pragmatic
+  // compromise as sdCardFonts_ below.
+  mutable std::map<int, EpdFontFamily> fontMap;
   // Mutable because ensureSdCardFontReady() is const (called from layout code
   // that holds a const GfxRenderer&) but triggers SD card reads and heap
   // allocation inside the SdCardFont objects. Same pragmatic compromise as
   // fontCacheManager_ below.
   mutable std::map<int, SdCardFont*> sdCardFonts_;
+
+  // Lazy-load hook: when a fontMap lookup misses, the renderer invokes this
+  // handler with the missing fontId. If the handler returns true (meaning it
+  // restored the font registration), the lookup is retried once. Used by
+  // SdThemeLoader to lazily reload theme fonts evicted by the reader.
+  using FontMissHandler = bool (*)(int fontId, void* ctx);
+  FontMissHandler fontMissHandler_ = nullptr;
+  void* fontMissCtx_ = nullptr;
+  std::map<int, EpdFontFamily>::const_iterator resolveFontIt(int fontId) const;
 
   // Mutable because drawText() is const but needs to delegate scan-mode
   // recording to the (non-const) FontCacheManager. Same pragmatic compromise
@@ -147,6 +160,13 @@ class GfxRenderer {
   }
   void setFontCacheManager(FontCacheManager* m) { fontCacheManager_ = m; }
   FontCacheManager* getFontCacheManager() const { return fontCacheManager_; }
+  // Install a callback invoked when a fontMap lookup misses. The callback
+  // may restore the registration and return true, in which case the lookup
+  // is retried once. ctx is passed through unchanged.
+  void setFontMissHandler(FontMissHandler handler, void* ctx) {
+    fontMissHandler_ = handler;
+    fontMissCtx_ = ctx;
+  }
   const std::map<int, EpdFontFamily>& getFontMap() const { return fontMap; }
   void registerSdCardFont(int fontId, SdCardFont* font) { sdCardFonts_[fontId] = font; }
   void unregisterSdCardFont(int fontId) { removeFont(fontId); }

@@ -426,6 +426,11 @@ void SdThemeLoader::loadThemeFonts(const char* themeId, const ThemeFontSpec& fon
 
           *fontIdSlots[i] = fontId;
           registeredFontIds_.push_back(fontId);
+          RoleEntry roleEntry;
+          roleEntry.fontId = fontId;
+          strncpy(roleEntry.path, fontPath, sizeof(roleEntry.path) - 1);
+          roleEntry.path[sizeof(roleEntry.path) - 1] = '\0';
+          roleEntries_.push_back(roleEntry);
           LOG_DBG(LOG_TAG, "Bound role '%s' -> %s (id=%d)", kRoleNames[i], fontPath, fontId);
           continue;
         }
@@ -448,6 +453,76 @@ void SdThemeLoader::clearFonts(GfxRenderer& renderer) {
   }
   registeredFontIds_.clear();
   loadedFonts_.clear();
+  roleEntries_.clear();
+}
+
+void SdThemeLoader::evictFonts(GfxRenderer& renderer) {
+  if (loadedFonts_.empty() && registeredFontIds_.empty()) return;
+  LOG_DBG(LOG_TAG, "evictFonts: dropping %u SdCardFont(s), heap free=%u before",
+          static_cast<unsigned>(loadedFonts_.size()), ESP.getFreeHeap());
+  for (int fontId : registeredFontIds_) {
+    renderer.removeFont(fontId);
+  }
+  registeredFontIds_.clear();
+  loadedFonts_.clear();  // SdCardFont dtor calls freeAll() per font
+  // roleEntries_ stays — tryLoadFontOnDemand needs the (fontId, path) records
+  // to lazily reload roles on first use by the next activity.
+  LOG_INF(LOG_TAG, "evictFonts: heap free=%u, maxAlloc=%u after", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
+}
+
+bool SdThemeLoader::tryLoadFontOnDemand(int fontId, GfxRenderer& renderer) {
+  const RoleEntry* entry = nullptr;
+  for (const auto& re : roleEntries_) {
+    if (re.fontId == fontId) {
+      entry = &re;
+      break;
+    }
+  }
+  if (!entry || entry->path[0] == '\0') return false;
+
+  // Dedup against any role we already restored that points at the same file.
+  SdCardFont* sharedFont = nullptr;
+  for (auto& lf : loadedFonts_) {
+    if (strcmp(lf.path, entry->path) == 0) {
+      sharedFont = lf.font.get();
+      break;
+    }
+  }
+
+  if (!sharedFont) {
+    auto font = makeUniqueNoThrow<SdCardFont>();
+    if (!font) {
+      LOG_ERR(LOG_TAG, "OOM: lazy SdCardFont for %s", entry->path);
+      return false;
+    }
+    if (!font->load(entry->path)) {
+      LOG_ERR(LOG_TAG, "Lazy load failed: %s", entry->path);
+      return false;
+    }
+    LoadedFont lf;
+    strncpy(lf.path, entry->path, sizeof(lf.path) - 1);
+    lf.path[sizeof(lf.path) - 1] = '\0';
+    lf.font = std::move(font);
+    sharedFont = lf.font.get();
+    loadedFonts_.push_back(std::move(lf));
+    LOG_INF(LOG_TAG, "Lazy-loaded %s (heap free=%u, maxAlloc=%u)", entry->path, ESP.getFreeHeap(),
+            ESP.getMaxAllocHeap());
+  }
+
+  renderer.registerSdCardFont(fontId, sharedFont);
+  EpdFontFamily family(sharedFont->getEpdFont(sharedFont->resolveStyle(0)),
+                       sharedFont->getEpdFont(sharedFont->resolveStyle(1)),
+                       sharedFont->getEpdFont(sharedFont->resolveStyle(2)),
+                       sharedFont->getEpdFont(sharedFont->resolveStyle(3)));
+  renderer.insertFont(fontId, family);
+  registeredFontIds_.push_back(fontId);
+  return true;
+}
+
+bool SdThemeLoader::onFontMiss(int fontId, void* ctx) {
+  auto* renderer = static_cast<GfxRenderer*>(ctx);
+  if (!renderer) return false;
+  return SdThemeLoader::getInstance().tryLoadFontOnDemand(fontId, *renderer);
 }
 
 const SdThemeLoader::ThemeInfo* SdThemeLoader::findThemeInfo(const char* themeId) const {

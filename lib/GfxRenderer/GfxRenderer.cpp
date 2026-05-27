@@ -26,6 +26,14 @@ uint8_t resolveSdCardStyle(const SdCardFont& font, const EpdFontFamily::Style st
 }
 }  // namespace
 
+std::map<int, EpdFontFamily>::const_iterator GfxRenderer::resolveFontIt(int fontId) const {
+  auto it = fontMap.find(fontId);
+  if (it == fontMap.end() && fontMissHandler_ && fontMissHandler_(fontId, fontMissCtx_)) {
+    it = fontMap.find(fontId);
+  }
+  return it;
+}
+
 const uint8_t* GfxRenderer::getGlyphBitmap(const EpdFontData* fontData, const EpdGlyph* glyph) const {
   if (fontData->groups != nullptr) {
     auto* fd = fontCacheManager_ ? fontCacheManager_->getDecompressor() : nullptr;
@@ -255,7 +263,7 @@ void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
 }
 
 int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontFamily::Style style) const {
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
@@ -291,7 +299,7 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
     return;
   }
 
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return;
@@ -1728,7 +1736,7 @@ int GfxRenderer::getSpaceWidth(const int fontId, const EpdFontFamily::Style styl
     return fp4::toPixel(sdIt->second->getAdvance(' ', resolvedStyle));
   }
 
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
@@ -1749,7 +1757,7 @@ int GfxRenderer::getSpaceAdvance(const int fontId, const uint32_t leftCp, const 
     return fp4::toPixel(sdIt->second->getAdvance(' ', resolvedStyle));
   }
 
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) return 0;
   const auto& font = fontIt->second;
   const EpdGlyph* spaceGlyph = font.getGlyph(' ', style);
@@ -1763,7 +1771,7 @@ int GfxRenderer::getSpaceAdvance(const int fontId, const uint32_t leftCp, const 
 
 int GfxRenderer::getKerning(const int fontId, const uint32_t leftCp, const uint32_t rightCp,
                             const EpdFontFamily::Style style) const {
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) return 0;
   const int kernFP = fontIt->second.getKerning(leftCp, rightCp, style);  // 4.4 fixed-point
   return fp4::toPixel(kernFP);                                           // snap 4.4 fixed-point to nearest pixel
@@ -1783,7 +1791,7 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFami
     return fp4::toPixel(widthFP);
   }
 
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
@@ -1816,7 +1824,7 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFami
 }
 
 int GfxRenderer::getFontAscenderSize(const int fontId) const {
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
@@ -1826,7 +1834,7 @@ int GfxRenderer::getFontAscenderSize(const int fontId) const {
 }
 
 int GfxRenderer::getLineHeight(const int fontId) const {
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
@@ -1836,7 +1844,7 @@ int GfxRenderer::getLineHeight(const int fontId) const {
 }
 
 int GfxRenderer::getTextHeight(const int fontId) const {
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return 0;
@@ -1851,7 +1859,7 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
     return;
   }
 
-  const auto fontIt = fontMap.find(fontId);
+  const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
     return;
@@ -1957,9 +1965,15 @@ bool GfxRenderer::storeBwBuffer() {
 }
 
 /**
- * This can only be called if `storeBwBuffer` was called prior to the grayscale render.
- * It should be called to restore the BW buffer state after grayscale rendering is complete.
+ * Pairs with `storeBwBuffer` to restore the BW framebuffer after a grayscale render.
  * Uses chunked restoration to match chunked storage.
+ *
+ * If `storeBwBuffer` failed (chunks missing), the caller is contractually
+ * required to have skipped the grayscale render — so the framebuffer still
+ * holds the intended BW state. We still call `cleanupGrayscaleBuffers` to
+ * rebase the display controller's BW/RED RAM from the framebuffer; skipping
+ * it leaves the controller's prior-frame snapshot stale and the next
+ * differential refresh ghosts the previous page.
  */
 void GfxRenderer::restoreBwBuffer() {
   // Check if all chunks are allocated
@@ -1973,6 +1987,7 @@ void GfxRenderer::restoreBwBuffer() {
 
   if (missingChunks) {
     freeBwBufferChunks();
+    display.cleanupGrayscaleBuffers(frameBuffer);
     return;
   }
 

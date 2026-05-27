@@ -27,6 +27,7 @@
 #include "QrDisplayActivity.h"
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
+#include "SdThemeLoader.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/ScreenshotUtil.h"
@@ -116,6 +117,16 @@ void EpubReaderActivity::onEnter() {
   if (!epub) {
     return;
   }
+
+  // Free SD theme font heap before any reader rendering. The reader uses only
+  // builtin fonts (status bar = SMALL_FONT_ID, body = SETTINGS.getReaderFontId
+  // resolved against the separate SdCardFontSystem, error fallbacks =
+  // UI_12_FONT_ID), so theme roles are pure dead weight during reading. On
+  // heavy themes (e.g. RoundedRaff) this reclaims enough contiguous heap that
+  // the chunked BW buffer snapshot for grayscale rendering doesn't fail under
+  // fragmentation. Lazy reload on exit happens via GfxRenderer's font miss
+  // handler (wired in main.cpp).
+  SdThemeLoader::getInstance().evictFonts(renderer);
 
   // Configure screen orientation based on settings
   // NOTE: This affects layout math and must be applied before any render calls.
@@ -909,13 +920,17 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   }
   const auto tDisplay = millis();
 
-  // Save bw buffer to reset buffer state after grayscale data sync
-  renderer.storeBwBuffer();
+  // Save bw buffer to reset buffer state after grayscale data sync.
+  // On failure (e.g. heap fragmentation under heavy SD themes), skip the
+  // grayscale pass entirely — rendering grayscale without a BW snapshot
+  // leaves the framebuffer holding the MSB grayscale pattern, and the next
+  // fast refresh's differential calc ghosts the previous page.
+  const bool bwStored = renderer.storeBwBuffer();
   const auto tBwStore = millis();
 
-  // grayscale rendering
+  // grayscale rendering (requires a successful BW buffer store)
   // TODO: Only do this if font supports it
-  if (SETTINGS.textAntiAliasing) {
+  if (bwStored && SETTINGS.textAntiAliasing) {
     renderer.clearScreen(0x00);
     renderer.setRenderMode(GfxRenderer::GRAYSCALE_LSB);
     page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);

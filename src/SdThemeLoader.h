@@ -32,6 +32,24 @@ class SdThemeLoader {
   // the heap-allocated ThemeData.
   void unloadTheme(GfxRenderer& renderer);
 
+  // Free every SD card font without unloading the theme. Per-role font IDs
+  // are remembered for lazy restoration; the theme metadata (colors,
+  // dimensions, layout) stays resident. Used by the EPUB reader, which
+  // touches zero theme roles, to reclaim ~50-150 KB of persistent SdCardFont
+  // state (kern classes, intervals, overflow buffers, advance tables) so
+  // mid-session chunked allocations (e.g. the BW buffer snapshot for
+  // grayscale rendering) don't fail under heap fragmentation.
+  void evictFonts(GfxRenderer& renderer);
+
+  // Lazy restoration entry point invoked by GfxRenderer's font miss handler.
+  // Returns true if the requested fontId mapped to a previously-evicted SD
+  // role and the SdCardFont was reloaded and re-registered with the renderer.
+  bool tryLoadFontOnDemand(int fontId, GfxRenderer& renderer);
+
+  // Static thunk suitable for GfxRenderer::setFontMissHandler. ctx must be
+  // a GfxRenderer*.
+  static bool onFontMiss(int fontId, void* ctx);
+
   const ThemeData* getData() const { return themeData_.get(); }
   bool isLoaded() const { return themeData_ != nullptr; }
   const char* getLoadedId() const { return isLoaded() ? idBuf_ : ""; }
@@ -63,6 +81,17 @@ class SdThemeLoader {
   // Every fontId we asked the renderer to register, in registration order.
   // clearFonts() walks this to unregister; loadedFonts_ owns the SdCardFonts.
   std::vector<int> registeredFontIds_;
+
+  // Per-role registration record. Captures the (fontId, source path) pair
+  // for each role backed by an SD font, so evictFonts() can drop the heavy
+  // SdCardFont instances yet still know how to reload them on demand.
+  // Multiple roles can point at the same path (dedup happens at SdCardFont
+  // instantiation in loadedFonts_).
+  struct RoleEntry {
+    int fontId = 0;
+    char path[128] = "";
+  };
+  std::vector<RoleEntry> roleEntries_;
 
   // Scan one root directory for .cptheme files.
   void scanRoot(const char* rootPath);
