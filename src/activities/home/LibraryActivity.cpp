@@ -274,9 +274,7 @@ void LibraryActivity::moveDown() {
   // ends up pointing at a hole (visually nothing selected).
   for (int c = col; c >= 0; --c) {
     if (LIBRARY_INDEX.getAt(targetPage, targetRow * COLS + c, PER_PAGE) != nullptr) {
-      if (targetPage != libraryPage) {
-        libraryPage = targetPage;
-      }
+      libraryPage = targetPage;
       librarySelected = targetRow * COLS + c;
       requestUpdate();
       return;
@@ -325,6 +323,29 @@ void LibraryActivity::moveRight() {
     librarySelected = candidate;
     requestUpdate();
   }
+}
+
+void LibraryActivity::moveNext() {
+  if (popup_.isOpen()) {
+    return;
+  }
+
+  // Linear advance through the library. Step to the next slot on this page;
+  // when that slot is past the page or empty (partial last page), step to
+  // the next page; on the last page, wrap back to page 0 / slot 0 so the
+  // power button cycles through the entire library.
+  const int next = librarySelected + 1;
+  if (next < PER_PAGE && LIBRARY_INDEX.getAt(libraryPage, next, PER_PAGE) != nullptr) {
+    librarySelected = next;
+    requestUpdate();
+    return;
+  }
+
+  const int pages = totalPages();
+  if (pages <= 0) return;  // empty library — nothing to advance to.
+  libraryPage = (libraryPage + 1) % pages;
+  librarySelected = 0;
+  requestUpdate();
 }
 
 void LibraryActivity::doSelect() {
@@ -498,10 +519,10 @@ void LibraryActivity::renderPasses() {
 }
 
 bool LibraryActivity::handlePowerShortPress() {
-  // Short-press of the power button is bound to "move right" — mirrors the
-  // Right front-button binding (popup navigation when open, grid otherwise).
-  // Consuming the press suppresses the global FORCE_REFRESH dispatch.
-  moveRight();
+  // Short-press of the power button advances linearly through the library
+  // (next book, next page, wrap at end). Consuming the press suppresses the
+  // global FORCE_REFRESH dispatch.
+  moveNext();
   return true;
 }
 

@@ -60,6 +60,8 @@ class LibraryActivity final : public Activity {
   void moveDown();
   void moveLeft();
   void moveRight();
+  void moveNext();
+
   void doSelect();
   // Dispatches the activity action for an active popup row (leaf or submenu
   // item). Reads popup_.topSelectedIndex() / subSelectedIndex() to decide.
@@ -104,8 +106,7 @@ class LibraryActivity final : public Activity {
   void render(RenderLock&&) override;
   void declareText(TextCollector& tc) override;
 
-  // Power-button override: short-press advances selection rightward in the
-  // book grid (mirrors the front Right button). The side-rail hint label
-  // is set inline at the renderSide call site.
+  // Power-button override: short-press advances linearly through the
+  // library (delegates to moveNext()), wrapping at the end.
   bool handlePowerShortPress() override;
 };
