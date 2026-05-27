@@ -12,7 +12,7 @@ class GfxRenderer;
 /// resolver callback wired into CrossPointSettings. Lives behind a single
 /// begin() + ensureLoaded() API used by main.cpp and the reader activities.
 ///
-/// Counterpart on the UI side is UiThemeLoader; the two systems are
+/// Counterpart on the UI side is ThemeFontManager; the two systems are
 /// intentionally separate because they have different constraints
 /// (one font vs many) and different lifecycles (per-book session vs
 /// per-theme with mid-session eviction).

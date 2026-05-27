@@ -74,7 +74,7 @@ class GfxRenderer {
   uint16_t panelWidthBytes = HalDisplay::DISPLAY_WIDTH_BYTES;
   uint32_t frameBufferSize = HalDisplay::BUFFER_SIZE;
   std::vector<uint8_t*> bwBufferChunks;
-  // Mutable because the font miss handler (used by UiThemeLoader for lazy
+  // Mutable because the font miss handler (used by ThemeFontManager for lazy
   // theme-font restoration after the reader evicts) populates the map from
   // const lookup paths like getTextWidth() / getLineHeight(). Same pragmatic
   // compromise as sdCardFonts_ below.
@@ -88,7 +88,7 @@ class GfxRenderer {
   // Lazy-load hook: when a fontMap lookup misses, the renderer invokes this
   // handler with the missing fontId. If the handler returns true (meaning it
   // restored the font registration), the lookup is retried once. Used by
-  // UiThemeLoader to lazily reload theme fonts evicted by the reader.
+  // ThemeFontManager to lazily reload theme fonts evicted by the reader.
   using FontMissHandler = bool (*)(int fontId, void* ctx);
   FontMissHandler fontMissHandler_ = nullptr;
   void* fontMissCtx_ = nullptr;

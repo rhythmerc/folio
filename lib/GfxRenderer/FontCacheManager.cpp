@@ -144,7 +144,7 @@ void TextCollector::use(int fontId, EpdFontFamily::Style style, const char* text
 
 void TextCollector::applyTo(FontCacheManager& fcm) const {
   // Dedup by underlying SdCardFont — multiple theme roles can be backed by
-  // the same SdCardFont when their .cpfont files match (UiThemeLoader
+  // the same SdCardFont when their .cpfont files match (ThemeFontManager
   // collapses identical paths). The mini glyph cache inside SdCardFont is
   // destructive on rebuild, so two prewarms with different text would have
   // the second clobber the first — every glyph not in the last prewarm

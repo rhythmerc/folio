@@ -20,7 +20,7 @@
 
 // Low-level .cpfont (v4) loader and glyph cache. Shared by both the reader
 // (one instance, via ReaderFontManager) and the UI/theme system (up to 8
-// instances deduped by path, via UiThemeLoader). Each instance owns one
+// instances deduped by path, via ThemeFontManager). Each instance owns one
 // open file path plus per-style glyph state.
 //
 // State machine for each style's EpdFontData pointer (see PerStyle below):

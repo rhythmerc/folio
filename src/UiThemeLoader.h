@@ -3,72 +3,51 @@
 #include <memory>
 #include <vector>
 
-#include "ThemeJsonParser.h"
-#include "components/themes/ThemeData.h"
+#include "CpThemeArchive.h"
 
 class GfxRenderer;
-class SdCardFont;
+struct ThemeData;
 
-// UI/theme-side font orchestrator. Manages 0..8 SdCardFont instances
-// (one per semantic theme role: title, heading, body, caption, accent,
-// plus three compact variants), deduplicated by .cpfont path so multiple
-// roles can share a single backing font. Supports mid-session eviction
-// with lazy reload via GfxRenderer::fontMissHandler, which is required
-// for the reader to reclaim heap when it doesn't need theme fonts.
+// Orchestrates SD theme loading: owns the active ThemeData (colors,
+// dimensions, layout), delegates archive discovery/extraction to
+// CpThemeArchive, and delegates SD font lifecycle to ThemeFontManager.
 //
-// Counterpart on the reader side is ReaderFontSystem; the two are
-// intentionally separate because they have different constraints
-// (many fonts vs one) and different lifecycles.
-//
-// Despite the name, this class manages the whole theme — colors,
-// dimensions, layout, and fonts — because the font lifecycle is
-// inseparable from the .cptheme archive's extraction lifecycle.
+// The font miss handler used for lazy theme-font restoration lives on
+// ThemeFontManager — wire it via ThemeFontManager::onFontMiss in main.cpp.
 class UiThemeLoader {
  public:
   static UiThemeLoader& getInstance();
 
-  struct ThemeInfo {
-    char id[32];
-    char name[48];
-    char cpthemePath[128];
-  };
+  // Re-export the archive's ThemeInfo as a nested alias so existing callers
+  // (e.g. SettingsList) keep their UiThemeLoader::ThemeInfo references valid.
+  using ThemeInfo = CpThemeArchive::ThemeInfo;
 
-  // Scan /.themes/ and /themes/ for .cptheme files. Populates the
-  // discovered-themes list with id/name/path for each valid archive.
+  // Scan /.themes/ and /themes/ for .cptheme files.
   void discoverThemes();
 
-  // Load a theme by id. Extracts the .cptheme archive if not already
-  // cached, parses theme.json, loads bundled fonts. Returns false on
-  // failure (falls back to Folio in the caller).
+  // Load a theme by id. Ensures the archive is extracted, parses theme.json,
+  // and loads bundled fonts. Returns false on failure (caller falls back to
+  // Folio).
   bool loadTheme(const char* themeId, GfxRenderer& renderer);
 
-  // Unload the current SD theme: unregister and free fonts, release
-  // the heap-allocated ThemeData.
+  // Unload the current SD theme: free fonts and release ThemeData.
   void unloadTheme(GfxRenderer& renderer);
 
   // Free every SD card font without unloading the theme. Per-role font IDs
   // are remembered for lazy restoration; the theme metadata (colors,
   // dimensions, layout) stays resident. Used by the EPUB reader, which
-  // touches zero theme roles, to reclaim ~50-150 KB of persistent SdCardFont
-  // state (kern classes, intervals, overflow buffers, advance tables) so
-  // mid-session chunked allocations (e.g. the BW buffer snapshot for
-  // grayscale rendering) don't fail under heap fragmentation.
+  // touches zero theme roles, to reclaim heap so mid-session chunked
+  // allocations (e.g. the BW buffer snapshot for grayscale rendering) don't
+  // fail under heap fragmentation.
   void evictFonts(GfxRenderer& renderer);
-
-  // Lazy restoration entry point invoked by GfxRenderer's font miss handler.
-  // Returns true if the requested fontId mapped to a previously-evicted SD
-  // role and the SdCardFont was reloaded and re-registered with the renderer.
-  bool tryLoadFontOnDemand(int fontId, GfxRenderer& renderer);
-
-  // Static thunk suitable for GfxRenderer::setFontMissHandler. ctx must be
-  // a GfxRenderer*.
-  static bool onFontMiss(int fontId, void* ctx);
 
   const ThemeData* getData() const { return themeData_.get(); }
   bool isLoaded() const { return themeData_ != nullptr; }
   const char* getLoadedId() const { return isLoaded() ? idBuf_ : ""; }
 
-  const std::vector<ThemeInfo>& getDiscoveredThemes() const { return themeList_; }
+  const std::vector<ThemeInfo>& getDiscoveredThemes() const {
+    return archive_.getDiscoveredThemes();
+  }
 
  private:
   UiThemeLoader() = default;
@@ -76,55 +55,10 @@ class UiThemeLoader {
   UiThemeLoader(const UiThemeLoader&) = delete;
   UiThemeLoader& operator=(const UiThemeLoader&) = delete;
 
+  CpThemeArchive archive_;
   std::unique_ptr<ThemeData> themeData_;
   char idBuf_[32] = "";
   char nameBuf_[48] = "";
-  std::vector<ThemeInfo> themeList_;
-
-  // One LoadedFont per unique .cpfont path. Multiple theme roles that point
-  // at the same file share a single SdCardFont instance — each role still
-  // gets its own fontId registered with the renderer (see registeredFontIds_).
-  // This dedup is what keeps theme RAM bounded when every role bundles an
-  // SD font: e.g. RoundedRaff has 8 roles backed by 4 unique files, so
-  // dedup roughly halves the resident font footprint.
-  struct LoadedFont {
-    char path[128];
-    std::unique_ptr<SdCardFont> font;
-  };
-  std::vector<LoadedFont> loadedFonts_;
-  // Every fontId we asked the renderer to register, in registration order.
-  // clearFonts() walks this to unregister; loadedFonts_ owns the SdCardFonts.
-  std::vector<int> registeredFontIds_;
-
-  // Per-role registration record. Captures the (fontId, source path) pair
-  // for each role backed by an SD font, so evictFonts() can drop the heavy
-  // SdCardFont instances yet still know how to reload them on demand.
-  // Multiple roles can point at the same path (dedup happens at SdCardFont
-  // instantiation in loadedFonts_).
-  struct RoleEntry {
-    int fontId = 0;
-    char path[128] = "";
-  };
-  std::vector<RoleEntry> roleEntries_;
-
-  // Scan one root directory for .cptheme files.
-  void scanRoot(const char* rootPath);
-
-  // Extract a .cptheme archive to /.themes/<id>/ cache directory.
-  bool extractCptheme(const char* cpthemePath, const char* themeId);
-
-  // Check whether an extraction cache exists and matches the source .cptheme.
-  bool isExtracted(const char* themeId, const char* cpthemePath) const;
-
-  // Load theme fonts from the extracted cache using the parsed font spec.
-  void loadThemeFonts(const char* themeId, const ThemeFontSpec& fontSpec,
-                      GfxRenderer& renderer);
-
-  // Free all loaded SD fonts and unregister them from the renderer.
-  void clearFonts(GfxRenderer& renderer);
-
-  // Find the .cptheme path for a given theme id in the discovered list.
-  const ThemeInfo* findThemeInfo(const char* themeId) const;
 };
 
 #define UI_THEMES UiThemeLoader::getInstance()

@@ -25,6 +25,7 @@
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
 #include "ReaderFontSystem.h"
+#include "ThemeFontManager.h"
 #include "UiThemeLoader.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
@@ -479,7 +480,7 @@ void setup() {
   // Lazy theme-font restoration: the EPUB reader evicts SD theme fonts on
   // entry to free heap for grayscale BW buffer allocation. The next activity
   // that draws using a theme role triggers an on-demand reload via this hook.
-  renderer.setFontMissHandler(&UiThemeLoader::onFontMiss, &renderer);
+  renderer.setFontMissHandler(&ThemeFontManager::onFontMiss, &renderer);
   UITheme::getInstance().reload(renderer);
 
   if (recoveryFirmwareMode) {
