@@ -26,14 +26,15 @@
 // State machine for each style's EpdFontData pointer (see PerStyle below):
 //
 //   load()        ─►  epdFont.data = &stubData
-//                     (header metrics only; no glyph data resident. Any
-//                      drawText against the stub renders via the renderer's
-//                      glyph fallback because the stub has zero intervals.)
+//                     (header metrics only; glyphs resolved on-demand via the
+//                      miss handler → overflow LRU. Used by UI roles that
+//                      render arbitrary text without a prewarm pass.)
 //
 //   prewarm(text) ─►  epdFont.data = &miniData
 //                     (mini intervals + glyph table + bitmap blob for the
-//                      visible codepoints. Codepoints outside the mini set
-//                      route to the renderer's fallback font.)
+//                      visible codepoints; miss handler still wired for any
+//                      glyph not in the prewarm set. Used by both UI screens
+//                      and reader page renders.)
 //
 //   clearCache()  ─►  epdFont.data = &stubData
 //                     (mini buffers freed; persistent advance cache survives)
@@ -123,6 +124,16 @@ class SdCardFont {
 
   // Number of styles present in this font file.
   uint8_t styleCount() const { return styleCount_; }
+
+  // Returns true if the glyph pointer points into the overflow buffer.
+  bool isOverflowGlyph(const EpdGlyph* glyph) const;
+
+  // Returns the bitmap for an on-demand-loaded (overflow) glyph.
+  const uint8_t* getOverflowBitmap(const EpdGlyph* glyph) const;
+
+  // Extract SdCardFont* from an opaque glyphMissCtx pointer.
+  // Used by GfxRenderer::getGlyphBitmap() to recover the SdCardFont from EpdFontData::glyphMissCtx.
+  static SdCardFont* fromMissCtx(void* ctx);
 
   struct Stats {
     uint32_t prewarmTotalMs = 0;
@@ -218,6 +229,40 @@ class SdCardFont {
 
   char filePath_[128] = {};
 
+  // Overflow context: glyphMissHandler needs to know which style it's serving
+  struct OverflowContext {
+    SdCardFont* self;
+    uint8_t styleIdx;
+  };
+  OverflowContext overflowCtx_[MAX_STYLES] = {};
+
+  // On-demand glyph cache. Holds glyphs that aren't in the prewarmed mini
+  // data — populated by glyphMissHandler on the first drawText that touches
+  // a not-yet-cached codepoint. With LRU eviction sized for a UI screen's
+  // working set (~50-100 unique glyphs), it persistently caches everything
+  // a normal screen renders, eliminating the per-paint refault pathology
+  // the old 8-slot ring caused for activities whose visible glyph set
+  // exceeded the prewarmed mini alphabet.
+  //
+  // Memory cost: 64 entries × (sizeof(OverflowEntry) ~32 B + avg bitmap
+  // ~50 B) ≈ 5 KB per font instance. Folio's three role fonts thus add
+  // ~15 KB of resident state — comfortably within budget on the ~280 KB
+  // free-heap floor we usually maintain.
+  static constexpr uint32_t OVERFLOW_CAPACITY = 64;
+  struct OverflowEntry {
+    EpdGlyph glyph;
+    uint8_t* bitmap = nullptr;
+    uint32_t codepoint = 0;
+    uint8_t styleIdx = 0;
+    // Logical timestamp for LRU eviction. 0 = entry empty / never used.
+    // Touched on lookup hit AND on insertion. Eviction picks the entry
+    // with the lowest non-zero tick.
+    uint32_t lastUsedTick = 0;
+  };
+  OverflowEntry overflow_[OVERFLOW_CAPACITY] = {};
+  uint32_t overflowCount_ = 0;
+  uint32_t nextLruTick_ = 1;  // Monotonic counter (0 reserved for "unused" sentinel).
+
   // Compact advance-only table for layout measurement (per-style).
   // Built by buildAdvanceTable(), queried by getAdvance().
   struct AdvanceEntry {
@@ -257,6 +302,7 @@ class SdCardFont {
   bool ensureStyleIntervalsLoaded(uint8_t styleIdx);
   bool buildMiniKernMatrix(PerStyle& s, const uint32_t* codepoints, uint32_t cpCount);
   void applyKernLigaturePointers(PerStyle& s, EpdFontData& data) const;
+  void applyGlyphMissCallback(uint8_t styleIdx);
   int32_t findGlobalGlyphIndex(const PerStyle& s, uint32_t codepoint) const;
   int fetchAdvancesForCodepoints(uint32_t* codepoints, uint32_t cpCount, uint8_t styleMask);
   template <typename Iter>
@@ -265,5 +311,9 @@ class SdCardFont {
 
   // Global helpers
   void freeAll();
+  void clearOverflow();
   static void computeStyleFileOffsets(PerStyle& s, uint32_t baseOffset);
+
+  // Static callback for EpdFontData::glyphMissHandler (per-style via OverflowContext)
+  static const EpdGlyph* onGlyphMiss(void* ctx, uint32_t codepoint);
 };

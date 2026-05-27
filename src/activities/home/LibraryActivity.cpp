@@ -424,10 +424,11 @@ void LibraryActivity::setSort(uint8_t field, uint8_t direction) {
 
 void LibraryActivity::render(RenderLock&&) {
   // Single-pass render. ActivityManager called declareText() just before
-  // this, so the font's mini cache already holds the glyphs this paint
-  // needs. Anything declareText missed (rare punctuation in a book title,
-  // CJK, etc.) routes through the renderer's glyph fallback to the bundled
-  // flash font instead of rendering as the theme font.
+  // this, so the font cache LRU already holds the glyphs this paint needs.
+  // Anything the declaration missed (rare punctuation in a book title,
+  // CJK, etc.) lazy-loads into the LRU via SdCardFont::onGlyphMiss — those
+  // entries also persist across paints, so a one-off slow first paint is
+  // the worst case for unforeseen glyphs.
   renderer.clearScreen();
   renderPasses();
   renderer.displayBuffer();
