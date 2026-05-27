@@ -74,24 +74,13 @@ class GfxRenderer {
   uint16_t panelWidthBytes = HalDisplay::DISPLAY_WIDTH_BYTES;
   uint32_t frameBufferSize = HalDisplay::BUFFER_SIZE;
   std::vector<uint8_t*> bwBufferChunks;
-  // Mutable because the font miss handler (used by ThemeFontManager for lazy
-  // theme-font restoration after the reader evicts) populates the map from
-  // const lookup paths like getTextWidth() / getLineHeight(). Same pragmatic
-  // compromise as sdCardFonts_ below.
-  mutable std::map<int, EpdFontFamily> fontMap;
+  std::map<int, EpdFontFamily> fontMap;
   // Mutable because ensureSdCardFontReady() is const (called from layout code
   // that holds a const GfxRenderer&) but triggers SD card reads and heap
   // allocation inside the SdCardFont objects. Same pragmatic compromise as
   // fontCacheManager_ below.
   mutable std::map<int, SdCardFont*> sdCardFonts_;
 
-  // Lazy-load hook: when a fontMap lookup misses, the renderer invokes this
-  // handler with the missing fontId. If the handler returns true (meaning it
-  // restored the font registration), the lookup is retried once. Used by
-  // ThemeFontManager to lazily reload theme fonts evicted by the reader.
-  using FontMissHandler = bool (*)(int fontId, void* ctx);
-  FontMissHandler fontMissHandler_ = nullptr;
-  void* fontMissCtx_ = nullptr;
   std::map<int, EpdFontFamily>::const_iterator resolveFontIt(int fontId) const;
 
   // ID of the registered EpdFontFamily that serves as the system-wide glyph
@@ -167,13 +156,6 @@ class GfxRenderer {
   }
   void setFontCacheManager(FontCacheManager* m) { fontCacheManager_ = m; }
   FontCacheManager* getFontCacheManager() const { return fontCacheManager_; }
-  // Install a callback invoked when a fontMap lookup misses. The callback
-  // may restore the registration and return true, in which case the lookup
-  // is retried once. ctx is passed through unchanged.
-  void setFontMissHandler(FontMissHandler handler, void* ctx) {
-    fontMissHandler_ = handler;
-    fontMissCtx_ = ctx;
-  }
   // Install the system-wide glyph fallback. `fontId` must already be registered
   // via insertFont. Retro-wires its regular-style EpdFont into every other
   // registered family so existing fonts inherit the fallback. Subsequent

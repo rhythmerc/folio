@@ -103,7 +103,3 @@ void UiThemeLoader::unloadTheme(GfxRenderer& renderer) {
   idBuf_[0] = '\0';
   nameBuf_[0] = '\0';
 }
-
-void UiThemeLoader::evictFonts(GfxRenderer& renderer) {
-  ThemeFontManager::getInstance().evict(renderer);
-}

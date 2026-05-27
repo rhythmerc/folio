@@ -25,7 +25,6 @@
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
 #include "ReaderFontSystem.h"
-#include "ThemeFontManager.h"
 #include "UiThemeLoader.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
@@ -474,10 +473,6 @@ void setup() {
   // the fully-loaded theme.
   UI_THEMES.discoverThemes();
   LOG_INF("MEM", "stage=themes-discovered free=%u maxAlloc=%u", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
-  // Lazy theme-font restoration: the EPUB reader evicts SD theme fonts on
-  // entry to free heap for grayscale BW buffer allocation. The next activity
-  // that draws using a theme role triggers an on-demand reload via this hook.
-  renderer.setFontMissHandler(&ThemeFontManager::onFontMiss, &renderer);
   // System-wide glyph fallback: when a registered font's subset (in particular
   // build-subsetted theme `.cpfont`s using the ~400-codepoint UI union) lacks
   // a codepoint, EpdFont routes the lookup to notosans14 before substituting

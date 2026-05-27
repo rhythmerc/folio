@@ -118,16 +118,6 @@ void EpubReaderActivity::onEnter() {
     return;
   }
 
-  // Free SD theme font heap before any reader rendering. The reader uses only
-  // builtin fonts (status bar = SMALL_FONT_ID, body = SETTINGS.getReaderFontId
-  // resolved against the separate ReaderFontSystem, error fallbacks =
-  // UI_12_FONT_ID), so theme roles are pure dead weight during reading. On
-  // heavy themes (e.g. RoundedRaff) this reclaims enough contiguous heap that
-  // the chunked BW buffer snapshot for grayscale rendering doesn't fail under
-  // fragmentation. Lazy reload on exit happens via GfxRenderer's font miss
-  // handler (wired in main.cpp).
-  UiThemeLoader::getInstance().evictFonts(renderer);
-
   // Configure screen orientation based on settings
   // NOTE: This affects layout math and must be applied before any render calls.
   ReaderUtils::applyOrientation(renderer, SETTINGS.orientation);

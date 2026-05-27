@@ -27,11 +27,7 @@ uint8_t resolveSdCardStyle(const SdCardFont& font, const EpdFontFamily::Style st
 }  // namespace
 
 std::map<int, EpdFontFamily>::const_iterator GfxRenderer::resolveFontIt(int fontId) const {
-  auto it = fontMap.find(fontId);
-  if (it == fontMap.end() && fontMissHandler_ && fontMissHandler_(fontId, fontMissCtx_)) {
-    it = fontMap.find(fontId);
-  }
-  return it;
+  return fontMap.find(fontId);
 }
 
 const uint8_t* GfxRenderer::getGlyphBitmap(const EpdFontData* fontData, const EpdGlyph* glyph) const {

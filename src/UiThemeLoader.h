@@ -11,9 +11,6 @@ struct ThemeData;
 // Orchestrates SD theme loading: owns the active ThemeData (colors,
 // dimensions, layout), delegates archive discovery/extraction to
 // CpThemeArchive, and delegates SD font lifecycle to ThemeFontManager.
-//
-// The font miss handler used for lazy theme-font restoration lives on
-// ThemeFontManager — wire it via ThemeFontManager::onFontMiss in main.cpp.
 class UiThemeLoader {
  public:
   static UiThemeLoader& getInstance();
@@ -32,14 +29,6 @@ class UiThemeLoader {
 
   // Unload the current SD theme: free fonts and release ThemeData.
   void unloadTheme(GfxRenderer& renderer);
-
-  // Free every SD card font without unloading the theme. Per-role font IDs
-  // are remembered for lazy restoration; the theme metadata (colors,
-  // dimensions, layout) stays resident. Used by the EPUB reader, which
-  // touches zero theme roles, to reclaim heap so mid-session chunked
-  // allocations (e.g. the BW buffer snapshot for grayscale rendering) don't
-  // fail under heap fragmentation.
-  void evictFonts(GfxRenderer& renderer);
 
   const ThemeData* getData() const { return themeData_.get(); }
   bool isLoaded() const { return themeData_ != nullptr; }
