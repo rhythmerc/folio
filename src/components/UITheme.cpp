@@ -4,7 +4,7 @@
 #include <GfxRenderer.h>
 #include <Logging.h>
 
-#include "SdThemeLoader.h"
+#include "UiThemeLoader.h"
 #include "components/themes/BaseTheme.h"
 
 UITheme UITheme::instance;
@@ -26,8 +26,8 @@ void UITheme::reload(GfxRenderer& renderer) {
 
 void UITheme::setTheme(CrossPointSettings::UI_THEME type, GfxRenderer& renderer) {
   if (type == CrossPointSettings::SD_THEME && SETTINGS.sdThemeName[0] != '\0') {
-    if (SD_THEMES.loadTheme(SETTINGS.sdThemeName, renderer)) {
-      const ThemeData* sdData = SD_THEMES.getData();
+    if (UI_THEMES.loadTheme(SETTINGS.sdThemeName, renderer)) {
+      const ThemeData* sdData = UI_THEMES.getData();
       if (!currentTheme) {
         currentTheme = std::make_unique<BaseTheme>(sdData);
       } else {
@@ -37,7 +37,7 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type, GfxRenderer& renderer)
     }
     LOG_ERR("UI", "SD theme '%s' failed to load; falling back to Folio", SETTINGS.sdThemeName);
   } else {
-    SD_THEMES.unloadTheme(renderer);
+    UI_THEMES.unloadTheme(renderer);
   }
 
   setTheme(CrossPointSettings::FOLIO);
@@ -45,8 +45,8 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type, GfxRenderer& renderer)
 
 void UITheme::setTheme(CrossPointSettings::UI_THEME type) {
   const ThemeData* selected = &BuiltinThemes::Folio;
-  if (type == CrossPointSettings::SD_THEME && SD_THEMES.isLoaded()) {
-    selected = SD_THEMES.getData();
+  if (type == CrossPointSettings::SD_THEME && UI_THEMES.isLoaded()) {
+    selected = UI_THEMES.getData();
   }
   if (!currentTheme) {
     currentTheme = std::make_unique<BaseTheme>(selected);

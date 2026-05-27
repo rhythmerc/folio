@@ -6,21 +6,21 @@
 
 class GfxRenderer;
 class SdCardFont;
-struct SdCardFontFamilyInfo;
+struct ReaderFontFamilyInfo;
 
-class SdCardFontManager {
+class ReaderFontManager {
  public:
-  SdCardFontManager() = default;
-  ~SdCardFontManager();
-  SdCardFontManager(const SdCardFontManager&) = delete;
-  SdCardFontManager& operator=(const SdCardFontManager&) = delete;
+  ReaderFontManager() = default;
+  ~ReaderFontManager();
+  ReaderFontManager(const ReaderFontManager&) = delete;
+  ReaderFontManager& operator=(const ReaderFontManager&) = delete;
 
   // Load the font file matching fontSizeEnum (SMALL=0 .. EXTRA_LARGE=3) by
   // ordinal position in the family's sorted size list. Only one .cpfont file
   // is loaded; other sizes remain on disk. This keeps resident interval +
   // kern/ligature tables to one size's worth of memory.
   // Returns true on success.
-  bool loadFamily(const SdCardFontFamilyInfo& family, GfxRenderer& renderer, uint8_t fontSizeEnum);
+  bool loadFamily(const ReaderFontFamilyInfo& family, GfxRenderer& renderer, uint8_t fontSizeEnum);
 
   // Unload everything, unregister from renderer.
   void unloadAll(GfxRenderer& renderer);

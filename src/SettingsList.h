@@ -3,7 +3,7 @@
 #include <HalClock.h>
 #include <HalTiltSensor.h>
 #include <I18n.h>
-#include <SdCardFontRegistry.h>
+#include <ReaderFontRegistry.h>
 
 #include <algorithm>
 #include <cstring>
@@ -12,12 +12,12 @@
 
 #include "CrossPointSettings.h"
 #include "KOReaderCredentialStore.h"
-#include "SdThemeLoader.h"
+#include "UiThemeLoader.h"
 #include "activities/settings/SettingsActivity.h"
 
 // Build the font family setting dynamically. When registry is non-null, SD card fonts
 // are appended after the built-in fonts. Otherwise only built-in fonts are listed.
-inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
+inline SettingInfo buildFontFamilySetting(const ReaderFontRegistry* registry) {
   // Built-in font labels (StrId)
   std::vector<StrId> enumValues = {StrId::STR_NOTO_SERIF, StrId::STR_NOTO_SANS};
   // Runtime string labels for SD card fonts
@@ -28,7 +28,7 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
     const auto& families = registry->getFamilies();
     enumStringValues.reserve(families.size());
     std::transform(families.begin(), families.end(), std::back_inserter(enumStringValues),
-                   [](const SdCardFontFamilyInfo& f) { return f.name; });
+                   [](const ReaderFontFamilyInfo& f) { return f.name; });
   }
 
   // Capture the SD font count for the lambdas
@@ -59,7 +59,7 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
     const auto& families = registry->getFamilies();
     sdFamilyNames.reserve(families.size());
     std::transform(families.begin(), families.end(), std::back_inserter(sdFamilyNames),
-                   [](const SdCardFontFamilyInfo& f) { return f.name; });
+                   [](const ReaderFontFamilyInfo& f) { return f.name; });
   }
 
   s.valueGetter = [sdFamilyNames]() -> uint8_t {
@@ -93,7 +93,7 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
 
 // Build the theme setting dynamically. When loader is non-null and has discovered
 // SD themes, they are appended after the built-in Folio entry.
-inline SettingInfo buildThemeSetting(const SdThemeLoader* loader) {
+inline SettingInfo buildThemeSetting(const UiThemeLoader* loader) {
   std::vector<std::string> allLabels;
   allLabels.push_back(I18N.get(StrId::STR_THEME_FOLIO));
 
@@ -148,13 +148,13 @@ inline SettingInfo buildThemeSetting(const SdThemeLoader* loader) {
 //
 // The static list is constructed exactly once (master's optimization, #1086 +
 // #1636) so the per-entry SettingInfo cost is paid once. When an
-// SdCardFontRegistry is supplied AND has SD card fonts installed, the
+// ReaderFontRegistry is supplied AND has SD card fonts installed, the
 // font-family entry is replaced in a per-call copy with a registry-aware
 // version. Callers without SD fonts pay only a vector copy.
-// When a SdThemeLoader is supplied with discovered themes, the theme
+// When a UiThemeLoader is supplied with discovered themes, the theme
 // picker entry is similarly replaced with a dynamic version.
-inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* registry = nullptr,
-                                                const SdThemeLoader* themeLoader = nullptr) {
+inline std::vector<SettingInfo> getSettingsList(const ReaderFontRegistry* registry = nullptr,
+                                                const UiThemeLoader* themeLoader = nullptr) {
   static const std::vector<SettingInfo> baseList = [] {
     std::vector<SettingInfo> v = {
         // --- Display ---

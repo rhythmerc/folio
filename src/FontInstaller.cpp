@@ -8,7 +8,7 @@
 
 #include "CrossPointSettings.h"
 
-FontInstaller::FontInstaller(SdCardFontRegistry& registry) : registry_(registry) {}
+FontInstaller::FontInstaller(ReaderFontRegistry& registry) : registry_(registry) {}
 
 bool FontInstaller::isValidFamilyName(const char* name) {
   if (name == nullptr || name[0] == '\0') return false;
@@ -58,8 +58,8 @@ bool FontInstaller::isValidCpfontFilename(const char* name) {
 bool FontInstaller::ensureFamilyDir(const char* familyName) {
   // Reuse the family's existing root if installed; otherwise pick the
   // default-write root (hidden if no roots exist yet).
-  const char* root = SdCardFontRegistry::findFamilyRoot(familyName);
-  if (!root) root = SdCardFontRegistry::defaultWriteRoot();
+  const char* root = ReaderFontRegistry::findFamilyRoot(familyName);
+  if (!root) root = ReaderFontRegistry::defaultWriteRoot();
 
   if (!Storage.exists(root)) {
     if (!Storage.mkdir(root)) {
@@ -107,8 +107,8 @@ bool FontInstaller::validateCpfontFile(const char* path) {
 void FontInstaller::buildFontPath(const char* family, const char* filename, char* outBuf, size_t outBufSize) {
   // Use the same root selection as ensureFamilyDir: existing install dir wins,
   // otherwise the default-write root.
-  const char* root = SdCardFontRegistry::findFamilyRoot(family);
-  if (!root) root = SdCardFontRegistry::defaultWriteRoot();
+  const char* root = ReaderFontRegistry::findFamilyRoot(family);
+  if (!root) root = ReaderFontRegistry::defaultWriteRoot();
   snprintf(outBuf, outBufSize, "%s/%s/%s", root, family, filename);
 }
 
@@ -118,7 +118,7 @@ FontInstaller::Error FontInstaller::deleteFamily(const char* familyName) {
   }
 
   // A family may exist in either root (or, edge case, both). Remove from both.
-  const char* roots[] = {SdCardFontRegistry::FONTS_DIR_HIDDEN, SdCardFontRegistry::FONTS_DIR_VISIBLE};
+  const char* roots[] = {ReaderFontRegistry::FONTS_DIR_HIDDEN, ReaderFontRegistry::FONTS_DIR_VISIBLE};
   bool removedAny = false;
   bool sawAny = false;
   for (const char* root : roots) {

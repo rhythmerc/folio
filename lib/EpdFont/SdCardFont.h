@@ -18,6 +18,39 @@
 // Reader enforcement: SdCardFont::load().
 #define CPFONT_VERSION 4
 
+// Low-level .cpfont (v4) loader and glyph cache. Shared by both the reader
+// (one instance, via ReaderFontManager) and the UI/theme system (up to 8
+// instances deduped by path, via UiThemeLoader). Each instance owns one
+// open file path plus per-style glyph state.
+//
+// State machine for each style's EpdFontData pointer (see PerStyle below):
+//
+//   load()        ─►  epdFont.data = &stubData
+//                     (header metrics only; glyphs resolved on-demand via the
+//                      miss handler → overflow LRU. Used by UI roles that
+//                      render arbitrary text without a prewarm pass.)
+//
+//   prewarm(text) ─►  epdFont.data = &miniData
+//                     (mini intervals + glyph table + bitmap blob for the
+//                      visible codepoints; miss handler still wired for any
+//                      glyph not in the prewarm set. Used by both UI screens
+//                      and reader page renders.)
+//
+//   clearCache()  ─►  epdFont.data = &stubData
+//                     (mini buffers freed; persistent advance cache survives)
+//
+//   freeAll()     ─►  both zeroed; instance is effectively dead until load()
+//
+// Two distinct paths exercise this object:
+//
+//   - Shared (UI + reader): load → prewarm → render → clearCache loop. Driven
+//     by FontCacheManager::prewarmCache via GfxRenderer.
+//
+//   - Reader-only (layout): buildAdvanceTable + getAdvance. The advance table
+//     is a separate persistent cache (sized for an entire book layout pass)
+//     that the UI never touches — UI text has fixed positions and never
+//     measures via this path. See ParsedText.cpp + TxtReaderActivity.cpp for
+//     the call sites; GfxRenderer::ensureSdCardFontReady forwards into it.
 class SdCardFont {
  public:
   static constexpr uint16_t MAX_PAGE_GLYPHS = 512;
@@ -44,6 +77,13 @@ class SdCardFont {
   // Returns number of glyphs that couldn't be loaded (0 on full success).
   int prewarm(const char* utf8Text, uint8_t styleMask = 0x0F, bool metadataOnly = false);
 
+  // --- Reader-only layout API ----------------------------------------------
+  // The advance table is exercised exclusively by the reader's layout pass
+  // (ParsedText / TxtReaderActivity → GfxRenderer::ensureSdCardFontReady).
+  // The UI never builds or queries it because UI text has fixed widths and
+  // never re-flows. The table coexists with mini data — it's a separate,
+  // longer-lived cache keyed by codepoint, not page.
+
   // Build a compact advance-only table for layout measurement.
   // Extracts ALL unique codepoints from words (no MAX_PAGE_GLYPHS cap),
   // batch-reads advanceX from SD, stores in a sorted per-style table.
@@ -57,6 +97,7 @@ class SdCardFont {
 
   // Returns true if advance table is populated for at least one style.
   bool hasAdvanceTable() const;
+  // --- End reader-only layout API ------------------------------------------
 
   // Free mini data for all styles, restore stub EpdFontData.
   // Also clears the temporary advance table (built per layout pass) but

@@ -10,7 +10,7 @@
 #include "fontIds.h"
 
 FontSelectionActivity::FontSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                             const SdCardFontRegistry* registry)
+                                             const ReaderFontRegistry* registry)
     : Activity("FontSelect", renderer, mappedInput), registry_(registry) {}
 
 void FontSelectionActivity::onEnter() {

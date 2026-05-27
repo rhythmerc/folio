@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SdCardFontRegistry.h>
+#include <ReaderFontRegistry.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +17,7 @@ class FontInstaller {
     MAX_FAMILIES_REACHED,
   };
 
-  explicit FontInstaller(SdCardFontRegistry& registry);
+  explicit FontInstaller(ReaderFontRegistry& registry);
 
   /// Validate a family name: alphanumeric + hyphen + underscore only, no path traversal.
   static bool isValidFamilyName(const char* name);
@@ -30,7 +30,7 @@ class FontInstaller {
 
   /// Ensure /<root>/<family>/ exists, where <root> is /.fonts (preferred) or /fonts.
   /// Re-uses the existing root if the family is already installed; otherwise
-  /// creates it under SdCardFontRegistry::defaultWriteRoot().
+  /// creates it under ReaderFontRegistry::defaultWriteRoot().
   bool ensureFamilyDir(const char* familyName);
 
   /// Validate a .cpfont file on disk (check magic bytes).
@@ -52,7 +52,7 @@ class FontInstaller {
   bool isFamilyInstalled(const char* familyName) const;
 
  private:
-  SdCardFontRegistry& registry_;
+  ReaderFontRegistry& registry_;
 
   static constexpr const char* CPFONT_MAGIC = "CPFONT\0";
   static constexpr size_t CPFONT_MAGIC_LEN = 8;

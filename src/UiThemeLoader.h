@@ -9,9 +9,23 @@
 class GfxRenderer;
 class SdCardFont;
 
-class SdThemeLoader {
+// UI/theme-side font orchestrator. Manages 0..8 SdCardFont instances
+// (one per semantic theme role: title, heading, body, caption, accent,
+// plus three compact variants), deduplicated by .cpfont path so multiple
+// roles can share a single backing font. Supports mid-session eviction
+// with lazy reload via GfxRenderer::fontMissHandler, which is required
+// for the reader to reclaim heap when it doesn't need theme fonts.
+//
+// Counterpart on the reader side is ReaderFontSystem; the two are
+// intentionally separate because they have different constraints
+// (many fonts vs one) and different lifecycles.
+//
+// Despite the name, this class manages the whole theme — colors,
+// dimensions, layout, and fonts — because the font lifecycle is
+// inseparable from the .cptheme archive's extraction lifecycle.
+class UiThemeLoader {
  public:
-  static SdThemeLoader& getInstance();
+  static UiThemeLoader& getInstance();
 
   struct ThemeInfo {
     char id[32];
@@ -57,10 +71,10 @@ class SdThemeLoader {
   const std::vector<ThemeInfo>& getDiscoveredThemes() const { return themeList_; }
 
  private:
-  SdThemeLoader() = default;
-  ~SdThemeLoader();
-  SdThemeLoader(const SdThemeLoader&) = delete;
-  SdThemeLoader& operator=(const SdThemeLoader&) = delete;
+  UiThemeLoader() = default;
+  ~UiThemeLoader();
+  UiThemeLoader(const UiThemeLoader&) = delete;
+  UiThemeLoader& operator=(const UiThemeLoader&) = delete;
 
   std::unique_ptr<ThemeData> themeData_;
   char idBuf_[32] = "";
@@ -113,4 +127,4 @@ class SdThemeLoader {
   const ThemeInfo* findThemeInfo(const char* themeId) const;
 };
 
-#define SD_THEMES SdThemeLoader::getInstance()
+#define UI_THEMES UiThemeLoader::getInstance()

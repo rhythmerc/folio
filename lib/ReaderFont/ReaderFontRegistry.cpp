@@ -1,4 +1,4 @@
-#include "SdCardFontRegistry.h"
+#include "ReaderFontRegistry.h"
 
 #include <HalStorage.h>
 #include <Logging.h>
@@ -6,23 +6,23 @@
 #include <algorithm>
 #include <cstring>
 
-// --- SdCardFontFamilyInfo helpers ---
+// --- ReaderFontFamilyInfo helpers ---
 
-const SdCardFontFileInfo* SdCardFontFamilyInfo::findFile(uint8_t size, uint8_t style) const {
+const ReaderFontFileInfo* ReaderFontFamilyInfo::findFile(uint8_t size, uint8_t style) const {
   for (const auto& f : files) {
     if (f.pointSize == size && f.style == style) return &f;
   }
   return nullptr;
 }
 
-bool SdCardFontFamilyInfo::hasSize(uint8_t size) const {
+bool ReaderFontFamilyInfo::hasSize(uint8_t size) const {
   for (const auto& f : files) {
     if (f.pointSize == size) return true;
   }
   return false;
 }
 
-std::vector<uint8_t> SdCardFontFamilyInfo::availableSizes() const {
+std::vector<uint8_t> ReaderFontFamilyInfo::availableSizes() const {
   std::vector<uint8_t> sizes;
   for (const auto& f : files) {
     bool found = false;
@@ -38,9 +38,9 @@ std::vector<uint8_t> SdCardFontFamilyInfo::availableSizes() const {
   return sizes;
 }
 
-// --- SdCardFontRegistry ---
+// --- ReaderFontRegistry ---
 
-bool SdCardFontRegistry::parseFilename(const char* filename, uint8_t& size, uint8_t& style) {
+bool ReaderFontRegistry::parseFilename(const char* filename, uint8_t& size, uint8_t& style) {
   // V4 naming: <name>_<size>.cpfont (e.g. Bookerly-SD_14.cpfont)
   // Use an ends-with check rather than strstr() so that in-progress downloads
   // like "Foo_14.cpfont.tmp" or backups like "Foo_14.cpfont~" aren't accepted.
@@ -69,14 +69,14 @@ bool SdCardFontRegistry::parseFilename(const char* filename, uint8_t& size, uint
   // V4 .cpfont files bundle every style (regular/bold/italic/bold-italic) into
   // one file, so style is always 0 at the registry level. The per-style
   // bitstream is selected later by SdCardFont::getEpdFont(style). The `style`
-  // field in SdCardFontFileInfo is reserved for future formats that split
+  // field in ReaderFontFileInfo is reserved for future formats that split
   // styles across files; scanDirectory() defends against accidental
   // (pointSize, style) collisions in that scenario.
   style = 0;
   return true;
 }
 
-void SdCardFontRegistry::scanDirectory(const char* dirPath, SdCardFontFamilyInfo& family) {
+void ReaderFontRegistry::scanDirectory(const char* dirPath, ReaderFontFamilyInfo& family) {
   FsFile dir = Storage.open(dirPath);
   if (!dir || !dir.isDirectory()) return;
 
@@ -110,11 +110,11 @@ void SdCardFontRegistry::scanDirectory(const char* dirPath, SdCardFontFamilyInfo
       }
     }
     if (duplicate) {
-      LOG_ERR("SDREG", "Duplicate font %s in %s — skipping", nameBuffer, dirPath);
+      LOG_ERR("RDRREG", "Duplicate font %s in %s — skipping", nameBuffer, dirPath);
       continue;
     }
 
-    SdCardFontFileInfo info;
+    ReaderFontFileInfo info;
     info.path = std::string(dirPath) + "/" + nameBuffer;
     info.pointSize = size;
     info.style = style;
@@ -125,14 +125,14 @@ void SdCardFontRegistry::scanDirectory(const char* dirPath, SdCardFontFamilyInfo
 // Scan a single root (e.g. "/.fonts") and append its families to `out`.
 // Skips families whose names already exist in `out` (de-duplicates between
 // the hidden and visible roots — first scan wins).
-void SdCardFontRegistry::scanRoot(const char* rootPath, std::vector<SdCardFontFamilyInfo>& out) {
+void ReaderFontRegistry::scanRoot(const char* rootPath, std::vector<ReaderFontFamilyInfo>& out) {
   FsFile root = Storage.open(rootPath);
   if (!root) {
-    LOG_DBG("SDREG", "Fonts directory not found: %s", rootPath);
+    LOG_DBG("RDRREG", "Fonts directory not found: %s", rootPath);
     return;
   }
   if (!root.isDirectory()) {
-    LOG_ERR("SDREG", "Fonts path is not a directory: %s", rootPath);
+    LOG_ERR("RDRREG", "Fonts path is not a directory: %s", rootPath);
     return;
   }
 
@@ -157,14 +157,14 @@ void SdCardFontRegistry::scanRoot(const char* rootPath, std::vector<SdCardFontFa
       }
       if (exists) continue;
 
-      SdCardFontFamilyInfo family;
+      ReaderFontFamilyInfo family;
       family.name = nameBuffer;
       std::string subDirPath = std::string(rootPath) + "/" + nameBuffer;
-      SdCardFontRegistry::scanDirectory(subDirPath.c_str(), family);
+      ReaderFontRegistry::scanDirectory(subDirPath.c_str(), family);
 
       if (!family.files.empty()) {
         out.push_back(std::move(family));
-        LOG_DBG("SDREG", "Found family: %s (%d files) in %s", out.back().name.c_str(),
+        LOG_DBG("RDRREG", "Found family: %s (%d files) in %s", out.back().name.c_str(),
                 static_cast<int>(out.back().files.size()), rootPath);
       }
     } else {
@@ -173,7 +173,7 @@ void SdCardFontRegistry::scanRoot(const char* rootPath, std::vector<SdCardFontFa
   }
 }
 
-bool SdCardFontRegistry::discover() {
+bool ReaderFontRegistry::discover() {
   families_.clear();
   families_.reserve(MAX_SD_FAMILIES);
 
@@ -184,18 +184,18 @@ bool SdCardFontRegistry::discover() {
 
   // Sort families alphabetically
   std::sort(families_.begin(), families_.end(),
-            [](const SdCardFontFamilyInfo& a, const SdCardFontFamilyInfo& b) { return a.name < b.name; });
+            [](const ReaderFontFamilyInfo& a, const ReaderFontFamilyInfo& b) { return a.name < b.name; });
 
   // Cap at MAX_SD_FAMILIES
   if (static_cast<int>(families_.size()) > MAX_SD_FAMILIES) {
     families_.resize(MAX_SD_FAMILIES);
   }
 
-  LOG_DBG("SDREG", "Discovery complete: %d families", static_cast<int>(families_.size()));
+  LOG_DBG("RDRREG", "Discovery complete: %d families", static_cast<int>(families_.size()));
   return !families_.empty();
 }
 
-const char* SdCardFontRegistry::findFamilyRoot(const char* familyName) {
+const char* ReaderFontRegistry::findFamilyRoot(const char* familyName) {
   if (!familyName || !*familyName) return nullptr;
   char path[160];
   snprintf(path, sizeof(path), "%s/%s", FONTS_DIR_HIDDEN, familyName);
@@ -205,7 +205,7 @@ const char* SdCardFontRegistry::findFamilyRoot(const char* familyName) {
   return nullptr;
 }
 
-const char* SdCardFontRegistry::defaultWriteRoot() {
+const char* ReaderFontRegistry::defaultWriteRoot() {
   // If exactly one of the roots already exists, keep using it. Otherwise
   // (neither exists, or both exist) prefer the hidden root for new installs.
   bool hiddenExists = Storage.exists(FONTS_DIR_HIDDEN);
@@ -215,14 +215,14 @@ const char* SdCardFontRegistry::defaultWriteRoot() {
   return FONTS_DIR_HIDDEN;
 }
 
-const SdCardFontFamilyInfo* SdCardFontRegistry::findFamily(const std::string& name) const {
+const ReaderFontFamilyInfo* ReaderFontRegistry::findFamily(const std::string& name) const {
   for (const auto& f : families_) {
     if (f.name == name) return &f;
   }
   return nullptr;
 }
 
-int SdCardFontRegistry::getFamilyIndex(const std::string& name) const {
+int ReaderFontRegistry::getFamilyIndex(const std::string& name) const {
   for (int i = 0; i < static_cast<int>(families_.size()); i++) {
     if (families_[i].name == name) return i;
   }

@@ -278,7 +278,7 @@ class CrossPointSettings {
   // Get singleton instance
   static CrossPointSettings& getInstance() { return instance; }
 
-  // Callback to resolve SD card font IDs. Set by SdCardFontSystem::begin().
+  // Callback to resolve SD card font IDs. Set by ReaderFontSystem::begin().
   // Returns font ID or 0 if not found.
   using SdFontIdResolver = int (*)(void* ctx, const char* familyName, uint8_t fontSize);
   SdFontIdResolver sdFontIdResolver = nullptr;

@@ -9,7 +9,7 @@
 #include <esp_rom_crc.h>
 
 #include "MappedInputManager.h"
-#include "SdCardFontSystem.h"
+#include "ReaderFontSystem.h"
 #include "SilentRestart.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/ConfirmationActivity.h"
@@ -19,7 +19,7 @@
 #include "network/HttpDownloader.h"
 
 FontDownloadActivity::FontDownloadActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
-    : Activity("FontDownload", renderer, mappedInput), fontInstaller_(sdFontSystem.registry()) {}
+    : Activity("FontDownload", renderer, mappedInput), fontInstaller_(readerFontSystem.registry()) {}
 
 // --- Lifecycle ---
 

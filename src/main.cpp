@@ -24,8 +24,8 @@
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
-#include "SdCardFontSystem.h"
-#include "SdThemeLoader.h"
+#include "ReaderFontSystem.h"
+#include "UiThemeLoader.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
@@ -39,7 +39,7 @@ MappedInputManager mappedInputManager(gpio);
 GfxRenderer renderer(display);
 ActivityManager activityManager(renderer, mappedInputManager);
 FontDecompressor fontDecompressor;
-SdCardFontSystem sdFontSystem;
+ReaderFontSystem readerFontSystem;
 FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts());
 static unsigned long allowSleepAt = 0;
 
@@ -326,7 +326,7 @@ void setupDisplayAndFonts(bool seamless = false) {
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
 
   // Discover and load SD card fonts
-  sdFontSystem.begin(renderer);
+  readerFontSystem.begin(renderer);
 
   // Theme-role font registry discovers SD-installed fonts for the *active*
   // theme only (driven by UITheme.reload below — that's where the registry
@@ -475,11 +475,11 @@ void setup() {
   // renders correctly before the SD theme is resident. activityManager.goHome
   // and the reader routing below run AFTER this, so the next activity sees
   // the fully-loaded theme.
-  SD_THEMES.discoverThemes();
+  UI_THEMES.discoverThemes();
   // Lazy theme-font restoration: the EPUB reader evicts SD theme fonts on
   // entry to free heap for grayscale BW buffer allocation. The next activity
   // that draws using a theme role triggers an on-demand reload via this hook.
-  renderer.setFontMissHandler(&SdThemeLoader::onFontMiss, &renderer);
+  renderer.setFontMissHandler(&UiThemeLoader::onFontMiss, &renderer);
   UITheme::getInstance().reload(renderer);
 
   if (recoveryFirmwareMode) {

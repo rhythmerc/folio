@@ -1,12 +1,12 @@
-#include "SdCardFontManager.h"
+#include "ReaderFontManager.h"
 
 #include <EpdFontFamily.h>
 #include <GfxRenderer.h>
 #include <Logging.h>
+#include <ReaderFontRegistry.h>
 #include <SdCardFont.h>
-#include <SdCardFontRegistry.h>
 
-SdCardFontManager::~SdCardFontManager() {
+ReaderFontManager::~ReaderFontManager() {
   for (auto& lf : loaded_) {
     delete lf.font;
   }
@@ -15,7 +15,7 @@ SdCardFontManager::~SdCardFontManager() {
 // FNV-1a continuation: seeds with contentHash, then hashes family name + point size.
 // Produces a deterministic ID that is stable across load/unload cycles and reboots,
 // and changes when font content changes (different header/TOC = different contentHash).
-int SdCardFontManager::computeFontId(uint32_t contentHash, const char* familyName, uint8_t pointSize) {
+int ReaderFontManager::computeFontId(uint32_t contentHash, const char* familyName, uint8_t pointSize) {
   static constexpr uint32_t FNV_PRIME = 16777619u;
   uint32_t hash = contentHash;
   while (*familyName) {
@@ -28,7 +28,7 @@ int SdCardFontManager::computeFontId(uint32_t contentHash, const char* familyNam
   return id != 0 ? id : 1;  // 0 is reserved as "not found" sentinel
 }
 
-bool SdCardFontManager::loadFamily(const SdCardFontFamilyInfo& family, GfxRenderer& renderer, uint8_t fontSizeEnum) {
+bool ReaderFontManager::loadFamily(const ReaderFontFamilyInfo& family, GfxRenderer& renderer, uint8_t fontSizeEnum) {
   // Unload any previously loaded family first
   if (!loadedFamilyName_.empty()) {
     unloadAll(renderer);
@@ -39,22 +39,22 @@ bool SdCardFontManager::loadFamily(const SdCardFontFamilyInfo& family, GfxRender
   // family has fewer sizes than 4, clamp to the last available size.
   auto sizes = family.availableSizes();
   if (sizes.empty()) {
-    LOG_ERR("SDMGR", "Family %s has no files to load", family.name.c_str());
+    LOG_ERR("RDRMGR", "Family %s has no files to load", family.name.c_str());
     return false;
   }
 
   uint8_t idx = fontSizeEnum;
   if (idx >= sizes.size()) idx = sizes.size() - 1;
-  const SdCardFontFileInfo* selected = family.findFile(sizes[idx]);
+  const ReaderFontFileInfo* selected = family.findFile(sizes[idx]);
 
   auto* font = new (std::nothrow) SdCardFont();
   if (!font) {
-    LOG_ERR("SDMGR", "Failed to allocate SdCardFont for %s", selected->path.c_str());
+    LOG_ERR("RDRMGR", "Failed to allocate SdCardFont for %s", selected->path.c_str());
     return false;
   }
 
   if (!font->load(selected->path.c_str())) {
-    LOG_ERR("SDMGR", "Failed to load %s", selected->path.c_str());
+    LOG_ERR("RDRMGR", "Failed to load %s", selected->path.c_str());
     delete font;
     return false;
   }
@@ -63,14 +63,14 @@ bool SdCardFontManager::loadFamily(const SdCardFontFamilyInfo& family, GfxRender
   // Guard against collision with built-in font IDs (astronomically unlikely
   // with FNV-1a hashes, but provides a safety net)
   if (renderer.getFontMap().count(fontId) != 0) {
-    LOG_ERR("SDMGR", "Font ID %d collides with existing font, skipping %s", fontId, selected->path.c_str());
+    LOG_ERR("RDRMGR", "Font ID %d collides with existing font, skipping %s", fontId, selected->path.c_str());
     delete font;
     return false;
   }
   renderer.registerSdCardFont(fontId, font);
   loaded_.push_back({font, fontId, selected->pointSize});
 
-  LOG_DBG("SDMGR", "Loaded %s size=%u id=%d styles=%u (sizeEnum=%u)", selected->path.c_str(), selected->pointSize,
+  LOG_DBG("RDRMGR", "Loaded %s size=%u id=%d styles=%u (sizeEnum=%u)", selected->path.c_str(), selected->pointSize,
           fontId, font->styleCount(), fontSizeEnum);
 
   EpdFontFamily fontFamily(font->getEpdFont(0), font->getEpdFont(1), font->getEpdFont(2), font->getEpdFont(3));
@@ -81,7 +81,7 @@ bool SdCardFontManager::loadFamily(const SdCardFontFamilyInfo& family, GfxRender
   return true;
 }
 
-void SdCardFontManager::unloadAll(GfxRenderer& renderer) {
+void ReaderFontManager::unloadAll(GfxRenderer& renderer) {
   renderer.clearSdCardFonts();
   for (auto& lf : loaded_) {
     renderer.removeFont(lf.fontId);
@@ -92,7 +92,7 @@ void SdCardFontManager::unloadAll(GfxRenderer& renderer) {
   loadedPointSize_ = 0;
 }
 
-int SdCardFontManager::getFontId(const std::string& familyName) const {
+int ReaderFontManager::getFontId(const std::string& familyName) const {
   if (familyName != loadedFamilyName_ || loaded_.empty()) return 0;
   return loaded_.front().fontId;
 }

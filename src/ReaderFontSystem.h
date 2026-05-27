@@ -1,19 +1,26 @@
 #pragma once
 
-#include <SdCardFontManager.h>
-#include <SdCardFontRegistry.h>
+#include <ReaderFontManager.h>
+#include <ReaderFontRegistry.h>
 
 #include <atomic>
 
 class GfxRenderer;
 
-/// Facade that owns the SD card font registry, manager, and resolver logic.
-/// Hides implementation details behind a single begin() + ensureLoaded() API.
-class SdCardFontSystem {
+/// Reader-side facade. Owns the ReaderFontRegistry (SD-card font discovery),
+/// the ReaderFontManager (one-loaded-font-at-a-time orchestrator), and the
+/// resolver callback wired into CrossPointSettings. Lives behind a single
+/// begin() + ensureLoaded() API used by main.cpp and the reader activities.
+///
+/// Counterpart on the UI side is UiThemeLoader; the two systems are
+/// intentionally separate because they have different constraints
+/// (one font vs many) and different lifecycles (per-book session vs
+/// per-theme with mid-session eviction).
+class ReaderFontSystem {
  public:
-  SdCardFontSystem() = default;
-  SdCardFontSystem(const SdCardFontSystem&) = delete;
-  SdCardFontSystem& operator=(const SdCardFontSystem&) = delete;
+  ReaderFontSystem() = default;
+  ReaderFontSystem(const ReaderFontSystem&) = delete;
+  ReaderFontSystem& operator=(const ReaderFontSystem&) = delete;
   /// Discover SD card fonts and load user's saved selection. Call once during setup.
   void begin(GfxRenderer& renderer);
 
@@ -27,10 +34,10 @@ class SdCardFontSystem {
   int resolveFontId(const char* familyName, uint8_t fontSizeEnum) const;
 
   /// Access the registry (e.g. for settings UI to enumerate available fonts).
-  const SdCardFontRegistry& registry() const { return registry_; }
+  const ReaderFontRegistry& registry() const { return registry_; }
 
   /// Non-const access to the registry (for FontInstaller).
-  SdCardFontRegistry& registry() { return registry_; }
+  ReaderFontRegistry& registry() { return registry_; }
 
   /// Mark the registry as needing re-discovery.
   /// Thread-safe: can be called from the web server task.
@@ -46,10 +53,10 @@ class SdCardFontSystem {
   }
 
  private:
-  SdCardFontRegistry registry_;
-  SdCardFontManager manager_;
+  ReaderFontRegistry registry_;
+  ReaderFontManager manager_;
   std::atomic<bool> registryDirty_{false};
 };
 
-// Global SD card font system instance (defined in main.cpp).
-extern SdCardFontSystem sdFontSystem;
+// Global reader-side font system (defined in main.cpp).
+extern ReaderFontSystem readerFontSystem;

@@ -1,4 +1,4 @@
-#include "SdThemeLoader.h"
+#include "UiThemeLoader.h"
 
 #include <Arduino.h>
 #include <EpdFontFamily.h>
@@ -15,7 +15,7 @@
 #include "components/themes/BaseTheme.h"
 
 namespace {
-constexpr char LOG_TAG[] = "SDTHM";
+constexpr char LOG_TAG[] = "UITHM";
 
 constexpr const char* SCAN_ROOTS[] = {"/.themes", "/themes"};
 constexpr int SCAN_ROOT_COUNT = 2;
@@ -75,14 +75,14 @@ int computeBundledFontId(const char* themeId, const char* roleName) {
 
 }  // namespace
 
-SdThemeLoader& SdThemeLoader::getInstance() {
-  static SdThemeLoader instance;
+UiThemeLoader& UiThemeLoader::getInstance() {
+  static UiThemeLoader instance;
   return instance;
 }
 
-SdThemeLoader::~SdThemeLoader() = default;
+UiThemeLoader::~UiThemeLoader() = default;
 
-void SdThemeLoader::discoverThemes() {
+void UiThemeLoader::discoverThemes() {
   themeList_.clear();
   for (int i = 0; i < SCAN_ROOT_COUNT; ++i) {
     scanRoot(SCAN_ROOTS[i]);
@@ -90,7 +90,7 @@ void SdThemeLoader::discoverThemes() {
   LOG_DBG(LOG_TAG, "Discovered %d SD theme(s)", static_cast<int>(themeList_.size()));
 }
 
-void SdThemeLoader::scanRoot(const char* rootPath) {
+void UiThemeLoader::scanRoot(const char* rootPath) {
   if (!Storage.exists(rootPath)) return;
 
   FsFile dir = Storage.open(rootPath);
@@ -154,7 +154,7 @@ void SdThemeLoader::scanRoot(const char* rootPath) {
   }
 }
 
-bool SdThemeLoader::loadTheme(const char* themeId, GfxRenderer& renderer) {
+bool UiThemeLoader::loadTheme(const char* themeId, GfxRenderer& renderer) {
   if (!themeId || themeId[0] == '\0') return false;
 
   if (isLoaded() && strcmp(idBuf_, themeId) == 0) return true;
@@ -219,14 +219,14 @@ bool SdThemeLoader::loadTheme(const char* themeId, GfxRenderer& renderer) {
   return true;
 }
 
-void SdThemeLoader::unloadTheme(GfxRenderer& renderer) {
+void UiThemeLoader::unloadTheme(GfxRenderer& renderer) {
   clearFonts(renderer);
   themeData_.reset();
   idBuf_[0] = '\0';
   nameBuf_[0] = '\0';
 }
 
-bool SdThemeLoader::isExtracted(const char* themeId, const char* cpthemePath) const {
+bool UiThemeLoader::isExtracted(const char* themeId, const char* cpthemePath) const {
   char markerPath[192];
   snprintf(markerPath, sizeof(markerPath), "%s/%s/%s", CACHE_ROOT, themeId, EXTRACTED_MARKER);
   FsFile marker;
@@ -243,7 +243,7 @@ bool SdThemeLoader::isExtracted(const char* themeId, const char* cpthemePath) co
   return storedHash == currentHash;
 }
 
-bool SdThemeLoader::extractCptheme(const char* cpthemePath, const char* themeId) {
+bool UiThemeLoader::extractCptheme(const char* cpthemePath, const char* themeId) {
   LOG_INF(LOG_TAG, "Extracting %s", cpthemePath);
 
   char cacheDir[128];
@@ -356,7 +356,7 @@ bool SdThemeLoader::extractCptheme(const char* cpthemePath, const char* themeId)
   return true;
 }
 
-void SdThemeLoader::loadThemeFonts(const char* themeId, const ThemeFontSpec& fontSpec,
+void UiThemeLoader::loadThemeFonts(const char* themeId, const ThemeFontSpec& fontSpec,
                                    GfxRenderer& renderer) {
   if (!themeData_) return;
 
@@ -447,7 +447,7 @@ void SdThemeLoader::loadThemeFonts(const char* themeId, const ThemeFontSpec& fon
   }
 }
 
-void SdThemeLoader::clearFonts(GfxRenderer& renderer) {
+void UiThemeLoader::clearFonts(GfxRenderer& renderer) {
   for (int fontId : registeredFontIds_) {
     renderer.removeFont(fontId);
   }
@@ -456,7 +456,7 @@ void SdThemeLoader::clearFonts(GfxRenderer& renderer) {
   roleEntries_.clear();
 }
 
-void SdThemeLoader::evictFonts(GfxRenderer& renderer) {
+void UiThemeLoader::evictFonts(GfxRenderer& renderer) {
   if (loadedFonts_.empty() && registeredFontIds_.empty()) return;
   LOG_DBG(LOG_TAG, "evictFonts: dropping %u SdCardFont(s), heap free=%u before",
           static_cast<unsigned>(loadedFonts_.size()), ESP.getFreeHeap());
@@ -470,7 +470,7 @@ void SdThemeLoader::evictFonts(GfxRenderer& renderer) {
   LOG_INF(LOG_TAG, "evictFonts: heap free=%u, maxAlloc=%u after", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 }
 
-bool SdThemeLoader::tryLoadFontOnDemand(int fontId, GfxRenderer& renderer) {
+bool UiThemeLoader::tryLoadFontOnDemand(int fontId, GfxRenderer& renderer) {
   const RoleEntry* entry = nullptr;
   for (const auto& re : roleEntries_) {
     if (re.fontId == fontId) {
@@ -519,13 +519,13 @@ bool SdThemeLoader::tryLoadFontOnDemand(int fontId, GfxRenderer& renderer) {
   return true;
 }
 
-bool SdThemeLoader::onFontMiss(int fontId, void* ctx) {
+bool UiThemeLoader::onFontMiss(int fontId, void* ctx) {
   auto* renderer = static_cast<GfxRenderer*>(ctx);
   if (!renderer) return false;
-  return SdThemeLoader::getInstance().tryLoadFontOnDemand(fontId, *renderer);
+  return UiThemeLoader::getInstance().tryLoadFontOnDemand(fontId, *renderer);
 }
 
-const SdThemeLoader::ThemeInfo* SdThemeLoader::findThemeInfo(const char* themeId) const {
+const UiThemeLoader::ThemeInfo* UiThemeLoader::findThemeInfo(const char* themeId) const {
   for (const auto& info : themeList_) {
     if (strcmp(info.id, themeId) == 0) return &info;
   }
