@@ -5,7 +5,6 @@
 
 #include "components/UITheme.h"
 #include "components/themes/BaseTheme.h"
-#include "components/themes/ThemeData.h"
 #include "fontIds.h"
 
 namespace {
@@ -38,6 +37,8 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
   const auto& theme = GUI;
   const auto& data = *theme.getData();
 
+  const auto bodyCompactFont = GUI.getFontForRole(FontRole::BodyCompact);
+
   // Force portrait so the hints stay aligned with the physical front buttons
   // regardless of the active reading orientation.
   const GfxRenderer::Orientation origOrientation = renderer.getOrientation();
@@ -62,7 +63,7 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
         renderer.drawRect(x, pageHeight - buttonY, buttonWidth, buttonHeight);
         const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, labels[i]);
         const int textX = x + (buttonWidth - 1 - textWidth) / 2;
-        renderer.drawText(UI_10_FONT_ID, textX, pageHeight - buttonY + textYOffset, labels[i]);
+        renderer.drawText(bodyCompactFont, textX, pageHeight - buttonY + textYOffset, labels[i]);
       }
       break;
     }
@@ -75,11 +76,10 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
       // physical button width — use the compact body face so the label has
       // breathing room inside the 106-px hint box. Falls through to the
       // regular body font when no compact face is installed.
-      const int labelFontId = theme.getFontForRole(FontRole::BodyCompact);
       for (int i = 0; i < 4; ++i) {
         if (labels[i] == nullptr || labels[i][0] == '\0') continue;
         drawHairlineHint(renderer, positions[i], pageHeight - buttonHeight, buttonWidth, buttonHeight, labels[i],
-                         labelFontId);
+                         bodyCompactFont);
       }
       break;
     }
@@ -97,9 +97,9 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
           renderer.fillRoundedRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, cornerRadius, Color::White);
           renderer.drawRoundedRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, 1, cornerRadius, true, true,
                                    false, false, true);
-          const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, labels[i]);
+          const int textWidth = renderer.getTextWidth(bodyCompactFont, labels[i]);
           const int textX = x + (buttonWidth - 1 - textWidth) / 2;
-          renderer.drawText(SMALL_FONT_ID, textX, pageHeight - buttonY + textYOffset, labels[i]);
+          renderer.drawText(bodyCompactFont, textX, pageHeight - buttonY + textYOffset, labels[i]);
         } else {
           renderer.fillRoundedRect(x, pageHeight - smallButtonHeight, buttonWidth, smallButtonHeight, cornerRadius,
                                    Color::White);
@@ -119,7 +119,7 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
       const int hintHeight = data.buttonHints.height - 10;
       const int groupWidth = (pageWidth - sidePadding * 2 - groupGap) / 2;
       const int hintY = pageHeight - hintHeight - bottomMargin;
-      const int textY = hintY + (hintHeight - renderer.getLineHeight(SMALL_FONT_ID)) / 2;
+      const int textY = hintY + (hintHeight - renderer.getLineHeight(bodyCompactFont)) / 2;
 
       const int leftGroupX = sidePadding;
       const int rightGroupX = leftGroupX + groupWidth + groupGap;
@@ -135,18 +135,18 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
       renderer.drawRoundedRect(leftGroupX, hintY, groupWidth, hintHeight, 2, groupCornerRadius, true);
       renderer.drawRoundedRect(rightGroupX, hintY, groupWidth, hintHeight, 2, groupCornerRadius, true);
 
-      const int selectW = renderer.getTextWidth(SMALL_FONT_ID, selectText.c_str(), EpdFontFamily::REGULAR);
-      const int downW = renderer.getTextWidth(SMALL_FONT_ID, downText.c_str(), EpdFontFamily::REGULAR);
+      const int selectW = renderer.getTextWidth(bodyCompactFont, selectText.c_str(), EpdFontFamily::REGULAR);
+      const int downW = renderer.getTextWidth(bodyCompactFont, downText.c_str(), EpdFontFamily::REGULAR);
 
       const int backX = leftGroupX + innerEdgePadding;
       const int selectX = leftGroupX + groupWidth - innerEdgePadding - selectW;
       const int upX = rightGroupX + innerEdgePadding;
       const int downX = rightGroupX + groupWidth - innerEdgePadding - downW;
 
-      if (!backDisabled) renderer.drawText(SMALL_FONT_ID, backX, textY, labels[0], true, EpdFontFamily::REGULAR);
-      renderer.drawText(SMALL_FONT_ID, selectX, textY, selectText.c_str(), true, EpdFontFamily::REGULAR);
-      renderer.drawText(SMALL_FONT_ID, upX, textY, upText.c_str(), true, EpdFontFamily::REGULAR);
-      renderer.drawText(SMALL_FONT_ID, downX, textY, downText.c_str(), true, EpdFontFamily::REGULAR);
+      if (!backDisabled) renderer.drawText(bodyCompactFont, backX, textY, labels[0], true, EpdFontFamily::REGULAR);
+      renderer.drawText(bodyCompactFont, selectX, textY, selectText.c_str(), true, EpdFontFamily::REGULAR);
+      renderer.drawText(bodyCompactFont, upX, textY, upText.c_str(), true, EpdFontFamily::REGULAR);
+      renderer.drawText(bodyCompactFont, downX, textY, downText.c_str(), true, EpdFontFamily::REGULAR);
       break;
     }
   }
@@ -170,6 +170,8 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
   const int sideButtonGap = rounded ? 5 : 0;
   const bool havePower = powerBtn != nullptr && powerBtn[0] != '\0';
 
+  const auto bodyCompactFont = GUI.getFontForRole(FontRole::BodyCompact);
+
   if (gpio.deviceIsX3()) {
     constexpr int x3ButtonY = 155;
     const int leftX = buttonMargin;
@@ -179,15 +181,15 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
       if (rounded) {
         renderer.drawRoundedRect(leftX, x3ButtonY, buttonWidth, buttonHeight, 1, roundedCornerRadius, false, true,
                                  false, true, true);
-        const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, topBtn);
-        renderer.drawTextRotated90CW(SMALL_FONT_ID, leftX, x3ButtonY + (buttonHeight + textWidth) / 2, topBtn);
+        const int textWidth = renderer.getTextWidth(bodyCompactFont, topBtn);
+        renderer.drawTextRotated90CW(bodyCompactFont, leftX, x3ButtonY + (buttonHeight + textWidth) / 2, topBtn);
       } else {
         renderer.drawRect(leftX, x3ButtonY, buttonWidth, buttonHeight);
-        const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, topBtn);
-        const int textHeight = renderer.getTextHeight(SMALL_FONT_ID);
+        const int textWidth = renderer.getTextWidth(bodyCompactFont, topBtn);
+        const int textHeight = renderer.getTextHeight(bodyCompactFont);
         const int textX = leftX + (buttonWidth - textHeight) / 2;
         const int textY = x3ButtonY + (buttonHeight + textWidth) / 2;
-        renderer.drawTextRotated90CW(SMALL_FONT_ID, textX, textY, topBtn);
+        renderer.drawTextRotated90CW(bodyCompactFont, textX, textY, topBtn);
       }
     }
 
@@ -195,15 +197,15 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
       if (rounded) {
         renderer.drawRoundedRect(rightX, x3ButtonY, buttonWidth, buttonHeight, 1, roundedCornerRadius, true, false,
                                  true, false, true);
-        const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, bottomBtn);
-        renderer.drawTextRotated90CW(SMALL_FONT_ID, rightX, x3ButtonY + (buttonHeight + textWidth) / 2, bottomBtn);
+        const int textWidth = renderer.getTextWidth(bodyCompactFont, bottomBtn);
+        renderer.drawTextRotated90CW(bodyCompactFont, rightX, x3ButtonY + (buttonHeight + textWidth) / 2, bottomBtn);
       } else {
         renderer.drawRect(rightX, x3ButtonY, buttonWidth, buttonHeight);
-        const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, bottomBtn);
-        const int textHeight = renderer.getTextHeight(SMALL_FONT_ID);
+        const int textWidth = renderer.getTextWidth(bodyCompactFont, bottomBtn);
+        const int textHeight = renderer.getTextHeight(bodyCompactFont);
         const int textX = rightX + (buttonWidth - textHeight) / 2;
         const int textY = x3ButtonY + (buttonHeight + textWidth) / 2;
-        renderer.drawTextRotated90CW(SMALL_FONT_ID, textX, textY, bottomBtn);
+        renderer.drawTextRotated90CW(bodyCompactFont, textX, textY, bottomBtn);
       }
     }
     return;
@@ -234,14 +236,14 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
                                true, false, true, false, true);
     }
     if (havePower) {
-      const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, powerBtn);
-      renderer.drawTextRotated90CW(SMALL_FONT_ID, x, powerY + 5 + (buttonHeight + textWidth) / 2, powerBtn);
+      const int textWidth = renderer.getTextWidth(bodyCompactFont, powerBtn);
+      renderer.drawTextRotated90CW(bodyCompactFont, x, powerY + 5 + (buttonHeight + textWidth) / 2, powerBtn);
     }
     for (int i = 0; i < 2; i++) {
       if (labels[i] == nullptr || labels[i][0] == '\0') continue;
       const int y = topButtonY + i * buttonHeight + 5;
-      const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, labels[i]);
-      renderer.drawTextRotated90CW(SMALL_FONT_ID, x, y + (buttonHeight + textWidth) / 2, labels[i]);
+      const int textWidth = renderer.getTextWidth(bodyCompactFont, labels[i]);
+      renderer.drawTextRotated90CW(bodyCompactFont, x, y + (buttonHeight + textWidth) / 2, labels[i]);
     }
     return;
   }
@@ -253,11 +255,11 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
   // with the page-turn pair below it.
   if (havePower) {
     renderer.drawRect(x, powerY, buttonWidth, buttonHeight);
-    const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, powerBtn);
-    const int textHeight = renderer.getTextHeight(SMALL_FONT_ID);
+    const int textWidth = renderer.getTextWidth(bodyCompactFont, powerBtn);
+    const int textHeight = renderer.getTextHeight(bodyCompactFont);
     const int textX = x + (buttonWidth - textHeight) / 2;
     const int textY = powerY + (buttonHeight + textWidth) / 2;
-    renderer.drawTextRotated90CW(SMALL_FONT_ID, textX, textY, powerBtn);
+    renderer.drawTextRotated90CW(bodyCompactFont, textX, textY, powerBtn);
   }
   if (topBtn != nullptr && topBtn[0] != '\0') {
     renderer.drawLine(x, topButtonY, x + buttonWidth - 1, topButtonY);
@@ -276,10 +278,10 @@ void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, co
   for (int i = 0; i < 2; i++) {
     if (labels[i] == nullptr || labels[i][0] == '\0') continue;
     const int y = topButtonY + i * buttonHeight;
-    const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, labels[i]);
-    const int textHeight = renderer.getTextHeight(SMALL_FONT_ID);
+    const int textWidth = renderer.getTextWidth(bodyCompactFont, labels[i]);
+    const int textHeight = renderer.getTextHeight(bodyCompactFont);
     const int textX = x + (buttonWidth - textHeight) / 2;
     const int textY = y + (buttonHeight + textWidth) / 2;
-    renderer.drawTextRotated90CW(SMALL_FONT_ID, textX, textY, labels[i]);
+    renderer.drawTextRotated90CW(bodyCompactFont, textX, textY, labels[i]);
   }
 }
