@@ -15,8 +15,9 @@ class GridHelper {
       itemCount(itemCount), 
       rowsPerPage(rowsPerPage),
       cols(cols), 
-      index(index) {
-        assert(index <= itemCount);
+      index(0)
+      {
+        setByIndex(index);
       };
 
     uint16_t rowForIndex(uint16_t index);

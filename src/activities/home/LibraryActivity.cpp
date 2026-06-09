@@ -102,8 +102,21 @@ void LibraryActivity::onEnter() {
   // Safe to do before the prefetch worker exists (no lock needed yet).
   rebuildView();
 
-  this->gridHelper = GridHelper(viewItemCount(), ROWS, COLS, 0);
-  this->lastObservedPage_ = this->gridHelper.currentPage();
+  switch(SETTINGS.libraryViewKind) {
+    case CrossPointSettings::LIB_VIEW_ALL: {
+      gridHelper = GridHelper(viewItemCount(), ROWS, COLS, 0);
+      break;
+    }
+    default: {
+      // non-ALL views insert a virtual back button as the first
+      // entry in the grid. Set index to 1 so we default to the first actual book.
+      gridHelper = GridHelper(viewItemCount(), ROWS, COLS, 1);
+      break;
+    }
+  }
+
+
+  lastObservedPage_ = gridHelper.currentPage();
 
   // Spin up the prefetch worker before requesting the first paint so it's
   // ready by the time we ask for neighbor-page fills.
