@@ -12,7 +12,11 @@
 HalStorage HalStorage::instance;
 
 HalStorage::HalStorage() {
-  storageMutex = xSemaphoreCreateMutex();
+  // Recursive so HalFile::~Impl can re-acquire from contexts that already
+  // hold the lock — e.g. HalStorage::openFileForRead's move-assignment runs
+  // the previous HalFile's destructor (which closes under the lock) while
+  // the lock is still held by the open() call itself.
+  storageMutex = xSemaphoreCreateRecursiveMutex();
   assert(storageMutex != nullptr);
 }
 
@@ -26,8 +30,8 @@ bool HalStorage::ready() const { return SDCard.ready(); }
 
 class HalStorage::StorageLock {
  public:
-  StorageLock() { xSemaphoreTake(HalStorage::getInstance().storageMutex, portMAX_DELAY); }
-  ~StorageLock() { xSemaphoreGive(HalStorage::getInstance().storageMutex); }
+  StorageLock() { xSemaphoreTakeRecursive(HalStorage::getInstance().storageMutex, portMAX_DELAY); }
+  ~StorageLock() { xSemaphoreGiveRecursive(HalStorage::getInstance().storageMutex); }
 };
 
 #define HAL_STORAGE_WRAPPED_CALL(method, ...) \
@@ -57,6 +61,18 @@ bool HalStorage::ensureDirectoryExists(const char* path) { HAL_STORAGE_WRAPPED_C
 class HalFile::Impl {
  public:
   Impl(FsFile&& fsFile) : file(std::move(fsFile)) {}
+  // Close under the storage mutex so the SD/SPI access is serialized with
+  // every other Storage caller. The default ~FsFile (with
+  // DESTRUCTOR_CLOSES_FILE=1) would otherwise close concurrently with
+  // another task's mutex-protected SD op and corrupt SdFat state. Post
+  // close(), ~FsBaseFile checks isOpen() and skips, so the member dtor
+  // that runs after our body is a true no-op.
+  ~Impl() {
+    if (file.isOpen()) {
+      HalStorage::StorageLock lock;
+      file.close();
+    }
+  }
   FsFile file;
 };
 
