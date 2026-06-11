@@ -15,7 +15,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "CollectionStore.h"
+#include "stores/collections/CollectionStore.h"
 #include "CrossPointSettings.h"
 #include "LibraryIndex.h"
 #include "MappedInputManager.h"
@@ -847,7 +847,7 @@ void LibraryActivity::rebuildView() {
   }
 
   if (kind == CrossPointSettings::LIB_VIEW_COLLECTION) {
-    const std::unordered_set<uint32_t> members(coll->memberPathHashes.begin(), coll->memberPathHashes.end());
+    const std::unordered_set<uint32_t> members(coll->members.begin(), coll->members.end());
     for (const auto& b : books) {
       if (members.count(b.pathHash)) view_.push_back(&b);
     }
