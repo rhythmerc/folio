@@ -179,9 +179,8 @@ enum class TextRotation { None, Rotated90CW };
 // font, in which case `fontData` is the FALLBACK family's data, not the primary's. Passing it in
 // also avoids a second interval scan / SD-overflow lookup per character.
 template <TextRotation rotation>
-static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode renderMode,
-                           const EpdGlyph* glyph, const EpdFontData* fontData, int cursorX, int cursorY,
-                           const bool pixelState) {
+static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode renderMode, const EpdGlyph* glyph,
+                           const EpdFontData* fontData, int cursorX, int cursorY, const bool pixelState) {
   if (!glyph || !fontData) return;
 
   const bool is2Bit = fontData->is2Bit;
@@ -292,6 +291,13 @@ void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
 }
 
 int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontFamily::Style style) const {
+  // Dry-run prewarm: skip glyph-metric measurement entirely. No pixels are
+  // drawn during the dry-run, so every caller's centering/layout math is
+  // discarded — the text is still collected for warming via drawText. Callers
+  // use the width only to position (never to decide whether to draw), so a 0
+  // here is harmless.
+  if (prewarmTextCollector_) return 0;
+
   const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
@@ -353,8 +359,8 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
       const int raiseBy = combiningMark::raiseAboveBase(combiningGlyph->top, combiningGlyph->height, lastBaseTop);
       const int combiningX = combiningMark::centerOver(lastBaseX, lastBaseLeft, lastBaseWidth, combiningGlyph->left,
                                                        combiningGlyph->width);
-      renderCharImpl<TextRotation::None>(*this, renderMode, combiningGlyph, combiningData, combiningX,
-                                         yPos - raiseBy, black);
+      renderCharImpl<TextRotation::None>(*this, renderMode, combiningGlyph, combiningData, combiningX, yPos - raiseBy,
+                                         black);
       continue;
     }
 
@@ -599,11 +605,57 @@ void GfxRenderer::drawPixelDither<Color::DarkGray>(const int x, const int y) con
 
 void GfxRenderer::fillRectDither(const int x, const int y, const int width, const int height, Color color) const {
   switch (color) {
-    case Color::Clear:                                                       break;
-    case Color::Black:     fillRectImpl<Color::Black>(x, y, width, height);     break;
-    case Color::White:     fillRectImpl<Color::White>(x, y, width, height);     break;
-    case Color::LightGray: fillRectImpl<Color::LightGray>(x, y, width, height); break;
-    case Color::DarkGray:  fillRectImpl<Color::DarkGray>(x, y, width, height);  break;
+    case Color::Clear:
+      break;
+    case Color::Black:
+      fillRectImpl<Color::Black>(x, y, width, height);
+      break;
+    case Color::White:
+      fillRectImpl<Color::White>(x, y, width, height);
+      break;
+    case Color::LightGray:
+      fillRectImpl<Color::LightGray>(x, y, width, height);
+      break;
+    case Color::DarkGray:
+      fillRectImpl<Color::DarkGray>(x, y, width, height);
+      break;
+  }
+}
+
+void GfxRenderer::drawDitheredLine(const int x, const int y, const int length) const {
+  if (length <= 0) return;
+  if (prewarmTextCollector_) return;
+  if (fontCacheManager_ && fontCacheManager_->isScanning()) return;
+
+  // Clip the logical 1px row to the visible area.
+  const int screenW = getScreenWidth();
+  const int screenH = getScreenHeight();
+  if (y < 0 || y >= screenH) return;
+  const int lx0 = std::max(0, x);
+  const int lx1 = std::min(screenW, x + length);  // exclusive
+  if (lx0 >= lx1) return;
+
+  // Rotate the first logical pixel once and derive the constant per-logical-x
+  // physical step (rotation is rigid, so the step is ±1 on a single axis).
+  int pX, pY, pXn, pYn;
+  rotateCoordinates(orientation, lx0, y, &pX, &pY, panelWidth, panelHeight);
+  rotateCoordinates(orientation, lx0 + 1, y, &pXn, &pYn, panelWidth, panelHeight);
+  const int dPhyX = pXn - pX;
+  const int dPhyY = pYn - pY;
+
+  // Walk only the inked pixels (even logical x → period-2 half-tone, visible at
+  // any y), stepping the physical position by 2x the per-pixel delta and writing
+  // the framebuffer directly. Bit value 0 = ink (black).
+  const int firstEven = (lx0 & 1) ? lx0 + 1 : lx0;
+  int phyX = pX + (firstEven - lx0) * dPhyX;
+  int phyY = pY + (firstEven - lx0) * dPhyY;
+  const int stepX = dPhyX * 2;
+  const int stepY = dPhyY * 2;
+  for (int lx = firstEven; lx < lx1; lx += 2) {
+    const uint32_t byteIndex = static_cast<uint32_t>(phyY) * panelWidthBytes + (phyX / 8);
+    frameBuffer[byteIndex] &= ~(1u << (7 - (phyX % 8)));
+    phyX += stepX;
+    phyY += stepY;
   }
 }
 
@@ -681,10 +733,22 @@ void GfxRenderer::fillRectImpl(const int x, const int y, const int width, const 
     // along a physical row. Derived from inverting rotateCoordinates.
     int dlxPerPhyX = 0, dlyPerPhyX = 0;
     switch (orientation) {
-      case Portrait:                  dlxPerPhyX =  0; dlyPerPhyX =  1; break;
-      case PortraitInverted:          dlxPerPhyX =  0; dlyPerPhyX = -1; break;
-      case LandscapeClockwise:        dlxPerPhyX = -1; dlyPerPhyX =  0; break;
-      case LandscapeCounterClockwise: dlxPerPhyX =  1; dlyPerPhyX =  0; break;
+      case Portrait:
+        dlxPerPhyX = 0;
+        dlyPerPhyX = 1;
+        break;
+      case PortraitInverted:
+        dlxPerPhyX = 0;
+        dlyPerPhyX = -1;
+        break;
+      case LandscapeClockwise:
+        dlxPerPhyX = -1;
+        dlyPerPhyX = 0;
+        break;
+      case LandscapeCounterClockwise:
+        dlxPerPhyX = 1;
+        dlyPerPhyX = 0;
+        break;
     }
 
     for (int py = phyY0; py <= phyY1; ++py) {
@@ -886,7 +950,7 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
   }
   if (prewarmTextCollector_) return;
 
-  if(cornerRadius <= 0) {
+  if (cornerRadius <= 0) {
     fillRectDither(x, y, width, height, color);
     return;
   }
@@ -1233,8 +1297,7 @@ BitmapCacheManager::Entry GfxRenderer::decodeBitmapEntry(const char* path) {
   return entry;
 }
 
-BitmapCacheManager::Entry* GfxRenderer::lookupOrLoadCachedBitmap(BitmapCacheManager& cache,
-                                                                 const char* path) const {
+BitmapCacheManager::Entry* GfxRenderer::lookupOrLoadCachedBitmap(BitmapCacheManager& cache, const char* path) const {
   if (path == nullptr || path[0] == '\0') return nullptr;
   if (auto* hit = cache.get(path)) return hit;
 
@@ -1243,8 +1306,8 @@ BitmapCacheManager::Entry* GfxRenderer::lookupOrLoadCachedBitmap(BitmapCacheMana
   return cache.set(std::move(entry));
 }
 
-bool GfxRenderer::getCachedBitmapDimensions(BitmapCacheManager& cache, const char* path,
-                                            int* outWidth, int* outHeight) const {
+bool GfxRenderer::getCachedBitmapDimensions(BitmapCacheManager& cache, const char* path, int* outWidth,
+                                            int* outHeight) const {
   auto* entry = lookupOrLoadCachedBitmap(cache, path);
   if (entry == nullptr) return false;
   if (outWidth) *outWidth = entry->width;
@@ -1252,8 +1315,8 @@ bool GfxRenderer::getCachedBitmapDimensions(BitmapCacheManager& cache, const cha
   return true;
 }
 
-bool GfxRenderer::peekCachedBitmapDimensions(BitmapCacheManager& cache, const char* path,
-                                              int* outWidth, int* outHeight) const {
+bool GfxRenderer::peekCachedBitmapDimensions(BitmapCacheManager& cache, const char* path, int* outWidth,
+                                             int* outHeight) const {
   if (path == nullptr || path[0] == '\0') return false;
   auto* entry = cache.get(path);
   if (entry == nullptr) return false;
@@ -1262,8 +1325,7 @@ bool GfxRenderer::peekCachedBitmapDimensions(BitmapCacheManager& cache, const ch
   return true;
 }
 
-void GfxRenderer::buildScaledBitmap(BitmapCacheManager::Entry* entry, int targetW,
-                                    int targetH) const {
+void GfxRenderer::buildScaledBitmap(BitmapCacheManager::Entry* entry, int targetW, int targetH) const {
   const int scaledStride = (targetW + 7) / 8;
   const size_t scaledBytes = static_cast<size_t>(scaledStride) * static_cast<size_t>(targetH);
 
@@ -1319,18 +1381,17 @@ void GfxRenderer::buildScaledBitmap(BitmapCacheManager::Entry* entry, int target
 // the caller can skip a substrate fillRect. The `if constexpr` switch
 // ensures each specialization carries exactly one inner-write branch.
 template <bool Opaque>
-bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, const int x,
-                                   const int y, const int maxWidth, const int maxHeight,
-                                   const int cornerRadius) const {
+bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, const int x, const int y,
+                                   const int maxWidth, const int maxHeight, const int cornerRadius) const {
   auto* entry = lookupOrLoadCachedBitmap(cache, path);
   if (entry == nullptr) return false;
-  if (prewarmTextCollector_) return false; // signify that we haven't drawn
-                                           // so that library takes the fallback path and
-                                           // optimistically pre-warms placeholder cover text
+  if (prewarmTextCollector_)
+    return false;  // signify that we haven't drawn
+                   // so that library takes the fallback path and
+                   // optimistically pre-warms placeholder cover text
 
   float scale = 1.0f;
-  if (maxWidth > 0 && entry->width > maxWidth)
-    scale = static_cast<float>(maxWidth) / static_cast<float>(entry->width);
+  if (maxWidth > 0 && entry->width > maxWidth) scale = static_cast<float>(maxWidth) / static_cast<float>(entry->width);
   if (maxHeight > 0 && entry->height > maxHeight)
     scale = std::min(scale, static_cast<float>(maxHeight) / static_cast<float>(entry->height));
 
@@ -1354,7 +1415,6 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
   }
   if (!entry->scaledPixels) return false;
 
-
   // Corner-skip table. When r > 0, pixels in the four [0, r) × [0, r) corner
   // boxes that fall outside the rounded shape are left untouched — same
   // pixel test as maskRoundedRectOutsideCorners, applied here so the blit
@@ -1375,8 +1435,10 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
       int skip = 0;
       while (skip < r) {
         const int tx = rr - skip;
-        if (tx * tx + ty2 > rr2) ++skip;
-        else break;
+        if (tx * tx + ty2 > rr2)
+          ++skip;
+        else
+          break;
       }
       skipPerRow[dy] = static_cast<int8_t>(skip);
     }
@@ -1416,8 +1478,10 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
         int rowSx1 = sx1;
         if (rounded) {
           int skip = 0;
-          if (sy < r) skip = skipPerRow[sy];
-          else if (sy >= targetH - r) skip = skipPerRow[targetH - 1 - sy];
+          if (sy < r)
+            skip = skipPerRow[sy];
+          else if (sy >= targetH - r)
+            skip = skipPerRow[targetH - 1 - sy];
           if (skip > 0) {
             rowSx0 = std::max(sx0, skip);
             rowSx1 = std::min(sx1, targetW - skip);
@@ -1427,8 +1491,8 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
 
         const int phyX = phyX0 + (sy - sy0) * dxPerSy;
         const uint8_t bitMask = static_cast<uint8_t>(0x80u >> (phyX & 7));
-        int32_t byteIndex = static_cast<int32_t>(phyY0) * panelStride + (phyX >> 3)
-                            + static_cast<int32_t>(rowSx0 - sx0) * byteStep;
+        int32_t byteIndex =
+            static_cast<int32_t>(phyY0) * panelStride + (phyX >> 3) + static_cast<int32_t>(rowSx0 - sx0) * byteStep;
 
         const uint8_t* srcRow = entry->scaledPixels.get() + sy * scaledStride;
         int sx = rowSx0;
@@ -1440,8 +1504,10 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
           for (int b = 0; b < run; ++b) {
             const bool srcSet = (srcByte & srcMask) != 0;
             if constexpr (Opaque) {
-              if (srcSet) frameBuffer[byteIndex] |= bitMask;
-              else        frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
+              if (srcSet)
+                frameBuffer[byteIndex] |= bitMask;
+              else
+                frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
             } else {
               if (!srcSet) frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
             }
@@ -1464,8 +1530,10 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
         int rowSx1 = sx1;
         if (rounded) {
           int skip = 0;
-          if (sy < r) skip = skipPerRow[sy];
-          else if (sy >= targetH - r) skip = skipPerRow[targetH - 1 - sy];
+          if (sy < r)
+            skip = skipPerRow[sy];
+          else if (sy >= targetH - r)
+            skip = skipPerRow[targetH - 1 - sy];
           if (skip > 0) {
             rowSx0 = std::max(sx0, skip);
             rowSx1 = std::min(sx1, targetW - skip);
@@ -1489,8 +1557,10 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
             const int32_t byteIndex = rowBase + (phyX >> 3);
             const uint8_t bitMask = static_cast<uint8_t>(0x80u >> (phyX & 7));
             if constexpr (Opaque) {
-              if (srcSet) frameBuffer[byteIndex] |= bitMask;
-              else        frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
+              if (srcSet)
+                frameBuffer[byteIndex] |= bitMask;
+              else
+                frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
             } else {
               if (!srcSet) frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
             }
@@ -1598,9 +1668,16 @@ std::string GfxRenderer::truncatedText(const int fontId, const char* text, const
                                        const EpdFontFamily::Style style) const {
   if (!text || maxWidth <= 0) return "";
 
-  std::string item = text;
   // U+2026 HORIZONTAL ELLIPSIS (UTF-8: 0xE2 0x80 0xA6)
   const char* ellipsis = "\xe2\x80\xa6";
+
+  // Dry-run prewarm: skip width measurement — the dominant cost of the dry-run
+  // pass — and warm the full, untruncated text instead. Its glyph set is a
+  // superset of any truncated result; the only glyph truncation can introduce
+  // that the full text lacks is the ellipsis, so append it here.
+  if (prewarmTextCollector_) return std::string(text) + ellipsis;
+
+  std::string item = text;
   int textWidth = getTextWidth(fontId, item.c_str(), style);
   if (textWidth <= maxWidth) {
     // Text fits, return as is
@@ -1619,6 +1696,14 @@ std::vector<std::string> GfxRenderer::wrappedText(const int fontId, const char* 
   std::vector<std::string> lines;
 
   if (!text || maxWidth <= 0 || maxLines <= 0) return lines;
+
+  // Dry-run prewarm: skip the wrapping width math and warm the full text's
+  // glyphs (a superset of any wrapped/truncated result) plus the ellipsis,
+  // which the last-line truncation may emit.
+  if (prewarmTextCollector_) {
+    lines.push_back(std::string(text) + "\xe2\x80\xa6");
+    return lines;
+  }
 
   std::string remaining = text;
   std::string currentLine;

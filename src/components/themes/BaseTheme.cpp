@@ -722,13 +722,15 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
     }
 
     // ----- Hairline divider under unselected rows -----------------------
-    // Dithered light-gray so it reads as the prototype's faint ~12% rule on
-    // 1-bit e-ink. Skipped on the selected row (its fill covers it) and after
-    // the last visible row. Card style provides its own gaps, so skip there.
+    // Half-tone rule (~prototype's faint 12% line). drawDitheredLine keys the
+    // dither to logical x so a 1px line stays visible at any y — unlike
+    // fillRectDither(LightGray), whose y-keyed pattern vanished on odd rows
+    // (e.g. Folio's row height landed dividers on a blank scanline). Skipped on
+    // the selected row (its fill covers it) and the last visible row; card
+    // styles supply their own gaps.
     if (m.list.showDividers && !selected && m.list.selectionStyle != SelectionStyle::RoundedRowAlways &&
         !isLastVisible(i)) {
-      renderer.fillRectDither(rect.x + contentPad, itemY + rowHeight - 1, contentWidth - contentPad * 2, 1,
-                              Color::LightGray);
+      renderer.drawDitheredLine(rect.x + contentPad, itemY + rowHeight - 1, contentWidth - contentPad * 2);
     }
 
     // ----- Inset for the row content ------------------------------------

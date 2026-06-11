@@ -113,7 +113,7 @@ void CollectionGroupActivity::render(RenderLock&&) {
 
   flex::Vstack page(
       screen, {flex::fixed(td.header.height), flex::grow(), flex::fixed(td.buttonHints.height)},
-      /*gap=*/td.layout.verticalSpacing,
+      0,
       flex::Padding{static_cast<int16_t>(td.layout.topPadding), 0, static_cast<int16_t>(td.layout.verticalSpacing), 0});
 
   GUI.drawHeader(renderer, page[0], headerTitle());

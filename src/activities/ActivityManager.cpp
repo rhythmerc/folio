@@ -56,11 +56,16 @@ void ActivityManager::renderTaskLoop() {
       // hash, so only the first paint of a new scene pays the SD-read cost.
       auto* fcm = renderer.getFontCacheManager();
       if (fcm != nullptr && currentActivity->wantsFontPrewarmRender()) {
+        const unsigned long prewarmStart = millis();
         TextCollector tc;
         renderer.setPrewarmTextCollector(&tc);
         currentActivity->render(RenderLock(RenderLock::DryRun{}));
         renderer.setPrewarmTextCollector(nullptr);
+        const unsigned long dryRunDone = millis();
         tc.applyTo(*fcm);
+        const unsigned long prewarmDone = millis();
+        LOG_DBG("ACT", "Prewarm: dry-run %lu ms, cache-warm %lu ms, total %lu ms",
+                dryRunDone - prewarmStart, prewarmDone - dryRunDone, prewarmDone - prewarmStart);
       }
 
       currentActivity->render(std::move(lock));

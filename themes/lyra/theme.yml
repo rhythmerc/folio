@@ -30,6 +30,7 @@ list:
   rowHeightWithSubtitle: 60
   menuRowHeight: 64
   menuSpacing: 8
+  selectionStyle: rounded-fill
 
 buttonHintsStyle: rounded-filled
 sideButtonHintsStyle: rounded

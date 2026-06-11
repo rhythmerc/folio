@@ -82,8 +82,7 @@ class GfxRenderer {
   // cached entry, or nullptr on miss (file missing, unsupported format,
   // decode error, OOM). Callers own the cache; the renderer just decodes
   // into it.
-  BitmapCacheManager::Entry* lookupOrLoadCachedBitmap(BitmapCacheManager& cache,
-                                                      const char* path) const;
+  BitmapCacheManager::Entry* lookupOrLoadCachedBitmap(BitmapCacheManager& cache, const char* path) const;
   void buildScaledBitmap(BitmapCacheManager::Entry* entry, int targetW, int targetH) const;
 
  public:
@@ -95,7 +94,6 @@ class GfxRenderer {
   static BitmapCacheManager::Entry decodeBitmapEntry(const char* path);
 
  private:
-
   void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, bool pixelState,
                   EpdFontFamily::Style style) const;
   void freeBwBufferChunks();
@@ -180,6 +178,13 @@ class GfxRenderer {
   void drawPixel(int x, int y, bool state = true) const;
   void drawLine(int x1, int y1, int x2, int y2, bool state = true) const;
   void drawLine(int x1, int y1, int x2, int y2, int lineWidth, bool state) const;
+  // Fast 1px-tall half-tone rule from (x, y) spanning `length` logical pixels.
+  // The dither is keyed to logical x only (ink on every other pixel), so a
+  // single-row line is always ~50% inked regardless of y — unlike
+  // fillRectDither(..., height=1, LightGray), whose pattern needs an even y and
+  // vanishes on odd rows. Uses fillRectDither's rotate-once + direct-framebuffer
+  // technique (no per-pixel drawPixel / rotateCoordinates overhead).
+  void drawDitheredLine(int x, int y, int length) const;
   void drawArc(int maxRadius, int cx, int cy, int xDir, int yDir, int lineWidth, bool state) const;
   void drawRect(int x, int y, int width, int height, bool state = true) const;
   void drawRect(int x, int y, int width, int height, int lineWidth, bool state) const;
@@ -210,15 +215,13 @@ class GfxRenderer {
   // re-populating.
   //
   // Returns the bitmap's native dimensions on success.
-  bool getCachedBitmapDimensions(BitmapCacheManager& cache, const char* path,
-                                 int* outWidth, int* outHeight) const;
+  bool getCachedBitmapDimensions(BitmapCacheManager& cache, const char* path, int* outWidth, int* outHeight) const;
 
   // Read-only sibling of getCachedBitmapDimensions: returns false on cache
   // miss instead of triggering a load. Used by lazy-loading callers that
   // populate the cache from a worker task and want the render path to fall
   // through to a placeholder while the cover is in flight.
-  bool peekCachedBitmapDimensions(BitmapCacheManager& cache, const char* path,
-                                  int* outWidth, int* outHeight) const;
+  bool peekCachedBitmapDimensions(BitmapCacheManager& cache, const char* path, int* outWidth, int* outHeight) const;
 
   // Draw the BMP at `path`, scaled to fit (maxWidth × maxHeight) at top-
   // left (x, y). Reads + decodes + stores in `cache` on first call for a
@@ -240,8 +243,8 @@ class GfxRenderer {
   // covers than drawing rectangular then masking with the background color
   // (a mask paints over the shadow; a skip lets it show through).
   template <bool Opaque = false>
-  bool drawCachedBitmap(BitmapCacheManager& cache, const char* path, int x, int y,
-                        int maxWidth, int maxHeight, int cornerRadius = 0) const;
+  bool drawCachedBitmap(BitmapCacheManager& cache, const char* path, int x, int y, int maxWidth, int maxHeight,
+                        int cornerRadius = 0) const;
 
   void fillPolygon(const int* xPoints, const int* yPoints, int numPoints, bool state = true) const;
 

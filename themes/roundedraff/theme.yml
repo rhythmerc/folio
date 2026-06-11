@@ -33,6 +33,7 @@ list:
   rowHeightWithSubtitle: 69
   menuRowHeight: 42
   menuSpacing: 6
+  selectionStyle: rounded-row-always
 
 buttonHintsStyle: paired-groups
 sideButtonHintsStyle: sharp
