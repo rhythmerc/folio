@@ -1,10 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
 #include "activities/Activity.h"
+#include "components/ui/List/List.h"
 #include "util/ButtonNavigator.h"
 
 // Full-screen Collections list: auto groups (By Series / By Author / By Genre)
@@ -22,23 +19,12 @@ class CollectionsActivity final : public Activity {
   void render(RenderLock&&) override;
 
  private:
-  enum class RowKind { GroupSeries, GroupAuthor, GroupGenre, Header, NewCollection, ManualCollection };
-
-  struct Row {
-    RowKind kind;
-    uint32_t collectionId;  // ManualCollection only
-    std::string label;
-    int count;    // ManualCollection member count
-    bool active;  // ManualCollection: matches the active library view
-  };
-
+  List list;
   ButtonNavigator buttonNavigator;
-  int selectedIndex = 0;
-  std::vector<Row> rows;
 
-  void buildRows();
-  void handleSelection();
-  bool isSelectable(int index) const;
-  int nextSelectable(int from) const;
-  int prevSelectable(int from) const;
+  void buildList();
+  void promptNewCollection();
+  // Result handler for a launched auto-group list: returns to Library when a
+  // group was chosen, stays on the collections list when the user backed out.
+  void onGroupPicked(const ActivityResult& res);
 };

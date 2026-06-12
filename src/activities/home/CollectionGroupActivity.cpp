@@ -80,6 +80,10 @@ void CollectionGroupActivity::onExit() { Activity::onExit(); }
 
 void CollectionGroupActivity::loop() {
   if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    // Signal "no group chosen" so the parent collections list stays put.
+    ActivityResult result;
+    result.isCancelled = true;
+    setResult(std::move(result));
     finish();
     return;
   }
@@ -91,7 +95,9 @@ void CollectionGroupActivity::loop() {
       strncpy(SETTINGS.libraryViewName, groups[selectedIndex].first.c_str(), sizeof(SETTINGS.libraryViewName) - 1);
       SETTINGS.libraryViewName[sizeof(SETTINGS.libraryViewName) - 1] = '\0';
       SETTINGS.saveToFile();
-      activityManager.goHome();
+      // Default (not-cancelled) result tells the parent a group was chosen, so
+      // the return propagates through CollectionsActivity back to the Library.
+      finish();
     }
     return;
   }

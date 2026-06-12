@@ -20,6 +20,8 @@
 #include "LibraryIndex.h"
 #include "MappedInputManager.h"
 #include "activities/ActivityManager.h"
+#include "activities/home/CollectionPickerActivity.h"
+#include "activities/home/CollectionsActivity.h"
 #include "components/UITheme.h"
 #include "components/themes/BaseTheme.h"
 #include "components/themes/ThemeData.generated.h"
@@ -442,6 +444,20 @@ void LibraryActivity::initPopup() {
   };
   subs[POPUP_TOP_SORT].initialSelection = []() { return static_cast<int>(SETTINGS.librarySortField); };
 
+  // Book submenu: 2 rows; collection membership for the selected book. Always
+  // opens at row 0. The actual collection choice lives on a full-screen picker
+  // (CascadingPopupMenu is two-level), launched from dispatchPopupActivation.
+  subs[POPUP_TOP_BOOK].itemCount = POPUP_BOOK_COUNT;
+  subs[POPUP_TOP_BOOK].rowLabel = [](int i) -> const char* {
+    switch (i) {
+      case POPUP_BOOK_ADD:
+        return tr(STR_ADD_TO_COLLECTION);
+      case POPUP_BOOK_REMOVE:
+        return tr(STR_REMOVE_FROM_COLLECTION);
+    }
+    return "";
+  };
+
   // Files submenu: 2 rows; always opens at row 0.
   subs[POPUP_TOP_FILES].itemCount = POPUP_FILES_COUNT;
   subs[POPUP_TOP_FILES].rowLabel = [](int i) -> const char* {
@@ -477,6 +493,8 @@ void LibraryActivity::initPopup() {
             return tr(STR_SORT);
           case POPUP_TOP_COLLECTIONS:
             return tr(STR_COLLECTIONS);
+          case POPUP_TOP_BOOK:
+            return tr(STR_BOOK);
           case POPUP_TOP_FILES:
             return tr(STR_FILES);
           case POPUP_TOP_POWER:
@@ -712,9 +730,22 @@ void LibraryActivity::dispatchPopupActivation(CascadingPopupMenu::Nav navResult)
   const int top = popup_.topSelectedIndex();
   if (navResult == CascadingPopupMenu::Nav::LeafActivated) {
     switch (top) {
-      case POPUP_TOP_COLLECTIONS:
-        activityManager.goToCollections();
+      case POPUP_TOP_COLLECTIONS: {
+        // Suspend (not destroy) this activity so returning preserves grid /
+        // prefetch state. Snapshot the active view so the return handler only
+        // rebuilds when the user actually switched views.
+        const uint8_t prevKind = SETTINGS.libraryViewKind;
+        const uint32_t prevId = SETTINGS.libraryViewCollectionId;
+        const std::string prevName = SETTINGS.libraryViewName;
+        startActivityForResult(std::make_unique<CollectionsActivity>(renderer, mappedInput),
+                               [this, prevKind, prevId, prevName](const ActivityResult&) {
+                                 const bool changed = SETTINGS.libraryViewKind != prevKind ||
+                                                      SETTINGS.libraryViewCollectionId != prevId ||
+                                                      prevName != std::string(SETTINGS.libraryViewName);
+                                 onReturnFromCollections(changed);
+                               });
         break;
+      }
       case POPUP_TOP_SETTINGS:
         activityManager.goToSettings();
         break;
@@ -736,6 +767,22 @@ void LibraryActivity::dispatchPopupActivation(CascadingPopupMenu::Nav navResult)
       }
       setSort(newField, newDirection);
 
+      break;
+    }
+    case POPUP_TOP_BOOK: {
+      const LibraryBook* book = bookForGridIndex(gridHelper.currentIndex());
+      if (book == nullptr) {
+        // Back tile or empty slot selected — nothing to edit.
+        popup_.close();
+        requestUpdate();
+        break;
+      }
+      // Capture by value: view_ pointers may be rebuilt while the picker is up.
+      const uint32_t bookHash = book->pathHash;
+      const auto mode =
+          (sub == POPUP_BOOK_ADD) ? CollectionPickerActivity::Mode::Add : CollectionPickerActivity::Mode::Remove;
+      startActivityForResult(std::make_unique<CollectionPickerActivity>(renderer, mappedInput, bookHash, mode),
+                             [this](const ActivityResult&) { onCollectionMembershipChanged(); });
       break;
     }
     case POPUP_TOP_FILES: {
@@ -762,6 +809,55 @@ void LibraryActivity::dispatchPopupActivation(CascadingPopupMenu::Nav navResult)
       break;
     }
   }
+}
+
+// Swallow the trailing button release from a suspended sub-activity that
+// finished on a Confirm press (or Back). The sub-activity is restored via its
+// result handler, not onEnter, so without this the release falls through to
+// doSelect()/popup re-open. Mirrors the lock set in onEnter for the same reason.
+void LibraryActivity::lockSubActivityReturnRelease() {
+  lockNextConfirmRelease = mappedInput.isPressed(MappedInputManager::Button::Confirm);
+  lockNextBackRelease = mappedInput.isPressed(MappedInputManager::Button::Back);
+}
+
+void LibraryActivity::reloadActiveView() {
+  cancelAllPrefetch();
+  xSemaphoreTake(cacheLock_, portMAX_DELAY);
+  rebuildView();
+  xSemaphoreGive(cacheLock_);
+
+  // Non-All views insert a back tile at slot 0, so default selection to the
+  // first real book (slot 1); All Books starts at slot 0.
+  const int initialIndex = (SETTINGS.libraryViewKind == CrossPointSettings::LIB_VIEW_ALL) ? 0 : 1;
+  gridHelper = GridHelper(viewItemCount(), ROWS, COLS, initialIndex);
+  lastObservedPage_ = 0;
+  primeNeighborhoodLazy(0);
+}
+
+void LibraryActivity::onCollectionMembershipChanged() {
+  popup_.close();
+  lockSubActivityReturnRelease();
+
+  // Only a collection view's contents depend on membership. Rebuild it so an
+  // added/removed book appears/disappears; other views (All Books, auto-groups)
+  // are unaffected, so just repaint in place to preserve the grid position.
+  if (SETTINGS.libraryViewKind == CrossPointSettings::LIB_VIEW_COLLECTION) {
+    COLLECTION_STORE.loadFromFile();
+    reloadActiveView();
+  }
+
+  requestUpdate();
+}
+
+void LibraryActivity::onReturnFromCollections(bool viewChanged) {
+  popup_.close();
+  lockSubActivityReturnRelease();
+
+  // The picker may have switched the active view (or created collections). Only
+  // rebuild when the view actually changed; otherwise preserve grid position.
+  if (viewChanged) reloadActiveView();
+
+  requestUpdate();
 }
 
 void LibraryActivity::applySort() {

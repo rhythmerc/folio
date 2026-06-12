@@ -348,6 +348,20 @@ sdkApiThatTakesOwnership(obj);  // SDK calls delete
 * No Hardcoding: Never assume 800 or 480. Use renderer.getScreenWidth() and renderer.getScreenHeight().
 * Viewable Area: Use renderer.getOrientedViewableTRBL() to stay within physical bezel margins.
 
+### Page Scaffold (UIPage) — Standard
+
+* **Build every full-screen activity view with [`UIPage`](../src/components/ui/UIPage/UIPage.h).**
+  `UIPage::render(renderer, title, subtitle, btnLabels, bodyPadding)` lays out the standard
+  page chrome (top padding + header + body + button hints) from theme metrics and returns the
+  body `Rect` to fill. This is the standard going forward — do NOT hand-assemble header /
+  body / footer stacks per activity.
+* For list bodies, prefer the [`List`](../src/components/ui/List/List.h) component (each
+  `ListItem` owns its own content + `onSelect` callback) over the deprecated index-keyed
+  `GUI.drawList(...)`. Drive it with `List::up()/down()/triggerSelected()`.
+* Reference implementations: [CollectionPickerActivity](../src/activities/home/CollectionPickerActivity.cpp),
+  [CollectionsActivity](../src/activities/home/CollectionsActivity.cpp),
+  [CollectionGroupActivity](../src/activities/home/CollectionGroupActivity.cpp).
+
 ### Layout (Flex Primitives)
 * Compose every screen with the flex primitives in [src/util/Flex.h](../src/util/Flex.h)
   (`Vstack`/`Hstack`/`Grid` + `fixed/grow/percent` + `Padding` + `align/center`). Do NOT hand-compute

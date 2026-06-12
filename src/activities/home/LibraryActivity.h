@@ -28,10 +28,15 @@ class LibraryActivity final : public Activity {
   // leaf actions and sort logic against these indices.
   static constexpr int POPUP_TOP_SORT = 0;
   static constexpr int POPUP_TOP_COLLECTIONS = 1;  // leaf → CollectionsActivity
-  static constexpr int POPUP_TOP_FILES = 2;
-  static constexpr int POPUP_TOP_POWER = 3;
-  static constexpr int POPUP_TOP_SETTINGS = 4;
-  static constexpr int POPUP_TOP_COUNT = 5;
+  static constexpr int POPUP_TOP_BOOK = 2;         // submenu: Add / Remove from Collection
+  static constexpr int POPUP_TOP_FILES = 3;
+  static constexpr int POPUP_TOP_POWER = 4;
+  static constexpr int POPUP_TOP_SETTINGS = 5;
+  static constexpr int POPUP_TOP_COUNT = 6;
+
+  static constexpr int POPUP_BOOK_ADD = 0;
+  static constexpr int POPUP_BOOK_REMOVE = 1;
+  static constexpr int POPUP_BOOK_COUNT = 2;
 
   static constexpr int POPUP_FILES_BROWSE = 0;
   static constexpr int POPUP_FILES_TRANSFER = 1;
@@ -193,6 +198,19 @@ class LibraryActivity final : public Activity {
   // Dispatches the activity action for an active popup row (leaf or submenu
   // item). Reads popup_.topSelectedIndex() / subSelectedIndex() to decide.
   void dispatchPopupActivation(CascadingPopupMenu::Nav navResult);
+  // Close the popup and refresh after the collection-membership picker returns.
+  // Only a collection view's contents depend on membership, so the view is
+  // rebuilt only then; otherwise the grid is just repainted in place.
+  void onCollectionMembershipChanged();
+  // Refresh after the (suspended) CollectionsActivity returns. Rebuilds the
+  // active view only when it changed, preserving grid position otherwise.
+  void onReturnFromCollections(bool viewChanged);
+  // Rebuild view_ from current settings and reset the grid to the view's
+  // default selection (shared by the membership / collections return paths).
+  void reloadActiveView();
+  // Swallow the trailing Confirm/Back release after a suspended sub-activity
+  // returns, so it doesn't fall through to doSelect() / popup re-open.
+  void lockSubActivityReturnRelease();
   // Re-sort the index from current settings and reset selection to the top.
   void applySort();
   // Persist the active sort field/direction and re-sort.

@@ -66,8 +66,7 @@ void CollectionStore::addBookToCollection(uint32_t bookHash, uint32_t collection
   }
   auto& collection = *collectionIt;
 
-  auto bookIt = std::find(collection.members.begin(), collection.members.end(), bookHash);
-  if (bookIt != collection.members.end()) {
+  if (collection.hasBook(bookHash)) {
     // book is already in collection; nothing to do
     return;
   }
