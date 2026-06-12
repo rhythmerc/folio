@@ -162,6 +162,12 @@ inline Rect inset(const Rect& parent, const Padding& pad) {
               parent.height - pad.top - pad.bottom};
 }
 
+inline Rect offset(const Rect& parent, int x, int y) {
+  return Rect{parent.x + x, parent.y + y,
+              parent.width,
+              parent.height};
+}
+
 namespace detail {
 
 // Resolve the main-axis size of every child given the available main-axis
