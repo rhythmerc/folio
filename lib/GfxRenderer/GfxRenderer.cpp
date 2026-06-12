@@ -43,11 +43,11 @@ const uint8_t* GfxRenderer::getGlyphBitmap(const EpdFontData* fontData, const Ep
     // must consume it (draw the glyph) before requesting another bitmap.
     return fd->getBitmap(fontData, glyph, glyphIndex);
   }
-  // For SD card fonts, check if the glyph was loaded on demand into the overflow
-  // buffer.  getOverflowBitmap() returns:
+  // For SD card fonts every glyph is loaded on demand into the overflow cache.
+  // getOverflowBitmap() returns:
   //   - bitmap pointer for overflow glyphs with bitmap data
   //   - nullptr for overflow glyphs without bitmap data (e.g. space: width=0, height=0)
-  //   - nullptr for non-overflow glyphs (normal prewarmed path)
+  //   - nullptr for glyphs not in the overflow cache
   // We distinguish overflow-with-no-bitmap from non-overflow by checking isOverflowGlyph().
   if (fontData->glyphMissCtx) {
     auto* sdFont = SdCardFont::fromMissCtx(fontData->glyphMissCtx);
@@ -291,13 +291,6 @@ void GfxRenderer::drawPixel(const int x, const int y, const bool state) const {
 }
 
 int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontFamily::Style style) const {
-  // Dry-run prewarm: skip glyph-metric measurement entirely. No pixels are
-  // drawn during the dry-run, so every caller's centering/layout math is
-  // discarded — the text is still collected for warming via drawText. Callers
-  // use the width only to position (never to decide whether to draw), so a 0
-  // here is harmless.
-  if (prewarmTextCollector_) return 0;
-
   const auto fontIt = resolveFontIt(fontId);
   if (fontIt == fontMap.end()) {
     LOG_ERR("GFX", "Font %d not found", fontId);
@@ -326,19 +319,6 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
 
   // cannot draw a NULL / empty string
   if (text == nullptr || *text == '\0') {
-    return;
-  }
-
-  // Dry-run pass: route the draw into the active TextCollector instead of
-  // rasterizing. The collector batches all draws across the render() pass
-  // and applies them as a single prewarmCache() per font afterwards.
-  if (prewarmTextCollector_) {
-    prewarmTextCollector_->use(fontId, style, text);
-    return;
-  }
-
-  if (fontCacheManager_ && fontCacheManager_->isScanning()) {
-    fontCacheManager_->recordText(text, fontId, style);
     return;
   }
 
@@ -394,8 +374,6 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
 }
 
 void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) const {
-  if (prewarmTextCollector_) return;
-  if (fontCacheManager_ && fontCacheManager_->isScanning()) return;
   if (x1 == x2) {
     if (y2 < y1) {
       std::swap(y1, y2);
@@ -625,8 +603,6 @@ void GfxRenderer::fillRectDither(const int x, const int y, const int width, cons
 
 void GfxRenderer::drawDitheredLine(const int x, const int y, const int length) const {
   if (length <= 0) return;
-  if (prewarmTextCollector_) return;
-  if (fontCacheManager_ && fontCacheManager_->isScanning()) return;
 
   // Clip the logical 1px row to the visible area.
   const int screenW = getScreenWidth();
@@ -668,8 +644,6 @@ void GfxRenderer::fillRectImpl(const int x, const int y, const int width, const 
   if constexpr (transparent && C == Color::White) return;
 
   if (width <= 0 || height <= 0) return;
-  if (prewarmTextCollector_) return;
-  if (fontCacheManager_ && fontCacheManager_->isScanning()) return;
 
   // Clip in logical space.
   const int screenW = getScreenWidth();
@@ -837,7 +811,6 @@ template void GfxRenderer::fillRectDither<true>(int, int, int, int, Color) const
 
 void GfxRenderer::drawCircle(const int cx, const int cy, const int radius, const Color color) const {
   if (radius <= 0 || color == Color::Clear) return;
-  if (prewarmTextCollector_) return;
   // Midpoint circle algorithm — plots the 8-way symmetric outline.
   int x = radius;
   int y = 0;
@@ -863,7 +836,6 @@ void GfxRenderer::drawCircle(const int cx, const int cy, const int radius, const
 
 void GfxRenderer::fillCircle(const int cx, const int cy, const int radius, const Color color) const {
   if (radius <= 0 || color == Color::Clear) return;
-  if (prewarmTextCollector_) return;
   // Midpoint circle — fill horizontal spans for each scanline pair.
   int x = radius;
   int y = 0;
@@ -888,7 +860,6 @@ void GfxRenderer::maskRoundedRectOutsideCorners(const int x, const int y, const 
   if (radius <= 0 || color == Color::Clear) {
     return;
   }
-  if (prewarmTextCollector_) return;
 
   const int rr = radius - 1;
   const int rr2 = rr * rr;
@@ -969,7 +940,6 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
   if (width <= 0 || height <= 0) {
     return;
   }
-  if (prewarmTextCollector_) return;
 
   if (cornerRadius <= 0) {
     fillRectDither(x, y, width, height, color);
@@ -1038,7 +1008,6 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
 }
 
 void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {
-  if (prewarmTextCollector_) return;
   int rotatedX = 0;
   int rotatedY = 0;
   rotateCoordinates(orientation, x, y, &rotatedX, &rotatedY, panelWidth, panelHeight);
@@ -1062,14 +1031,11 @@ void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, co
 }
 
 void GfxRenderer::drawIcon(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {
-  if (prewarmTextCollector_) return;
   display.drawImageTransparent(bitmap, y, getScreenWidth() - width - x, height, width);
 }
 
 void GfxRenderer::drawBitmap(const Bitmap& bitmap, const int x, const int y, const int maxWidth, const int maxHeight,
                              const float cropX, const float cropY) const {
-  if (prewarmTextCollector_) return;
-  if (fontCacheManager_ && fontCacheManager_->isScanning()) return;
   // For 1-bit bitmaps, use optimized 1-bit rendering path (no crop support for 1-bit)
   if (bitmap.is1Bit() && cropX == 0.0f && cropY == 0.0f) {
     drawBitmap1Bit(bitmap, x, y, maxWidth, maxHeight);
@@ -1177,7 +1143,6 @@ void GfxRenderer::drawBitmap(const Bitmap& bitmap, const int x, const int y, con
 
 void GfxRenderer::drawBitmap1Bit(const Bitmap& bitmap, const int x, const int y, const int maxWidth,
                                  const int maxHeight) const {
-  if (prewarmTextCollector_) return;
   float scale = 1.0f;
   bool isScaled = false;
   if (maxWidth > 0 && bitmap.getWidth() > maxWidth) {
@@ -1406,10 +1371,6 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
                                    const int maxWidth, const int maxHeight, const int cornerRadius) const {
   auto* entry = lookupOrLoadCachedBitmap(cache, path);
   if (entry == nullptr) return false;
-  if (prewarmTextCollector_)
-    return false;  // signify that we haven't drawn
-                   // so that library takes the fallback path and
-                   // optimistically pre-warms placeholder cover text
 
   float scale = 1.0f;
   if (maxWidth > 0 && entry->width > maxWidth) scale = static_cast<float>(maxWidth) / static_cast<float>(entry->width);
@@ -1603,7 +1564,6 @@ template bool GfxRenderer::drawCachedBitmap<true>(BitmapCacheManager&, const cha
 
 void GfxRenderer::fillPolygon(const int* xPoints, const int* yPoints, int numPoints, bool state) const {
   if (numPoints < 3) return;
-  if (prewarmTextCollector_) return;
 
   // Find bounding box
   int minY = yPoints[0], maxY = yPoints[0];
@@ -1666,20 +1626,17 @@ void GfxRenderer::fillPolygon(const int* xPoints, const int* yPoints, int numPoi
 static unsigned long start_ms = 0;
 
 void GfxRenderer::clearScreen(const uint8_t color) const {
-  if (prewarmTextCollector_) return;
   start_ms = millis();
   display.clearScreen(color);
 }
 
 void GfxRenderer::invertScreen() const {
-  if (prewarmTextCollector_) return;
   for (uint32_t i = 0; i < frameBufferSize; i++) {
     frameBuffer[i] = ~frameBuffer[i];
   }
 }
 
 void GfxRenderer::displayBuffer(const HalDisplay::RefreshMode refreshMode) const {
-  if (prewarmTextCollector_) return;
   auto elapsed = millis() - start_ms;
   LOG_DBG("GFX", "Time = %lu ms from clearScreen to displayBuffer", elapsed);
   display.displayBuffer(refreshMode, fadingFix);
@@ -1691,12 +1648,6 @@ std::string GfxRenderer::truncatedText(const int fontId, const char* text, const
 
   // U+2026 HORIZONTAL ELLIPSIS (UTF-8: 0xE2 0x80 0xA6)
   const char* ellipsis = "\xe2\x80\xa6";
-
-  // Dry-run prewarm: skip width measurement — the dominant cost of the dry-run
-  // pass — and warm the full, untruncated text instead. Its glyph set is a
-  // superset of any truncated result; the only glyph truncation can introduce
-  // that the full text lacks is the ellipsis, so append it here.
-  if (prewarmTextCollector_) return std::string(text) + ellipsis;
 
   std::string item = text;
   int textWidth = getTextWidth(fontId, item.c_str(), style);
@@ -1717,14 +1668,6 @@ std::vector<std::string> GfxRenderer::wrappedText(const int fontId, const char* 
   std::vector<std::string> lines;
 
   if (!text || maxWidth <= 0 || maxLines <= 0) return lines;
-
-  // Dry-run prewarm: skip the wrapping width math and warm the full text's
-  // glyphs (a superset of any wrapped/truncated result) plus the ellipsis,
-  // which the last-line truncation may emit.
-  if (prewarmTextCollector_) {
-    lines.push_back(std::string(text) + "\xe2\x80\xa6");
-    return lines;
-  }
 
   std::string remaining = text;
   std::string currentLine;
@@ -2024,13 +1967,6 @@ void GfxRenderer::drawTextRotated90CW(const int fontId, const int x, const int y
                                       const EpdFontFamily::Style style) const {
   // Cannot draw a NULL / empty string
   if (text == nullptr || *text == '\0') {
-    return;
-  }
-
-  // Dry-run pass: route into the collector. Rotation is irrelevant for the
-  // prewarm — the same glyphs are needed regardless of orientation.
-  if (prewarmTextCollector_) {
-    prewarmTextCollector_->use(fontId, style, text);
     return;
   }
 

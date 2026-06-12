@@ -237,10 +237,6 @@ class LibraryActivity final : public Activity {
   void onExit() override;
   void loop() override;
   void render(RenderLock&&) override;
-  // Self-warming experiment: flash fonts warm via the FontDecompressor
-  // group-LRU, SD fonts via the SdCardFont overflow + kern-row caches. Was
-  // true (needed before SD self-warming existed); flip back if SD regresses.
-  bool wantsFontPrewarmRender() const override { return false; }
 
   // Power-button override: short-press advances linearly through the
   // library (delegates to moveNext()), wrapping at the end.

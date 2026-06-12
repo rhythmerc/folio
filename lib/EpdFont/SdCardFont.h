@@ -29,37 +29,24 @@ class HalFile;
 // instances deduped by path, via ThemeFontManager). Each instance owns one
 // open file path plus per-style glyph state.
 //
-// State machine for each style's EpdFontData pointer (see PerStyle below):
+// Rendering is self-warming: epdFont.data always points at stubData, and
+// glyph bitmaps + kern-matrix rows are resolved on demand and cached:
 //
-//   load()        ─►  epdFont.data = &stubData
-//                     (header metrics only; glyphs resolved on-demand via the
-//                      miss handler → overflow LRU. Used by UI roles that
-//                      render arbitrary text without a prewarm pass.)
+//   - Glyphs: EpdFontData::glyphMissHandler → onGlyphMiss → byte-budgeted
+//     overflow LRU (read through the persistent overflowFile_ handle).
+//   - Kerning: EpdFontData::kernRowHandler → onKernRow → kern-row LRU.
+//   - Ligatures + kern class tables: loaded once (loadStyleKernLigatureData)
+//     and wired into stubData by applyGlyphMissCallback.
 //
-//   prewarm(text) ─►  epdFont.data = &miniData
-//                     (mini intervals + glyph table + bitmap blob for the
-//                      visible codepoints; miss handler still wired for any
-//                      glyph not in the prewarm set. Used by both UI screens
-//                      and reader page renders.)
+// clearCache() drops these caches (the handle too); freeAll() tears the
+// instance down. There is no prewarm pass.
 //
-//   clearCache()  ─►  epdFont.data = &stubData
-//                     (mini buffers freed; persistent advance cache survives)
-//
-//   freeAll()     ─►  both zeroed; instance is effectively dead until load()
-//
-// Two distinct paths exercise this object:
-//
-//   - Shared (UI + reader): load → prewarm → render → clearCache loop. Driven
-//     by FontCacheManager::prewarmCache via GfxRenderer.
-//
-//   - Reader-only (layout): buildAdvanceTable + getAdvance. The advance table
-//     is a separate persistent cache (sized for an entire book layout pass)
-//     that the UI never touches — UI text has fixed positions and never
-//     measures via this path. See ParsedText.cpp + TxtReaderActivity.cpp for
-//     the call sites; GfxRenderer::ensureSdCardFontReady forwards into it.
+// A separate Reader-only layout API (buildAdvanceTable + getAdvance) maintains
+// a persistent advance cache sized for a whole book layout pass — the UI never
+// touches it (UI text has fixed positions). See ParsedText.cpp +
+// TxtReaderActivity.cpp; GfxRenderer::ensureSdCardFontReady forwards into it.
 class SdCardFont {
  public:
-  static constexpr uint16_t MAX_PAGE_GLYPHS = 512;
   static constexpr uint8_t MAX_STYLES = 4;
 
   SdCardFont() = default;
@@ -76,23 +63,15 @@ class SdCardFont {
   // Returns true on success.
   bool load(const char* path);
 
-  // Pre-read glyphs needed for the given UTF-8 text from SD card.
-  // styleMask: bitmask of styles to prewarm (bit 0=regular, 1=bold, 2=italic, 3=bolditalic).
-  // Default 0x0F = all present styles.
-  // When metadataOnly=true, only glyph metrics are loaded (no bitmap data).
-  // Returns number of glyphs that couldn't be loaded (0 on full success).
-  int prewarm(const char* utf8Text, uint8_t styleMask = 0x0F, bool metadataOnly = false);
-
   // --- Reader-only layout API ----------------------------------------------
   // The advance table is exercised exclusively by the reader's layout pass
   // (ParsedText / TxtReaderActivity → GfxRenderer::ensureSdCardFontReady).
   // The UI never builds or queries it because UI text has fixed widths and
-  // never re-flows. The table coexists with mini data — it's a separate,
-  // longer-lived cache keyed by codepoint, not page.
+  // never re-flows. It's a separate, longer-lived cache keyed by codepoint.
 
   // Build a compact advance-only table for layout measurement.
-  // Extracts ALL unique codepoints from words (no MAX_PAGE_GLYPHS cap),
-  // batch-reads advanceX from SD, stores in a sorted per-style table.
+  // Extracts ALL unique codepoints from words, batch-reads advanceX from SD,
+  // stores in a sorted per-style table.
   // Returns number of codepoints not found in font coverage.
   int buildAdvanceTable(const char* utf8Text, uint8_t styleMask = 0x0F);
   int buildAdvanceTable(const std::vector<std::string>& words, bool includeHyphen, uint8_t styleMask = 0x0F);
@@ -172,7 +151,7 @@ class SdCardFont {
     uint8_t ligaturePairCount = 0;
   };
 
-  // All per-style data: file offsets, intervals, kern/lig, prewarm cache, EpdFont
+  // All per-style data: file offsets, intervals, kern/lig tables, stub, EpdFont
   struct PerStyle {
     CpFontHeader header{};
 
@@ -188,41 +167,20 @@ class SdCardFont {
     // Full intervals loaded from file (kept in RAM for codepoint lookup)
     EpdUnicodeInterval* fullIntervals = nullptr;
 
-    // Persistent kern-class + ligature tables (lazy-loaded on first prewarm).
+    // Persistent kern-class + ligature tables (loaded once on first use).
     // The full kern MATRIX is NOT resident — on Literata-class fonts a single
     // style's matrix is ~36-42KB contiguous, and 4 styles' worth won't fit
     // alongside bitmaps + framebuffer on a 380KB device. Only kernLeftClasses
     // and kernRightClasses (small codepoint→classId tables, ~3KB each) stay
-    // resident; the matrix is reconstructed per-page as miniKernMatrix.
+    // resident; matrix rows are fetched on demand via onKernRow.
     EpdKernClassEntry* kernLeftClasses = nullptr;
     EpdKernClassEntry* kernRightClasses = nullptr;
     EpdLigaturePair* ligaturePairs = nullptr;
     bool kernLigLoaded = false;
 
-    // Stub EpdFontData returned when not prewarmed
+    // The single EpdFontData this style renders from. Glyph bitmaps + kern rows
+    // resolve on demand via the miss/row handlers wired in applyGlyphMissCallback.
     EpdFontData stubData{};
-
-    // Mini EpdFontData built during prewarm
-    EpdFontData miniData{};
-    EpdUnicodeInterval* miniIntervals = nullptr;
-    EpdGlyph* miniGlyphs = nullptr;
-    uint8_t* miniBitmap = nullptr;
-    uint32_t miniIntervalCount = 0;
-    uint32_t miniGlyphCount = 0;
-
-    // Per-page mini kern matrix (built by buildMiniKernMatrix on each full
-    // prewarm). miniKernLeftClasses/miniKernRightClasses map ONLY the codepoints
-    // used on the current page to renumbered class IDs (1..miniKern*ClassCount).
-    // miniKernMatrix is a small miniKernLeftClassCount × miniKernRightClassCount
-    // flat matrix. Typical Latin page: ~25×25 matrix = ~625 bytes per style vs
-    // ~36KB for the full Literata matrix — ~50× reduction.
-    EpdKernClassEntry* miniKernLeftClasses = nullptr;
-    EpdKernClassEntry* miniKernRightClasses = nullptr;
-    uint16_t miniKernLeftEntryCount = 0;
-    uint16_t miniKernRightEntryCount = 0;
-    uint8_t miniKernLeftClassCount = 0;
-    uint8_t miniKernRightClassCount = 0;
-    int8_t* miniKernMatrix = nullptr;
 
     // The EpdFont whose data pointer we manage
     EpdFont epdFont{&stubData};
@@ -308,30 +266,18 @@ class SdCardFont {
   uint32_t contentHash_ = 0;
   bool loaded_ = false;
 
-  // Fingerprint of the last successful prewarm — FNV-1a hash of the sorted
-  // codepoints + styleMask + metadataOnly flag. Used by prewarm() to skip
-  // the destructive rebuild when the same content is re-prewarmed (a common
-  // case when activities re-render with stable visible text). Reset by
-  // clearCache() / freeAll() so the next prewarm rebuilds unconditionally.
-  uint32_t lastPrewarmHash_ = 0;
-
   // Per-style helpers
-  void freeStyleMiniData(PerStyle& s);
   void freeStyleAll(PerStyle& s);
   void freeStyleKernLigatureData(PerStyle& s);
-  void freeStyleMiniKern(PerStyle& s);
   bool loadStyleKernLigatureData(PerStyle& s);
   // Lazy-load fullIntervals for a style. Returns true if intervals are
   // resident after the call. Cheap when already loaded (no-op).
   bool ensureStyleIntervalsLoaded(uint8_t styleIdx);
-  bool buildMiniKernMatrix(PerStyle& s, const uint32_t* codepoints, uint32_t cpCount);
-  void applyKernLigaturePointers(PerStyle& s, EpdFontData& data) const;
   void applyGlyphMissCallback(uint8_t styleIdx);
   int32_t findGlobalGlyphIndex(const PerStyle& s, uint32_t codepoint) const;
   int fetchAdvancesForCodepoints(uint32_t* codepoints, uint32_t cpCount, uint8_t styleMask);
   template <typename Iter>
   int buildAdvanceTableRange(Iter begin, Iter end, bool includeSpace, bool includeHyphen, uint8_t styleMask);
-  int prewarmStyle(uint8_t styleIdx, const uint32_t* codepoints, uint32_t cpCount, bool metadataOnly);
 
   // Global helpers
   void freeAll();

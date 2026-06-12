@@ -40,7 +40,7 @@ GfxRenderer renderer(display);
 ActivityManager activityManager(renderer, mappedInputManager);
 FontDecompressor fontDecompressor;
 ReaderFontSystem readerFontSystem;
-FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts());
+FontCacheManager fontCacheManager(renderer.getSdCardFonts());
 static unsigned long allowSleepAt = 0;
 
 // Fonts
@@ -326,13 +326,9 @@ void setupDisplayAndFonts(bool seamless = false) {
   // Theme-role font registry discovers SD-installed fonts for the *active*
   // theme only (driven by UITheme.reload below — that's where the registry
   // gets told which theme is current). Other themes' role fonts stay on
-  // disk untouched until the user actually switches themes.
-  //
-  // Prewarming the mini glyph cache is deliberately NOT done here:
-  // prewarmAll across every style of every role font is ~2,700+ sequential
-  // SD reads, which trips the task watchdog inside setup() and boot-loops
-  // the device. Activities prewarm on first entry (see Activity::onEnter)
-  // when the watchdog is being fed normally.
+  // disk untouched until the user actually switches themes. Glyph bitmaps and
+  // kern rows load on demand during rendering (self-warming caches), so there
+  // is nothing to prewarm at boot.
 
   LOG_DBG("MAIN", "Fonts setup");
 }

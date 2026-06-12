@@ -6,7 +6,6 @@
 
 class FontCacheManager;
 class SdCardFont;
-class TextCollector;
 
 #include <cstring>
 #include <map>
@@ -65,18 +64,6 @@ class GfxRenderer {
   // as before, concentrated in a single pointer instead of four fields.
   mutable FontCacheManager* fontCacheManager_ = nullptr;
 
-  // Active dry-run text collector. Non-null only while the render pipeline
-  // is executing the prewarm pass (see ActivityManager::renderTaskLoop and
-  // Activity::wantsPrewarmRender). When set, every drawText routes to
-  // collector->use() instead of rasterizing, and every drawing primitive
-  // (lines, rects, bitmaps, …) early-returns. Measurement APIs (getTextWidth,
-  // wrappedText, kerning, etc.) still run normally so layout decisions are
-  // deterministic across the dry-run and real-render passes.
-  //
-  // Mutable for the same reason as fontCacheManager_: the drawing methods
-  // are const but the collector pointer is render-pipeline state, not
-  // user-observable state.
-  mutable TextCollector* prewarmTextCollector_ = nullptr;
 
   // Lazily populate `cache` with the decoded BMP at `path`. Returns the
   // cached entry, or nullptr on miss (file missing, unsupported format,
@@ -131,13 +118,6 @@ class GfxRenderer {
   void setFontCacheManager(FontCacheManager* m) { fontCacheManager_ = m; }
   FontCacheManager* getFontCacheManager() const { return fontCacheManager_; }
 
-  // Install / clear the dry-run prewarm collector. Set to a non-null pointer
-  // before invoking render() in dry-run mode, clear back to nullptr before
-  // the real render. While set, every drawing primitive in this class
-  // either records its text into the collector (text APIs) or returns
-  // immediately (everything else).
-  void setPrewarmTextCollector(TextCollector* c) const { prewarmTextCollector_ = c; }
-  TextCollector* getPrewarmTextCollector() const { return prewarmTextCollector_; }
   // Install the system-wide glyph fallback. `fontId` must already be registered
   // via insertFont. Retro-wires its regular-style EpdFont into every other
   // registered family so existing fonts inherit the fallback. Subsequent
