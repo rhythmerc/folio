@@ -39,7 +39,7 @@ batteryStyle: segmented
 showsFileIcons: true
 
 layout:
-  topPadding: 5
+  topPadding: 20 
   verticalSpacing: 16
   contentSidePadding: 20
 
@@ -60,14 +60,6 @@ tabBar:
 scrollBar:
   width: 4
   rightOffset: 5
-
-home:
-  topPadding: 56
-  coverHeight: 226
-  coverTileHeight: 242
-  recentBooksCount: 1
-  continueReadingInMenu: false
-  menuTopOffset: 16
 
 progressBar:
   height: 16

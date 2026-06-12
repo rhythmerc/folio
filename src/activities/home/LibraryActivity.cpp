@@ -1013,6 +1013,8 @@ void LibraryActivity::render(RenderLock&&) {
 }
 
 void LibraryActivity::renderPasses() {
+  const auto& td = *GUI.getData();
+
   const Rect screen{0, 0, renderer.getScreenWidth(), renderer.getScreenHeight()};
   const auto btnLabels = popup_.isOpen()
     ? popup_.getFooterLabels(mappedInput)
@@ -1022,7 +1024,8 @@ void LibraryActivity::renderPasses() {
     renderer,
     viewTitle_.empty() ? tr(STR_LIBRARY) : viewTitle_.c_str(),
     getHeaderSubtitleText().c_str(),
-    btnLabels
+    btnLabels,
+    flex::xy(td.library.pagePaddingX, td.library.pagePaddingY)
   );
 
   // Zero grid items means an empty device library (the All view with no

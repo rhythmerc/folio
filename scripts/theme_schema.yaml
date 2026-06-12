@@ -162,7 +162,7 @@ struct:
   - group: layout
     struct_name: Layout
     fields:
-      - { cpp: topPadding,        type: int, default: 5 }
+      - { cpp: topPadding,        type: int, default: 0 }
       - { cpp: verticalSpacing,   type: int, default: 10 }
       - { cpp: contentSidePadding, type: int, default: 18 }
 
@@ -192,16 +192,6 @@ struct:
     fields:
       - { cpp: width,       type: int, default: 4 }
       - { cpp: rightOffset, type: int, default: 5 }
-
-  - group: home
-    struct_name: Home
-    fields:
-      - { cpp: topPadding,            type: int,  default: 56 }
-      - { cpp: coverHeight,           type: int,  default: 226 }
-      - { cpp: coverTileHeight,       type: int,  default: 242 }
-      - { cpp: recentBooksCount,      type: int,  default: 1 }
-      - { cpp: continueReadingInMenu, type: bool, default: false }
-      - { cpp: menuTopOffset,         type: int,  default: 16 }
 
   - group: progressBar
     struct_name: ProgressBar
@@ -251,6 +241,8 @@ struct:
       - { cpp: coverBorderWidth,             type: int,            default: 1 }
       - { cpp: coverDropShadowOffsetX,       type: int,            default: 3 }
       - { cpp: coverDropShadowOffsetY,       type: int,            default: 3 }
+      - { cpp: pagePaddingX,                 type: int,            default: 0 }
+      - { cpp: pagePaddingY,                 type: int,            default: 0 }
 
   - group: popup
     struct_name: Popup

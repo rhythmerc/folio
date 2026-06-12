@@ -63,6 +63,7 @@ void List::triggerSelected() {
 
 void List::render(const GfxRenderer& renderer, Rect rect) const {
   if (items_.empty()) return;
+  const auto &td = *GUI.getData();
 
   // The theme primitive keys layout off which callbacks are non-null (e.g. a
   // present rowSubtitle makes every row taller). Only hand it the callbacks a
@@ -96,6 +97,16 @@ void List::render(const GfxRenderer& renderer, Rect rect) const {
   if (anyHeader) rowIsHeader = [this](int i) { return items_[i].header; };
   if (anyBold) rowBold = [this](int i) { return items_[i].bold; };
 
-  GUI.drawList(renderer, rect, static_cast<int>(items_.size()), selected_, rowTitle, rowSubtitle, rowIcon, rowValue,
+  // lists apply their own padding, so we must expand the rectangle horizontally by contentSidePadding if we're already inset
+  const Rect listRect = rect.x != 0
+    ? Rect{
+        .x = rect.x - td.layout.contentSidePadding,
+        .y = rect.y,
+        .width = rect.width + (2 * td.layout.contentSidePadding),
+        .height = rect.height
+      }
+    : std::move(rect);
+
+  GUI.drawList(renderer, listRect, static_cast<int>(items_.size()), selected_, rowTitle, rowSubtitle, rowIcon, rowValue,
                highlightValue, rowDimmed, rowIsHeader, rowBold, valueMetaStyle);
 }

@@ -1,3 +1,4 @@
+#include <optional>
 #include "components/themes/BaseTheme.h"
 #include "MappedInputManager.h"
 #include "util/Flex.h"
@@ -9,6 +10,6 @@ class UIPage {
         const char* title,
         const char* subtitle,
         const MappedInputManager::Labels btnLabels,
-        const flex::Padding bodyPadding = flex::Padding{}
+        const std::optional<flex::Padding> paddingOverride = std::nullopt
     );
 };

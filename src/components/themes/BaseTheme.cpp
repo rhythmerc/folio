@@ -27,6 +27,7 @@
 #include "components/icons/transfer.h"
 #include "components/icons/wifi.h"
 #include "fontIds.h"
+#include "util/Flex.h"
 
 namespace {
 
@@ -765,12 +766,16 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
       textWidth -= iconSize + kSelectionHPad;
     }
 
+    // Content rect for this row's text, after all left insets and (for the
+    // rounded styles) the right-side selection inset.
+    const Rect contentRect{textX, itemY, textWidth, rowHeight};
+
     // ----- Value ---------------------------------------------------------
     // The right-aligned meta column (counts, chevrons) renders smaller + italic
     // than the main label when valueMetaStyle is set (prototype's .row-meta).
     const int valueFont = valueMetaStyle ? metaFont : bodyFont;
     const EpdFontFamily::Style valueStyle = valueMetaStyle ? EpdFontFamily::ITALIC : EpdFontFamily::REGULAR;
-    int valueWidth = 0;
+    int valueColW = 0;
     std::string valueText;
     constexpr int minValueGap = 10;
     if (rowValue != nullptr) {
@@ -778,9 +783,20 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
       if (!valueText.empty()) {
         const int maxValW = std::max(0, textWidth - 40 - minValueGap);
         valueText = renderer.truncatedText(valueFont, valueText.c_str(), maxValW, valueStyle);
-        valueWidth = renderer.getTextWidth(valueFont, valueText.c_str(), valueStyle) + minValueGap;
-        textWidth -= valueWidth;
+        valueColW = renderer.getTextWidth(valueFont, valueText.c_str(), valueStyle);
       }
+    }
+
+    // Split the row into a grow title column + fixed value column so the value
+    // text inherits the same edge padding as the title (the value used to be
+    // anchored to the raw content edge, with no inset on rounded styles). When
+    // there's no value the title spans the whole content rect (no phantom gap).
+    Rect valueCol{};
+    if (!valueText.empty()) {
+      flex::Hstack cols(contentRect, {flex::grow(), flex::fixed(valueColW)}, minValueGap);
+      textX = cols[0].x;
+      textWidth = cols[0].width;
+      valueCol = cols[1];
     }
 
     // ----- Title ---------------------------------------------------------
@@ -834,12 +850,12 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
 
     // ----- Value text ----------------------------------------------------
     if (!valueText.empty()) {
-      const int valueX = rect.x + contentWidth - contentPad - valueWidth + minValueGap;
+      const int valueX = valueCol.x;
       int valueY = itemY + (rowHeight - renderer.getLineHeight(valueFont)) / 2;
       if (hasSubtitle) valueY = itemY + 10;
       const bool valueInverted = selected && highlightValue;
-      if (valueInverted) {
-        renderer.fillRoundedRect(valueX - kSelectionHPad / 2, itemY, valueWidth, rowHeight,
+      if (valueInverted && m.list.selectionStyle != SelectionStyle::SolidFill) {
+        renderer.fillRoundedRect(valueX - kSelectionHPad / 2, itemY, valueCol.width + kSelectionHPad, rowHeight,
                                  data->selection.cornerRadius, Color::Black);
       }
       renderer.drawText(valueFont, valueX, valueY, valueText.c_str(), !invertText && !valueInverted, valueStyle);

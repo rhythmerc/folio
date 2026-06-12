@@ -42,7 +42,7 @@ batteryStyle: solid
 showsFileIcons: false
 
 layout:
-  topPadding: 0
+  topPadding: 15 
   verticalSpacing: 10
   contentSidePadding: 20
 
@@ -63,14 +63,6 @@ tabBar:
 scrollBar:
   width: 4
   rightOffset: 5
-
-home:
-  topPadding: 55
-  coverHeight: 300
-  coverTileHeight: 350
-  recentBooksCount: 1
-  continueReadingInMenu: true
-  menuTopOffset: 20
 
 progressBar:
   height: 16

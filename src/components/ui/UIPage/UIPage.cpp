@@ -8,8 +8,8 @@ Rect UIPage::render(
     GfxRenderer& renderer,
     const char* title,
     const char* subtitle,
-    MappedInputManager::Labels btnLabels, 
-    const flex::Padding bodyPadding
+    MappedInputManager::Labels btnLabels,
+    std::optional<flex::Padding> paddingOverride
 ) {
   const auto& td = *GUI.getData();
   const Rect screen{ 0, 0, renderer.getScreenWidth(), renderer.getScreenHeight() };
@@ -27,7 +27,17 @@ Rect UIPage::render(
   GUI.drawHeader(renderer, page[1], title, subtitle);
 
   const auto body = page[2];
-  const auto bodyWithPadding = flex::inset(body, bodyPadding);
+  const auto bodyWithPadding = flex::inset(
+      body,
+      paddingOverride.value_or(flex::Padding{ 
+          .top = static_cast<int16_t>(td.layout.topPadding),
+          .right = static_cast<int16_t>(td.layout.contentSidePadding),
+          .bottom = 0,
+          .left = static_cast<int16_t>(td.layout.contentSidePadding)
+        }
+      )
+  );
+
 
   ButtonHints::render(renderer, btnLabels.btn1, btnLabels.btn2, btnLabels.btn3, btnLabels.btn4);
 
