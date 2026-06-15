@@ -1034,6 +1034,41 @@ void GfxRenderer::drawIcon(const uint8_t bitmap[], const int x, const int y, con
   display.drawImageTransparent(bitmap, y, getScreenWidth() - width - x, height, width);
 }
 
+void GfxRenderer::drawIcon(const Bitmap1Bit& icon, const int x, const int y, const bool inverted) const {
+  // Icon arrays are authored in physical orientation (for the legacy byte-blit),
+  // but blit1Bit walks its source in logical orientation. Rotate 90° CW into
+  // logical space so the glyph isn't drawn sideways. Square icons only.
+  constexpr int kMaxIconDim = 32;
+  if (icon.bitmap == nullptr || icon.width <= 0 || icon.height <= 0 || icon.width > kMaxIconDim ||
+      icon.height > kMaxIconDim) {
+    LOG_ERR("GFX", "drawIcon: unsupported icon %dx%d (max %d)", icon.width, icon.height, kMaxIconDim);
+    return;
+  }
+
+  const int srcStride = (icon.width + 7) / 8;
+  const int rotW = icon.height;  // 90° CW swaps dimensions
+  const int rotH = icon.width;
+  const int rotStride = (rotW + 7) / 8;
+  uint8_t rotated[kMaxIconDim * ((kMaxIconDim + 7) / 8)] = {};
+
+  // rot90CW: rotated(col=i, row=j) = src(col=j, row=height-1-i). Bit value is
+  // copied verbatim (1 = background, 0 = ink), matching blit1Bit's convention.
+  for (int i = 0; i < rotW; ++i) {
+    const uint8_t* s = icon.bitmap + (icon.height - 1 - i) * srcStride;
+    for (int j = 0; j < rotH; ++j) {
+      if (s[j >> 3] & static_cast<uint8_t>(0x80u >> (j & 7))) {
+        rotated[j * rotStride + (i >> 3)] |= static_cast<uint8_t>(0x80u >> (i & 7));
+      }
+    }
+  }
+
+  if (inverted) {
+    blit1Bit<BlitMode::TransparentWhite>(rotated, rotStride, rotW, rotH, x, y, 0);
+  } else {
+    blit1Bit<BlitMode::TransparentBlack>(rotated, rotStride, rotW, rotH, x, y, 0);
+  }
+}
+
 void GfxRenderer::drawBitmap(const Bitmap& bitmap, const int x, const int y, const int maxWidth, const int maxHeight,
                              const float cropX, const float cropY) const {
   // For 1-bit bitmaps, use optimized 1-bit rendering path (no crop support for 1-bit)
@@ -1361,6 +1396,14 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
     return false;
   }
 
+  constexpr BlitMode mode = Opaque ? BlitMode::Opaque : BlitMode::TransparentBlack;
+  blit1Bit<mode>(entry->scaledPixels.get(), (targetW + 7) / 8, targetW, targetH, x, y, cornerRadius);
+  return true;
+}
+
+template <GfxRenderer::BlitMode Mode>
+void GfxRenderer::blit1Bit(const uint8_t* src, const int srcStride, const int w, const int h, const int x,
+                           const int y, const int cornerRadius) const {
   // Corner-skip table. When r > 0, pixels in the four [0, r) × [0, r) corner
   // boxes that fall outside the rounded shape are left untouched — same
   // pixel test as maskRoundedRectOutsideCorners, applied here so the blit
@@ -1369,7 +1412,7 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
   // dimension so opposite corners can't overlap.
   constexpr int kMaxCornerR = 32;
   int8_t skipPerRow[kMaxCornerR];
-  const int rMax = std::min(kMaxCornerR, std::min(targetW / 2, targetH / 2));
+  const int rMax = std::min(kMaxCornerR, std::min(w / 2, h / 2));
   const int r = std::max(0, std::min(cornerRadius, rMax));
   const bool rounded = r > 0;
   if (rounded) {
@@ -1390,14 +1433,13 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
     }
   }
 
-  const int scaledStride = (targetW + 7) / 8;
   const int screenW = getScreenWidth();
   const int screenH = getScreenHeight();
   const int sx0 = std::max(0, -x);
-  const int sx1 = std::min(targetW, screenW - x);
+  const int sx1 = std::min(w, screenW - x);
   const int sy0 = std::max(0, -y);
-  const int sy1 = std::min(targetH, screenH - y);
-  if (sx0 >= sx1 || sy0 >= sy1) return true;
+  const int sy1 = std::min(h, screenH - y);
+  if (sx0 >= sx1 || sy0 >= sy1) return;
 
   int phyX0, phyY0;
   rotateCoordinates(orientation, x + sx0, y + sy0, &phyX0, &phyY0, panelWidth, panelHeight);
@@ -1426,11 +1468,11 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
           int skip = 0;
           if (sy < r)
             skip = skipPerRow[sy];
-          else if (sy >= targetH - r)
-            skip = skipPerRow[targetH - 1 - sy];
+          else if (sy >= h - r)
+            skip = skipPerRow[h - 1 - sy];
           if (skip > 0) {
             rowSx0 = std::max(sx0, skip);
-            rowSx1 = std::min(sx1, targetW - skip);
+            rowSx1 = std::min(sx1, w - skip);
             if (rowSx0 >= rowSx1) continue;
           }
         }
@@ -1440,7 +1482,7 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
         int32_t byteIndex =
             static_cast<int32_t>(phyY0) * panelStride + (phyX >> 3) + static_cast<int32_t>(rowSx0 - sx0) * byteStep;
 
-        const uint8_t* srcRow = entry->scaledPixels.get() + sy * scaledStride;
+        const uint8_t* srcRow = src + sy * srcStride;
         int sx = rowSx0;
         while (sx < rowSx1) {
           const int bitOffset = sx & 7;
@@ -1449,13 +1491,15 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
           uint8_t srcMask = static_cast<uint8_t>(0x80u >> bitOffset);
           for (int b = 0; b < run; ++b) {
             const bool srcSet = (srcByte & srcMask) != 0;
-            if constexpr (Opaque) {
+            if constexpr (Mode == BlitMode::Opaque) {
               if (srcSet)
                 frameBuffer[byteIndex] |= bitMask;
               else
                 frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
-            } else {
+            } else if constexpr (Mode == BlitMode::TransparentBlack) {
               if (!srcSet) frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
+            } else {  // TransparentWhite
+              if (!srcSet) frameBuffer[byteIndex] |= bitMask;
             }
             byteIndex += byteStep;
             srcMask >>= 1;
@@ -1478,11 +1522,11 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
           int skip = 0;
           if (sy < r)
             skip = skipPerRow[sy];
-          else if (sy >= targetH - r)
-            skip = skipPerRow[targetH - 1 - sy];
+          else if (sy >= h - r)
+            skip = skipPerRow[h - 1 - sy];
           if (skip > 0) {
             rowSx0 = std::max(sx0, skip);
-            rowSx1 = std::min(sx1, targetW - skip);
+            rowSx1 = std::min(sx1, w - skip);
             if (rowSx0 >= rowSx1) continue;
           }
         }
@@ -1491,7 +1535,7 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
         const int32_t rowBase = static_cast<int32_t>(phyY) * panelStride;
         int phyX = phyX0 + (rowSx0 - sx0) * dxPerSx;
 
-        const uint8_t* srcRow = entry->scaledPixels.get() + sy * scaledStride;
+        const uint8_t* srcRow = src + sy * srcStride;
         int sx = rowSx0;
         while (sx < rowSx1) {
           const int bitOffset = sx & 7;
@@ -1502,13 +1546,15 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
             const bool srcSet = (srcByte & srcMask) != 0;
             const int32_t byteIndex = rowBase + (phyX >> 3);
             const uint8_t bitMask = static_cast<uint8_t>(0x80u >> (phyX & 7));
-            if constexpr (Opaque) {
+            if constexpr (Mode == BlitMode::Opaque) {
               if (srcSet)
                 frameBuffer[byteIndex] |= bitMask;
               else
                 frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
-            } else {
+            } else if constexpr (Mode == BlitMode::TransparentBlack) {
               if (!srcSet) frameBuffer[byteIndex] &= static_cast<uint8_t>(~bitMask);
+            } else {  // TransparentWhite
+              if (!srcSet) frameBuffer[byteIndex] |= bitMask;
             }
             phyX += dxPerSx;
             srcMask >>= 1;
@@ -1519,8 +1565,6 @@ bool GfxRenderer::drawCachedBitmap(BitmapCacheManager& cache, const char* path, 
       break;
     }
   }
-
-  return true;
 }
 
 template bool GfxRenderer::drawCachedBitmap<false>(BitmapCacheManager&, const char*, int, int, int, int, int) const;
@@ -1601,6 +1645,7 @@ void GfxRenderer::invertScreen() const {
 }
 
 void GfxRenderer::displayBuffer(const HalDisplay::RefreshMode refreshMode) const {
+  if (displaySuppressed_) return;
   auto elapsed = millis() - start_ms;
   LOG_DBG("GFX", "Time = %lu ms from clearScreen to displayBuffer", elapsed);
   display.displayBuffer(refreshMode, fadingFix);

@@ -1,5 +1,6 @@
+#pragma once
+
 #include <optional>
-#include "components/themes/BaseTheme.h"
 #include "MappedInputManager.h"
 #include "util/Flex.h"
 

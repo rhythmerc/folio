@@ -11,6 +11,7 @@
 
 #include "GfxRenderer.h"
 #include "MappedInputManager.h"
+#include "components/ui/GlobalMenu/GlobalMenu.h"
 #include "util/ScreenshotInfo.h"
 
 class Activity;    // forward declaration
@@ -63,12 +64,19 @@ class ActivityManager {
   // This variable must only be set by the main loop, to avoid race conditions
   bool requestedUpdate = false;
 
+  GlobalMenu globalMenu;
+
  public:
   explicit ActivityManager(GfxRenderer& renderer, MappedInputManager& mappedInput)
-      : renderer(renderer), mappedInput(mappedInput), renderingMutex(xSemaphoreCreateMutex()) {
-    assert(renderingMutex != nullptr && "Failed to create rendering mutex");
-    stackActivities.reserve(10);
-  }
+      : renderer(renderer), 
+        mappedInput(mappedInput), 
+        renderingMutex(xSemaphoreCreateMutex()),
+        globalMenu(GlobalMenu{renderer, mappedInput})
+    {
+      assert(renderingMutex != nullptr && "Failed to create rendering mutex");
+      stackActivities.reserve(10);
+    }
+
   ~ActivityManager() { assert(false); /* should never be called */ };
 
   void begin();

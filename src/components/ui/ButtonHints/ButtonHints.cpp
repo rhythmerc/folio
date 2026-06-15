@@ -32,8 +32,12 @@ void drawHairlineHint(const GfxRenderer& renderer, int x, int y, int buttonWidth
 
 }  // namespace
 
+bool ButtonHints::suppressed_ = false;
+
 void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
                          const char* btn4) {
+  if (suppressed_) return;
+
   const auto& theme = GUI;
   const auto& data = *theme.getData();
 
@@ -156,6 +160,8 @@ void ButtonHints::render(GfxRenderer& renderer, const char* btn1, const char* bt
 
 void ButtonHints::renderSide(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn,
                              const char* powerBtn) {
+  if (suppressed_) return;
+
   const auto& data = *GUI.getData();
   const int screenWidth = renderer.getScreenWidth();
   const int buttonWidth = data.buttonHints.sideWidth;

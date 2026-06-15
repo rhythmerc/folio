@@ -20,6 +20,7 @@
 #include "settings/OpdsServerListActivity.h"
 #include "settings/SettingsActivity.h"
 #include "util/FullScreenMessageActivity.h"
+#include "components/ui/ButtonHints/ButtonHints.h"
 
 void ActivityManager::begin() {
   xTaskCreate(&renderTaskTrampoline, "ActivityManagerRender",
@@ -42,10 +43,25 @@ void ActivityManager::renderTaskLoop() {
     // Acquire the lock before reading currentActivity to avoid a TOCTOU race
     // where the main task deletes the activity between the null-check and render().
     RenderLock lock;
-    if (currentActivity) {
+
+    if (currentActivity && currentActivity->useGlobalMenu() && globalMenu.isOpen()) {
       HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
+
+      // Draw the activity first, then overlay the menu. Both run under the single
+      // `lock` acquired above: render() does not release it, so the framebuffer
+      // stays protected for the overlay draw. The activity's own displayBuffer()
+      // is silenced by FlushGuard so only the menu pushes — one panel refresh.
+      {
+        GfxRenderer::FlushGuard noFlush(renderer);
+        ButtonHints::SuppressGuard noHints;  // hints would bleed through the menu overlay
+        currentActivity->render(std::move(lock));
+      }
+      globalMenu.render();
+    } else if (currentActivity) {
+      HalPowerManager::Lock powerLock;
       currentActivity->render(std::move(lock));
     }
+
     // Notify any task blocked in requestUpdateAndWait() that the render is done.
     TaskHandle_t waiter = nullptr;
     taskENTER_CRITICAL(nullptr);
@@ -60,8 +76,28 @@ void ActivityManager::renderTaskLoop() {
 
 void ActivityManager::loop() {
   if (currentActivity) {
-    // Note: do not hold a lock here, the loop() method must be responsible for acquire one if needed
-    currentActivity->loop();
+    bool menuHandled = false;
+    if (currentActivity->useGlobalMenu()) {
+      const bool wasOpen = globalMenu.isOpen();
+      if (globalMenu.loop()) {
+        // The menu consumed this Back edge — don't let the activity also act on
+        // it this frame (e.g. closing the menu must not fall through and open
+        // the library popup off the same press).
+        menuHandled = true;
+        // Capture the activity's menu data on the closed->open edge, while the
+        // activity is still alive.
+        if (globalMenu.isOpen() && !wasOpen) {
+          globalMenu.setEntry(currentActivity->getGlobalMenuData());
+        }
+        // One refresh per menu state change. The render task's menu-open branch
+        // re-composites the menu, so this can't wipe it (see renderTaskLoop).
+        requestUpdate();
+      }
+    }
+
+    if (!globalMenu.isOpen() && !menuHandled) {
+      currentActivity->loop();
+    }
   }
 
   while (pendingAction != PendingAction::None) {
@@ -271,6 +307,7 @@ void ActivityManager::requestUpdate(bool immediate) {
     requestedUpdate = true;
   }
 }
+
 void ActivityManager::requestUpdateAndWait() {
   if (!renderTaskHandle) {
     return;

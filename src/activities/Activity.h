@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -12,6 +13,7 @@
 #include "MappedInputManager.h"
 #include "RenderLock.h"
 #include "util/ScreenshotInfo.h"
+#include "lib/MenuRegistry.h"
 
 class Activity {
   friend class ActivityManager;
@@ -71,4 +73,12 @@ class Activity {
   // TODO: remove this in near future
   void onGoHome();
   void onSelectBook(const std::string& path);
+
+  virtual std::optional<MenuRegistryEntry> getGlobalMenuData() {
+    return std::nullopt;
+  }
+
+  virtual bool useGlobalMenu() {
+    return false;
+  };
 };

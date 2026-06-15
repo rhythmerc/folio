@@ -242,4 +242,7 @@ class LibraryActivity final : public Activity {
   // Power-button override: short-press advances linearly through the
   // library (delegates to moveNext()), wrapping at the end.
   bool handlePowerShortPress() override;
+
+  std::optional<MenuRegistryEntry> getGlobalMenuData() override;
+  bool useGlobalMenu() override { return true; }
 };

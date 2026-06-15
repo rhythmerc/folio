@@ -13,6 +13,7 @@ class SdCardFont;
 #include <vector>
 
 #include "Bitmap.h"
+#include "Bitmap1Bit.h"
 
 // Color representation: uint8_t mapped to 4x4 Bayer matrix dithering levels
 // 0 = transparent, 1-16 = gray levels (white to black)
@@ -64,8 +65,27 @@ class GfxRenderer {
   // as before, concentrated in a single pointer instead of four fields.
   mutable FontCacheManager* fontCacheManager_ = nullptr;
 
+  // While true, displayBuffer() is a no-op. Lets an overlay (e.g. GlobalMenu)
+  // draw a base frame into the framebuffer without pushing it, then composite
+  // and push exactly once. Mutable because displayBuffer() is const. Toggled
+  // only via FlushGuard.
+  mutable bool displaySuppressed_ = false;
+
 
  public:
+  // RAII: silence displayBuffer() for its lifetime so a base frame can be drawn
+  // without a panel push, to be composited under an overlay before a single
+  // push. Nested class — has access to the private displaySuppressed_ flag.
+  class FlushGuard {
+    const GfxRenderer& r_;
+
+   public:
+    explicit FlushGuard(const GfxRenderer& r) : r_(r) { r_.displaySuppressed_ = true; }
+    ~FlushGuard() { r_.displaySuppressed_ = false; }
+    FlushGuard(const FlushGuard&) = delete;
+    FlushGuard& operator=(const FlushGuard&) = delete;
+  };
+
   // Build the 1-bit raster for `entry` at (targetW × targetH) from a 2bpp
   // source buffer, allocating the raster from `arena`. Sets entry.scaledPixels
   // / scaledWidth / scaledHeight / scaledPixelsBytes; leaves entry.width /
@@ -92,6 +112,20 @@ class GfxRenderer {
   void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, bool pixelState,
                   EpdFontFamily::Style style) const;
   void freeBwBufferChunks();
+
+  // Per-pixel compositing op for the shared 1-bit blit (blit1Bit). The source
+  // convention is `0` = ink, `1` = background.
+  //   TransparentBlack: paint ink black, leave background untouched.
+  //   Opaque:           paint ink black and background white (both inks).
+  //   TransparentWhite: paint ink white, leave background untouched.
+  enum class BlitMode : uint8_t { TransparentBlack, Opaque, TransparentWhite };
+
+  // Orientation-aware, pixel-exact 1-bit blit. `src` is an MSB-first packed
+  // raster of `w`×`h` with row stride `srcStride` bytes, drawn at logical
+  // (x, y). cornerRadius > 0 skips pixels outside the rounded corners. Shared
+  // by drawCachedBitmap (pre-scaled covers) and the Bitmap1Bit drawIcon path.
+  template <BlitMode Mode>
+  void blit1Bit(const uint8_t* src, int srcStride, int w, int h, int x, int y, int cornerRadius) const;
   template <Color color>
   void drawPixelDither(int x, int y) const;
   template <Color color>
@@ -192,7 +226,20 @@ class GfxRenderer {
   void fillRoundedRect(int x, int y, int width, int height, int cornerRadius, bool roundTopLeft, bool roundTopRight,
                        bool roundBottomLeft, bool roundBottomRight, Color color) const;
   void drawImage(const uint8_t bitmap[], int x, int y, int width, int height) const;
+
+  // Legacy transparent icon blit: byte-aligned copy via the SDK. Fast, but the
+  // start position is quantized to 8px on the packed axis and the source is not
+  // rotated, so it is only correct in Portrait. Kept for existing list/menu
+  // callers. Prefer the Bitmap1Bit overload below for new code.
   void drawIcon(const uint8_t bitmap[], int x, int y, int width, int height) const;
+
+  // Precise transparent icon blit. Pixel-exact and orientation-aware (shares
+  // the blit core with drawCachedBitmap), so it is not byte-quantized. A `0`
+  // source bit is ink; `1` bits show whatever was painted underneath.
+  //
+  // inverted=false: ink is painted black (normal, light background).
+  // inverted=true:  ink is painted white instead (for a dark/selected row).
+  void drawIcon(const Bitmap1Bit& icon, int x, int y, bool inverted = false) const;
   void drawBitmap(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight, float cropX = 0,
                   float cropY = 0) const;
   void drawBitmap1Bit(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight) const;

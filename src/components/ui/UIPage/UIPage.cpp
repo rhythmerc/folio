@@ -24,6 +24,9 @@ Rect UIPage::render(
     }
   );
 
+  const auto top = flex::join(page[0], page[1]);
+  renderer.fillRect(top.x, top.y, top.width, top.height, false);
+
   GUI.drawHeader(renderer, page[1], title, subtitle);
 
   const auto body = page[2];

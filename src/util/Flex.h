@@ -168,6 +168,19 @@ inline Rect offset(const Rect& parent, int x, int y) {
               parent.height};
 }
 
+// Bounding box: the smallest rect that fully covers both `a` and `b`. Pure
+// function, header-only. Treats width/height as exclusive extents (a rect
+// covers [x, x+width)), so abutting rects join without overlap or gap.
+inline Rect join(const Rect& a, const Rect& b) {
+  const int left = a.x < b.x ? a.x : b.x;
+  const int top = a.y < b.y ? a.y : b.y;
+  const int aRight = a.x + a.width, bRight = b.x + b.width;
+  const int aBottom = a.y + a.height, bBottom = b.y + b.height;
+  const int right = aRight > bRight ? aRight : bRight;
+  const int bottom = aBottom > bBottom ? aBottom : bBottom;
+  return Rect{left, top, right - left, bottom - top};
+}
+
 namespace detail {
 
 // Resolve the main-axis size of every child given the available main-axis

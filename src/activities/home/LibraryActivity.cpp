@@ -24,6 +24,7 @@
 #include "activities/home/CollectionPickerActivity.h"
 #include "activities/home/CollectionsActivity.h"
 #include "components/UITheme.h"
+#include "components/icons/book-2.h"
 #include "components/themes/BaseTheme.h"
 #include "components/themes/ThemeData.generated.h"
 #include "components/ui/ButtonHints/ButtonHints.h"
@@ -1328,4 +1329,15 @@ void LibraryActivity::renderPopup() {
   const int bottomLimit = screenH - FOOTER_HEIGHT - 6;
   const int rightLimit = screenW - CONTENT_PAD_X;
   popup_.render(renderer, leftX, bottomLimit, rightLimit);
+}
+
+std::optional<MenuRegistryEntry> LibraryActivity::getGlobalMenuData() {
+  return MenuRegistryEntry{
+    .icon = {
+      .width = 32,
+      .height = 32,
+      .bitmap = Book2Icon 
+    },
+    .name = this->name 
+  };
 }

@@ -9,6 +9,17 @@ class GfxRenderer;
 // that hint (the visual style decides whether the slot's frame is still drawn).
 class ButtonHints {
  public:
+  // RAII: while alive, render()/renderSide() become no-ops. The GlobalMenu
+  // overlay draws the activity as a base frame; its own button hints would
+  // bleed through the overlay, so the manager suppresses them for that draw.
+  class SuppressGuard {
+   public:
+    SuppressGuard() { suppressed_ = true; }
+    ~SuppressGuard() { suppressed_ = false; }
+    SuppressGuard(const SuppressGuard&) = delete;
+    SuppressGuard& operator=(const SuppressGuard&) = delete;
+  };
+
   // Front buttons (bottom edge in portrait). The renderer's orientation is
   // temporarily forced to Portrait so hints stay aligned to the physical
   // buttons regardless of the active reading orientation.
@@ -24,4 +35,9 @@ class ButtonHints {
   // is silently dropped on X3.
   static void renderSide(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn,
                          const char* powerBtn = nullptr);
+
+ private:
+  // Toggled only via SuppressGuard. Single-threaded render task, so a plain
+  // static bool is sufficient — no synchronization needed.
+  static bool suppressed_;
 };

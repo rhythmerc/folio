@@ -289,5 +289,11 @@ struct:
       - { cpp: cursorThickness,   type: int, default: 3 }
       - { cpp: lineEndOffset,     type: int, default: 0 }
 
+  - group: globalMenu
+    struct_name: GlobalMenuThemeSettings
+    fields:
+      - { cpp: paddingX, type: int, default: 6 }
+      - { cpp: paddingY, type: int, default: 10 }
+
   # Trailing top-level field
   - { cpp: showsFileIcons, type: bool, default: false }
