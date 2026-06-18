@@ -161,7 +161,7 @@ int CascadingPopupMenu::panelWidth(GfxRenderer& renderer, const std::vector<Popu
   return 2 * pm.borderThickness + 2 * pm.paddingX + maxLabelW + glyphReserve;
 }
 
-void CascadingPopupMenu::render(GfxRenderer& renderer, Position anchor, Rect area) const {
+void CascadingPopupMenu::render(GfxRenderer& renderer, Anchor anchor, Rect area) const {
   if (!open_ || stack_.empty()) return;
   const auto& pm = GUI.getData()->popupMenu;
   const int areaTop = area.y;
@@ -181,7 +181,7 @@ void CascadingPopupMenu::render(GfxRenderer& renderer, Position anchor, Rect are
 
   // Walk the panel chain left-to-right. The root pins a corner to `anchor`;
   // every subsequent panel cascades from its parent's selected row.
-  int x = anchor.x;
+  int x = anchor.pos.x;
   int prevTop = 0;                 // top edge of the panel drawn last iteration
   std::optional<uint8_t> prevSel;  // its selected row — the one a child hangs off
   for (int p = 0; p < panelCount; ++p) {
@@ -204,8 +204,8 @@ void CascadingPopupMenu::render(GfxRenderer& renderer, Position anchor, Rect are
     // aligns its bottom with the row. Everything is clamped into `area`.
     int y;
     if (p == 0) {
-      const bool fitsBelow = anchor.y + h + pm.shadowOffsetY <= areaBottom;
-      y = fitsBelow ? anchor.y : anchor.y - h;
+      const bool fitsBelow = anchor.pos.y + h + pm.shadowOffsetY <= areaBottom;
+      y = (anchor.origin == AnchorOrigin::TopLeft && fitsBelow) ? anchor.pos.y : anchor.pos.y - h;
     } else if (!prevSel.has_value()) {
       y = prevTop;
     } else {
@@ -237,10 +237,9 @@ void CascadingPopupMenu::render(GfxRenderer& renderer, Position anchor, Rect are
 }
 
 MappedInputManager::Labels CascadingPopupMenu::getButtonLabels(const MappedInputManager& mappedInput) const {
-  const bool inSubmenu = stack_.size() > 1;
   const PopupMenuEntry* entry = focusedEntry();
   const bool confirmEnters = entry != nullptr && isBranch(*entry);
-  const char* back = inSubmenu ? tr(STR_BACK) : tr(STR_CLOSE);
+  const char* back = tr(STR_BACK);
   const char* confirm = confirmEnters ? tr(STR_ENTER) : tr(STR_SELECT);
   return mappedInput.mapLabels(back, confirm, "", "");
 }

@@ -42,6 +42,16 @@ struct PopupMenuEntry {
 // entry owns what its row *means* (label + leaf action).
 class CascadingPopupMenu {
  public:
+  enum AnchorOrigin {
+    BottomLeft,
+    TopLeft
+  };
+
+  struct Anchor{
+    AnchorOrigin origin;
+    Position pos;
+  };
+
   CascadingPopupMenu() = default;
 
   // Install the menu. `builder` produces the entry tree (re-run on open and
@@ -76,7 +86,7 @@ class CascadingPopupMenu {
   // grows downward from `anchor` (top-left) when it fits below within `area`,
   // otherwise upward (bottom-left). Child panels cascade rightward, bounded by
   // `area`'s right and bottom edges.
-  void render(GfxRenderer& renderer, Position anchor, Rect area) const;
+  void render(GfxRenderer& renderer, Anchor anchor, Rect area) const;
 
   // Button hints for the open popup (back: Close at root / Back in a submenu,
   // confirm: Enter on a branch / Select on a leaf; left/right blank), routed

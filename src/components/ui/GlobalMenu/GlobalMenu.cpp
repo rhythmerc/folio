@@ -178,7 +178,16 @@ void GlobalMenu::render() {
 
   if (popup_.isOpen()) {
     const Rect slot = selectedSlotRect(nav);
-    const Position anchor{nav.x + nav.width + td.globalMenu.popupGap, slot.y};
+    const bool isBottom = selectedIndex >= getTopEntries().size();
+
+    const CascadingPopupMenu::Anchor anchor{ 
+      .origin = isBottom ? CascadingPopupMenu::AnchorOrigin::BottomLeft : CascadingPopupMenu::AnchorOrigin::TopLeft,
+      .pos = { 
+        nav.x + nav.width + td.globalMenu.popupGap, 
+        isBottom ? slot.y + slot.height : slot.y
+      }
+    };
+
     popup_.render(renderer, anchor, popupArea);
   }
 
