@@ -42,7 +42,6 @@ class ActivityManager {
   MappedInputManager& mappedInput;
   std::vector<std::unique_ptr<Activity>> stackActivities;
   std::unique_ptr<Activity> currentActivity;
-  GlobalMenu globalMenu;
 
   void exitActivity(const RenderLock& lock);
 
@@ -69,6 +68,8 @@ class ActivityManager {
   bool requestedUpdate = false;
 
  public:
+  GlobalMenu globalMenu;
+
   explicit ActivityManager(GfxRenderer& renderer, MappedInputManager& mappedInput)
       : renderer(renderer), 
         mappedInput(mappedInput), 

@@ -614,12 +614,13 @@ void loop() {
     return;
   }
 
+
   // Power-button short-press dispatch. Activities may override via
   // Activity::handlePowerShortPress() — if the active activity consumes the
   // press, the global FORCE_REFRESH behavior is suppressed for this release.
   if (mappedInputManager.wasReleased(MappedInputManager::Button::Power)) {
     Activity* active = activityManager.getCurrentActivity();
-    const bool consumed = active && active->handlePowerShortPress();
+    const bool consumed = active && !activityManager.globalMenu.isOpen() && active->handlePowerShortPress();
     if (!consumed && SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::FORCE_REFRESH) {
       LOG_DBG("MAIN", "Manual screen refresh triggered");
       RenderLock lock;
