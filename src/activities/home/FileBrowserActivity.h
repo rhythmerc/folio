@@ -1,10 +1,8 @@
 #pragma once
 
-#include <functional>
 #include <string>
 #include <vector>
 
-#include "RecentBooksStore.h"
 #include "activities/Activity.h"
 #include "util/ButtonNavigator.h"
 
@@ -36,6 +34,11 @@ class FileBrowserActivity final : public Activity {
   void loadFiles();
   size_t findEntry(const std::string& name) const;
 
+  void onGoToRoot();
+  void onGoBack();
+  void onSelectEntry(); 
+  void onDeleteEntry();
+
  public:
   explicit FileBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::string initialPath = "/",
                                Mode mode = Mode::Books)
@@ -46,4 +49,7 @@ class FileBrowserActivity final : public Activity {
   void onExit() override;
   void loop() override;
   void render(RenderLock&&) override;
+
+  bool useGlobalMenu() override { return mode == Mode::Books; }
+  std::vector<MenuRegistryEntry> getGlobalMenuEntries() override;
 };

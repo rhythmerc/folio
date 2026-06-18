@@ -4,20 +4,17 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <I18n.h>
-
-#include <algorithm>
-
+#include <i18n.h>
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "activities/util/ConfirmationActivity.h"
 #include "components/UITheme.h"
 #include "components/ui/ButtonHints/ButtonHints.h"
 #include "fontIds.h"
-
-namespace {
-constexpr unsigned long GO_HOME_MS = 1000;
-}  // namespace
+#include "components/icons/file40.h"
+#include "components/icons/folder40.h"
+#include "components/icons/arrowUp40.h"
+#include "components/icons/slash.h"
 
 void FileBrowserActivity::loadFiles() {
   files.clear();
@@ -100,17 +97,6 @@ void FileBrowserActivity::clearFileMetadata(const std::string& fullPath) {
 }
 
 void FileBrowserActivity::loop() {
-  // Long press BACK (1s+) goes to root folder (Books mode only).
-  // In firmware-pick mode we keep navigation simple: short Back = up dir / cancel.
-  if (mode == Mode::Books && mappedInput.isPressed(MappedInputManager::Button::Back) &&
-      mappedInput.getHeldTime() >= GO_HOME_MS && basepath != "/" && !lockLongPressBack) {
-    basepath = "/";
-    loadFiles();
-    selectorIndex = 0;
-    requestUpdate();
-    return;
-  }
-
   if (lockLongPressBack && mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     lockLongPressBack = false;
     return;
@@ -124,98 +110,19 @@ void FileBrowserActivity::loop() {
       lockNextConfirmRelease = false;
       return;
     }
-    if (files.empty()) return;
 
-    const std::string& entry = files[selectorIndex];
-    bool isDirectory = (entry.back() == '/');
+    this->onSelectEntry();
 
-    // Firmware picker: select file -> return path; navigate into directories normally.
-    if (mode == Mode::PickFirmware && !isDirectory) {
-      std::string cleanBasePath = basepath;
-      if (cleanBasePath.back() != '/') cleanBasePath += "/";
-      ActivityResult res{FilePathResult{cleanBasePath + entry}};
-      res.isCancelled = false;
-      setResult(std::move(res));
-      finish();
-      return;
-    }
-
-    if (mode == Mode::Books && mappedInput.getHeldTime() >= GO_HOME_MS) {
-      // --- LONG PRESS ACTION: DELETE FILE OR DIRECTORY ---
-      std::string cleanBasePath = basepath;
-      if (cleanBasePath.back() != '/') cleanBasePath += "/";
-      const std::string fullPath = cleanBasePath + entry;
-
-      auto handler = [this, fullPath, isDirectory](const ActivityResult& res) {
-        if (!res.isCancelled) {
-          LOG_DBG("FileBrowser", "Attempting to delete: %s", fullPath.c_str());
-          if (!isDirectory) {
-            clearFileMetadata(fullPath);
-          }
-          const bool deleted = isDirectory ? Storage.removeDir(fullPath.c_str()) : Storage.remove(fullPath.c_str());
-          if (deleted) {
-            LOG_DBG("FileBrowser", "Deleted successfully");
-            loadFiles();
-            if (files.empty()) {
-              selectorIndex = 0;
-            } else if (selectorIndex >= files.size()) {
-              // Move selection to the new "last" item
-              selectorIndex = files.size() - 1;
-            }
-
-            requestUpdate(true);
-          } else {
-            LOG_ERR("FileBrowser", "Failed to delete: %s", fullPath.c_str());
-          }
-        } else {
-          LOG_DBG("FileBrowser", "Delete cancelled by user");
-        }
-      };
-
-      std::string heading = tr(STR_DELETE) + std::string("? ");
-
-      startActivityForResult(std::make_unique<ConfirmationActivity>(renderer, mappedInput, heading, entry), handler);
-      return;
-    } else {
-      // --- SHORT PRESS ACTION: OPEN/NAVIGATE ---
-      if (basepath.back() != '/') basepath += "/";
-
-      if (isDirectory) {
-        basepath += entry.substr(0, entry.length() - 1);
-        loadFiles();
-        selectorIndex = 0;
-        requestUpdate();
-      } else {
-        onSelectBook(basepath + entry);
-      }
-    }
     return;
   }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    // Short press: go up one directory, or go home if at root
-    if (mappedInput.getHeldTime() < GO_HOME_MS) {
-      if (basepath != "/") {
-        const std::string oldPath = basepath;
-
-        basepath.replace(basepath.find_last_of('/'), std::string::npos, "");
-        if (basepath.empty()) basepath = "/";
-        loadFiles();
-
-        const auto pos = oldPath.find_last_of('/');
-        const std::string dirName = oldPath.substr(pos + 1) + "/";
-        selectorIndex = findEntry(dirName);
-
-        requestUpdate();
-      } else if (mode == Mode::PickFirmware) {
-        // Firmware picker at root: cancel back to caller instead of going home.
-        ActivityResult res;
-        res.isCancelled = true;
-        setResult(std::move(res));
-        finish();
-      } else {
-        onGoHome();
-      }
+    if (mode == Mode::PickFirmware) {
+      // Firmware picker at root: cancel back to caller instead of going home.
+      ActivityResult res;
+      res.isCancelled = true;
+      setResult(std::move(res));
+      finish();
     }
   }
 
@@ -323,15 +230,171 @@ void FileBrowserActivity::render(RenderLock&&) {
   // STR_SELECT instead. Directories in the same picker still descend, so keep STR_OPEN there.
   const bool selectingFirmwareFile = mode == Mode::PickFirmware && !files.empty() && files[selectorIndex].back() != '/';
   const char* confirmLabel = files.empty() ? "" : (selectingFirmwareFile ? tr(STR_SELECT) : tr(STR_OPEN));
-  const auto labels = mappedInput.mapLabels(backLabel, confirmLabel, files.empty() ? "" : tr(STR_DIR_UP),
-                                            files.empty() ? "" : tr(STR_DIR_DOWN));
+
+  const auto labels = mappedInput.mapLabels(
+      this->useGlobalMenu() ? tr(STR_MENU_LABEL) : backLabel, 
+      confirmLabel, 
+      files.empty() ? "" : tr(STR_DIR_UP),
+      files.empty() ? "" : tr(STR_DIR_DOWN)
+  );
+
   ButtonHints::render(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
+}
+
+void FileBrowserActivity::onSelectEntry() {
+  if (files.empty()) return;
+
+  const std::string& entry = files[selectorIndex];
+  bool isDirectory = (entry.back() == '/');
+
+  // Firmware picker: select file -> return path; navigate into directories normally.
+  if (mode == Mode::PickFirmware && !isDirectory) {
+    std::string cleanBasePath = basepath;
+    if (cleanBasePath.back() != '/') cleanBasePath += "/";
+    ActivityResult res{FilePathResult{cleanBasePath + entry}};
+    res.isCancelled = false;
+    setResult(std::move(res));
+    finish();
+    return;
+  }
+
+
+  if (basepath.back() != '/') basepath += "/";
+
+  if (isDirectory) {
+    basepath += entry.substr(0, entry.length() - 1);
+    loadFiles();
+    selectorIndex = 0;
+    requestUpdate();
+  } else {
+    onSelectBook(basepath + entry);
+  }
+
+  return;
+}
+
+void FileBrowserActivity::onDeleteEntry() {
+  const std::string& entry = files[selectorIndex];
+  bool isDirectory = (entry.back() == '/');
+
+  std::string cleanBasePath = basepath;
+  if (cleanBasePath.back() != '/') cleanBasePath += "/";
+  const std::string fullPath = cleanBasePath + entry;
+
+  auto handler = [this, fullPath, isDirectory](const ActivityResult& res) {
+    if (!res.isCancelled) {
+      LOG_DBG("FileBrowser", "Attempting to delete: %s", fullPath.c_str());
+      if (!isDirectory) {
+        clearFileMetadata(fullPath);
+      }
+      const bool deleted = isDirectory ? Storage.removeDir(fullPath.c_str()) : Storage.remove(fullPath.c_str());
+      if (deleted) {
+        LOG_DBG("FileBrowser", "Deleted successfully");
+        loadFiles();
+        if (files.empty()) {
+          selectorIndex = 0;
+        } else if (selectorIndex >= files.size()) {
+          // Move selection to the new "last" item
+          selectorIndex = files.size() - 1;
+        }
+
+        requestUpdate(true);
+      } else {
+        LOG_ERR("FileBrowser", "Failed to delete: %s", fullPath.c_str());
+      }
+    } else {
+      LOG_DBG("FileBrowser", "Delete cancelled by user");
+    }
+  };
+
+  std::string heading = tr(STR_DELETE) + std::string("? ");
+
+  startActivityForResult(std::make_unique<ConfirmationActivity>(renderer, mappedInput, heading, entry), handler);
+}
+
+void FileBrowserActivity::onGoToRoot() {
+  basepath = "/";
+  loadFiles();
+  selectorIndex = 0;
+  requestUpdate();
+  return;
+}
+
+void FileBrowserActivity::onGoBack() {
+  const std::string oldPath = basepath;
+
+  basepath.replace(basepath.find_last_of('/'), std::string::npos, "");
+  if (basepath.empty()) basepath = "/";
+  loadFiles();
+
+  const auto pos = oldPath.find_last_of('/');
+  const std::string dirName = oldPath.substr(pos + 1) + "/";
+  selectorIndex = findEntry(dirName);
+
+  requestUpdate();
 }
 
 size_t FileBrowserActivity::findEntry(const std::string& name) const {
   for (size_t i = 0; i < files.size(); i++)
     if (files[i] == name) return i;
   return 0;
+}
+
+std::vector<MenuRegistryEntry> FileBrowserActivity::getGlobalMenuEntries() {
+  if (mode != Mode::Books) {
+    return {};
+  }
+
+  const std::string& entry = files[selectorIndex];
+  bool isDirectory = (entry.back() == '/');
+
+  std::vector<MenuRegistryEntry> entries = {
+    MenuRegistryEntry{
+      .icon = Bitmap1Bit{
+        40,
+        40,
+        isDirectory ? Folder40Icon : File40Icon
+      },
+      .name = isDirectory ? tr(STR_SELECTED_DIRECTORY) : tr(STR_SELECTED_FILE),
+      .popupItems = {
+        PopupMenuEntry{
+          .label = tr(STR_OPEN),
+          .onSelected = [this]() { 
+            this->onSelectEntry();
+            return true;
+          }
+        },
+        PopupMenuEntry{
+          .label = tr(STR_DELETE),
+          .onSelected = [this]() {
+            this->onDeleteEntry();
+            return true; 
+          }
+        }
+      }
+    }
+  };
+
+  if(basepath != "/") {
+    entries.insert(entries.end(), std::initializer_list<MenuRegistryEntry>{
+      MenuRegistryEntry{
+        .icon = Bitmap1Bit{ 40, 40, Arrowup40Icon },
+        .name = tr(STR_GO_BACK),
+        .onPress = [this]() {
+          this->onGoBack();
+        }
+      },
+      MenuRegistryEntry{
+        .icon = Bitmap1Bit{ 40, 40, SlashIcon },
+        .name = tr(STR_GO_TO_ROOT),
+        .onPress = [this]() {
+          this->onGoToRoot();
+        }
+      }
+    });
+  }
+
+  return entries;
 }
