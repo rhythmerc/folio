@@ -91,21 +91,16 @@ class ActivityManager {
                       .onSelected = [this]() { goHome(); return true; }
                     },
                     PopupMenuEntry{
-                      .label = tr(STR_FILES),
-                      .children = {
-                        PopupMenuEntry{
-                          .label = tr(STR_BROWSE),
-                          .onSelected = [this]() { goToFileBrowser(); return true; }
-                        },
-                        PopupMenuEntry{
-                          .label = tr(STR_TRANSFER),
-                          .onSelected = [this]() { goToFileTransfer(); return true; }
-                        }
-                      }
+                      .label = tr(STR_FILE_BROWSER),
+                      .onSelected = [this]() { goToFileBrowser(); return true; }
+                    },
+                    PopupMenuEntry{
+                      .label = tr(STR_FILE_TRANSFER),
+                      .onSelected = [this]() { goToFileTransfer(); return true; }
                     }
                   }
                 },
-                {
+                MenuRegistryEntry{
                   .icon = Bitmap1Bit{ 40, 40, Settingsalt40Icon },
                   .name = tr(STR_SETTINGS_TITLE),
                   .onPress = [this]() -> void {
