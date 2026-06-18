@@ -109,6 +109,13 @@ class LibraryIndex {
   // supplied. Returns true on success (an empty library is a successful result).
   bool refreshFromSdCard(GfxRenderer* progressRenderer = nullptr);
 
+  // Books whose metadata contains `query` as a case-insensitive substring.
+  // Searches all available text metadata: title, author, series, and genre.
+  // A blank query returns an empty result. Returned pointers index into the
+  // books vector and are valid only until the next sortBy()/load (same
+  // contract as getBooks()).
+  std::vector<const LibraryBook*> search(std::string_view query) const;
+
   const std::vector<LibraryBook>& getBooks() const { return books; }
   int getBookCount() const { return static_cast<int>(books.size()); }
   bool isEmpty() const { return books.empty(); }

@@ -182,6 +182,9 @@ class LibraryActivity final : public Activity {
   void renderBackTile(const Rect& cell, bool selected);
 
   void doSelect();
+  // Launch the keyboard to enter a search query; on confirm, switch the shelf to
+  // the LIB_VIEW_SEARCH filter for that query. Returns true (closes the popup).
+  bool onSearch();
   // Close the popup and refresh after the collection-membership picker returns.
   // Only a collection view's contents depend on membership, so the view is
   // rebuilt only then; otherwise the grid is just repainted in place.

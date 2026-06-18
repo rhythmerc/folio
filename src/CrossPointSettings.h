@@ -170,6 +170,9 @@ class CrossPointSettings {
     LIB_VIEW_SERIES = 2,
     LIB_VIEW_AUTHOR = 3,
     LIB_VIEW_GENRE = 4,
+    // Transient filter: libraryViewName holds the search query, matched
+    // case-insensitively against title/author/series/genre.
+    LIB_VIEW_SEARCH = 5,
     LIBRARY_VIEW_KIND_COUNT
   };
 

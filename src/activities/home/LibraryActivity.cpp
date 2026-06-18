@@ -19,12 +19,15 @@
 #include "LibraryIndex.h"
 #include "MappedInputManager.h"
 #include "activities/ActivityManager.h"
+#include "activities/ActivityResult.h"
 #include "activities/RenderLock.h"
 #include "activities/home/CollectionPickerActivity.h"
 #include "activities/home/CollectionsActivity.h"
+#include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
 #include "components/icons/bookalt40.h"
 #include "components/icons/books40.h"
+#include "components/icons/search40.h"
 #include "components/icons/sort40.h"
 #include "components/themes/BaseTheme.h"
 #include "components/themes/ThemeData.generated.h"
@@ -561,6 +564,31 @@ void LibraryActivity::doSelect() {
   activityManager.goToReader(book->path);
 }
 
+bool LibraryActivity::onSearch() {
+  const std::string current =
+      (SETTINGS.libraryViewKind == CrossPointSettings::LIB_VIEW_SEARCH) ? std::string(SETTINGS.libraryViewName)
+                                                                        : std::string();
+  startActivityForResult(
+      std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_SEARCH), current,
+                                              sizeof(SETTINGS.libraryViewName) - 1, InputType::Text),
+      [this](const ActivityResult& res) {
+        lockSubActivityReturnRelease();
+        if (!res.isCancelled) {
+          const auto& kb = std::get<KeyboardResult>(res.data);
+          if (!kb.text.empty()) {
+            SETTINGS.libraryViewKind = CrossPointSettings::LIB_VIEW_SEARCH;
+            SETTINGS.libraryViewCollectionId = 0;
+            strncpy(SETTINGS.libraryViewName, kb.text.c_str(), sizeof(SETTINGS.libraryViewName) - 1);
+            SETTINGS.libraryViewName[sizeof(SETTINGS.libraryViewName) - 1] = '\0';
+            SETTINGS.saveToFile();
+            reloadActiveView();
+          }
+        }
+        requestUpdate();
+      });
+  return true;
+}
+
 // Swallow the trailing button release from a suspended sub-activity that
 // finished on a Confirm press (or Back). The sub-activity is restored via its
 // result handler, not onEnter, so without this the release falls through to
@@ -697,6 +725,19 @@ void LibraryActivity::rebuildView() {
     }
     hasBackTile_ = true;
     viewTitle_ = coll->name;  // empty collection is allowed (back-tile-only view)
+    return;
+  }
+
+  if (kind == CrossPointSettings::LIB_VIEW_SEARCH) {
+    const std::string query = SETTINGS.libraryViewName;
+    if (query.empty()) {
+      fallBackToAll();
+      return;
+    }
+    // No-results is a valid state: keep the back tile so the user can return.
+    view_ = LIBRARY_INDEX.search(query);
+    hasBackTile_ = true;
+    viewTitle_ = query;
     return;
   }
 
@@ -1186,6 +1227,11 @@ std::vector<MenuRegistryEntry> LibraryActivity::getGlobalMenuEntries() {
                                });
         return true;
       }
+    },
+    MenuRegistryEntry{
+      .icon = { 40, 40, Search40Icon },
+      .name = tr(STR_SEARCH),
+      .onPress = [this]() { return onSearch(); }
     }
   };
 

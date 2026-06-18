@@ -9,6 +9,7 @@
 #include <Serialization.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <functional>
 #include <string_view>
@@ -342,6 +343,35 @@ void LibraryIndex::unload() {
   books.clear();
   books.shrink_to_fit();
   loaded = false;
+}
+
+namespace {
+// Case-insensitive (ASCII fold) substring test.
+bool containsCI(std::string_view haystack, std::string_view needle) {
+  const auto eq = [](char a, char b) {
+    return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+  };
+  return std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(), eq) != haystack.end();
+}
+}  // namespace
+
+std::vector<const LibraryBook*> LibraryIndex::search(std::string_view query) const {
+  // Trim surrounding whitespace; a blank query matches nothing (not everything).
+  const auto first = query.find_first_not_of(" \t");
+  if (first == std::string_view::npos) return {};
+  const auto last = query.find_last_not_of(" \t");
+  query = query.substr(first, last - first + 1);
+
+  std::vector<const LibraryBook*> matches;
+  for (const auto& b : books) {
+    // genre is the raw newline-joined <dc:subject> string; a plain substring
+    // test over it is sufficient (queries don't span the '\n' separator).
+    if (containsCI(b.title, query) || containsCI(b.author, query) || containsCI(b.series, query) ||
+        containsCI(b.genre, query)) {
+      matches.push_back(&b);
+    }
+  }
+  return matches;
 }
 
 void LibraryIndex::refreshProgress(const std::string& path) {
