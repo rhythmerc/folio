@@ -17,12 +17,6 @@ struct KeyboardResult {
   std::string text;
 };
 
-struct MenuResult {
-  int action = -1;
-  uint8_t orientation = 0;
-  uint8_t pageTurnOption = 0;
-};
-
 struct ChapterResult {
   int spineIndex = 0;
 };
@@ -54,7 +48,7 @@ struct FilePathResult {
   std::string path;
 };
 
-using ResultVariant = std::variant<std::monostate, WifiResult, KeyboardResult, MenuResult, ChapterResult, PercentResult,
+using ResultVariant = std::variant<std::monostate, WifiResult, KeyboardResult, ChapterResult, PercentResult,
                                    PageResult, SyncResult, NetworkModeResult, FootnoteResult, FilePathResult>;
 
 struct ActivityResult {

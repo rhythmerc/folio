@@ -5,7 +5,6 @@
 
 #include <optional>
 
-#include "EpubReaderMenuActivity.h"
 #include "activities/Activity.h"
 
 class EpubReaderActivity final : public Activity {
@@ -40,6 +39,12 @@ class EpubReaderActivity final : public Activity {
 
   // Footnote support
   std::vector<FootnoteEntry> currentPageFootnotes;
+  // Page identity currentPageFootnotes was last filled for. render() reloads on
+  // every refresh (incl. while the GlobalMenu is open), but the footnote menu
+  // labels point into currentPageFootnotes, so it must stay put unless the page
+  // changed. -1 forces a fill on first render.
+  int footnotesSpineIndex = -1;
+  int footnotesPage = -1;
   struct SavedPosition {
     int spineIndex;
     int pageNumber;
@@ -55,10 +60,30 @@ class EpubReaderActivity final : public Activity {
   bool saveProgress(int spineIndex, int currentPage, int pageCount);
   // Jump to a percentage of the book (0-100), mapping it to spine and page.
   void jumpToPercent(int percent);
-  void onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action);
   void applyOrientation(uint8_t orientation);
   void toggleAutoPageTurn(uint8_t selectedPageTurnOption);
   void pageTurn(bool isForwardTurn);
+
+  // Sidebar (GlobalMenu) integration. Tall orientations show every action at the
+  // top level; wide (landscape) orientations fold the extras under a "More" entry
+  // because the nav strip has far fewer 64px slots when the screen is 480px tall.
+  std::vector<MenuRegistryEntry> buildTallMenuEntries();
+  std::vector<MenuRegistryEntry> buildWideMenuEntries();
+  std::vector<PopupMenuEntry> orientationItems();
+  std::vector<PopupMenuEntry> autoTurnItems();
+  std::vector<PopupMenuEntry> toolItems();
+  std::vector<PopupMenuEntry> footnoteItems();
+
+  // Reader actions invoked from the sidebar (formerly onReaderMenuConfirm cases).
+  void selectChapter();
+  void goToPercent();
+  void displayQr();
+  void takeScreenshot();
+  void startSync();
+  void deleteCacheAndExit();
+  // Current auto-turn rate index (into PAGE_TURN_RATES); 0 = Off. Mirrors the
+  // value last applied via toggleAutoPageTurn so the submenu can mark it.
+  uint8_t autoTurnOption = 0;
 
   // Footnote navigation
   void navigateToHref(const std::string& href, bool savePosition = false);
@@ -72,5 +97,10 @@ class EpubReaderActivity final : public Activity {
   void loop() override;
   void render(RenderLock&& lock) override;
   bool isReaderActivity() const override { return true; }
+  std::optional<GlobalMenuConfig> getGlobalMenuConfig() override {
+    // clearFontCacheOnClose reclaims the UI-font RAM so the grayscale framebuffer snapshot has headroom.
+    return GlobalMenuConfig{.clearFontCacheOnClose = true};
+  }
+  std::vector<MenuRegistryEntry> getGlobalMenuEntries() override;
   ScreenshotInfo getScreenshotInfo() const override;
 };

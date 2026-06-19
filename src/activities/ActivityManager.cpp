@@ -44,7 +44,7 @@ void ActivityManager::renderTaskLoop() {
     // where the main task deletes the activity between the null-check and render().
     RenderLock lock;
 
-    if (currentActivity && currentActivity->useGlobalMenu() && globalMenu.isOpen()) {
+    if (currentActivity && currentActivity->getGlobalMenuConfig().has_value() && globalMenu.isOpen()) {
       HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
 
       // Draw the activity first, then overlay the menu. Both run under the single
@@ -56,6 +56,7 @@ void ActivityManager::renderTaskLoop() {
         ButtonHints::SuppressGuard noHints;  // hints would bleed through the menu overlay
         currentActivity->render(std::move(lock));
       }
+
       globalMenu.render();
     } else if (currentActivity) {
       HalPowerManager::Lock powerLock;
@@ -77,7 +78,8 @@ void ActivityManager::renderTaskLoop() {
 void ActivityManager::loop() {
   if (currentActivity) {
     bool menuHandled = false;
-    if (currentActivity->useGlobalMenu()) {
+    if (const auto cfg = currentActivity->getGlobalMenuConfig()) {
+      const bool wasOpen = globalMenu.isOpen();
       bool handled = globalMenu.loop();
       if (handled) {
         menuHandled = true;
@@ -85,6 +87,14 @@ void ActivityManager::loop() {
         // One refresh per menu state change. The render task's menu-open branch
         // re-composites the menu, so this can't wipe it (see renderTaskLoop).
         requestUpdate();
+      }
+
+      // On menu close, reclaim the font-cache RAM the menu warmed (opt-in: the
+      // reader needs the headroom back for its grayscale framebuffer snapshot).
+      // The next render re-warms the screen's fonts on demand.
+      if (wasOpen && !globalMenu.isOpen() && cfg->clearFontCacheOnClose) {
+        RenderLock lock;
+        if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
       }
     }
 

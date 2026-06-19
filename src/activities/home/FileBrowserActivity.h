@@ -50,6 +50,9 @@ class FileBrowserActivity final : public Activity {
   void loop() override;
   void render(RenderLock&&) override;
 
-  bool useGlobalMenu() override { return mode == Mode::Books; }
+  std::optional<GlobalMenuConfig> getGlobalMenuConfig() override {
+    return mode == Mode::Books ? std::optional<GlobalMenuConfig>(GlobalMenuConfig{.clearFontCacheOnClose = false})
+                               : std::nullopt;
+  }
   std::vector<MenuRegistryEntry> getGlobalMenuEntries() override;
 };

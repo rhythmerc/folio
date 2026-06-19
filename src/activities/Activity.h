@@ -77,7 +77,7 @@ class Activity {
     return std::vector<MenuRegistryEntry>{};
   }
 
-  virtual bool useGlobalMenu() {
-    return false;
-  };
+  virtual std::optional<GlobalMenuConfig> getGlobalMenuConfig() {
+    return std::nullopt;
+  }
 };

@@ -232,7 +232,7 @@ void FileBrowserActivity::render(RenderLock&&) {
   const char* confirmLabel = files.empty() ? "" : (selectingFirmwareFile ? tr(STR_SELECT) : tr(STR_OPEN));
 
   const auto labels = mappedInput.mapLabels(
-      this->useGlobalMenu() ? tr(STR_MENU_LABEL) : backLabel, 
+      this->getGlobalMenuConfig().has_value() ? tr(STR_MENU_LABEL) : backLabel,
       confirmLabel, 
       files.empty() ? "" : tr(STR_DIR_UP),
       files.empty() ? "" : tr(STR_DIR_DOWN)
