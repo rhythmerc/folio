@@ -54,11 +54,58 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
   return false;
 }
 
+std::vector<MappedInputManager::Button> MappedInputManager::allButtonsForDirection(MappedInputManager::DirectionalButton btn, GfxRenderer::Orientation orientation) {
+  const auto btns = directionalButtonsForOrientation(orientation);
+  switch(btn) {
+    case DirectionalButton::Up:
+      return btns.Up;
+    case DirectionalButton::Down:
+      return btns.Down;
+    case DirectionalButton::Left:
+      return btns.Left;
+    case DirectionalButton::Right:
+      return btns.Right;
+    default:
+      return std::vector<MappedInputManager::Button>{};
+  }
+}
+
 bool MappedInputManager::wasPressed(const Button button) const { return mapButton(button, &HalGPIO::wasPressed); }
-
 bool MappedInputManager::wasReleased(const Button button) const { return mapButton(button, &HalGPIO::wasReleased); }
-
 bool MappedInputManager::isPressed(const Button button) const { return mapButton(button, &HalGPIO::isPressed); }
+
+bool MappedInputManager::wasPressed(const DirectionalButton button, GfxRenderer::Orientation orientation) const { 
+  auto allBtns = allButtonsForDirection(button, orientation);
+  for (auto btn : allBtns) {
+    if (wasPressed(btn)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool MappedInputManager::wasReleased(const DirectionalButton button, GfxRenderer::Orientation orientation) const { 
+  auto allBtns = allButtonsForDirection(button, orientation);
+  for (auto btn : allBtns) {
+    if (wasReleased(btn)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool MappedInputManager::isPressed(const DirectionalButton button, GfxRenderer::Orientation orientation) const { 
+  auto allBtns = allButtonsForDirection(button, orientation);
+  for (auto btn : allBtns) {
+    if (isPressed(btn)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 bool MappedInputManager::wasAnyPressed() const { return gpio.wasAnyPressed(); }
 
@@ -113,4 +160,41 @@ int MappedInputManager::getPressedFrontButton() const {
     return HalGPIO::BTN_RIGHT;
   }
   return -1;
+}
+
+MappedInputManager::DirectionalButtons MappedInputManager::directionalButtonsForOrientation(
+    GfxRenderer::Orientation orientation
+) {
+  switch(orientation) {
+    case GfxRenderer::Orientation::Portrait:
+      return DirectionalButtons{
+        .Up = { MappedInputManager::Button::Up },
+        .Down = { MappedInputManager::Button::Down },
+        .Left = { MappedInputManager::Button::Left, MappedInputManager::Button::Back },
+        .Right = { MappedInputManager::Button::Right, MappedInputManager::Button::Confirm },
+      };
+    case GfxRenderer::Orientation::PortraitInverted:
+      return DirectionalButtons{
+        .Up = { MappedInputManager::Button::Down },
+        .Down = { MappedInputManager::Button::Up },
+        .Left = { MappedInputManager::Button::Right, MappedInputManager::Button::Confirm },
+        .Right = { MappedInputManager::Button::Left, MappedInputManager::Button::Back },
+      };
+    case GfxRenderer::Orientation::LandscapeClockwise:
+      return DirectionalButtons{
+        .Up = { MappedInputManager::Button::Left, MappedInputManager::Button::Back },
+        .Down = { MappedInputManager::Button::Right, MappedInputManager::Button::Confirm },
+        .Left = { MappedInputManager::Button::Down },
+        .Right = { MappedInputManager::Button::Up },
+      };
+    case GfxRenderer::Orientation::LandscapeCounterClockwise:
+      return DirectionalButtons{
+        .Up = { MappedInputManager::Button::Right, MappedInputManager::Button::Confirm },
+        .Down = { MappedInputManager::Button::Left, MappedInputManager::Button::Back },
+        .Left = { MappedInputManager::Button::Up },
+        .Right = { MappedInputManager::Button::Down }
+      };
+    default:
+      return DirectionalButtons{};
+  }
 }

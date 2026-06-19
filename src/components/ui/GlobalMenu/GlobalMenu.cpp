@@ -22,39 +22,40 @@ void GlobalMenu::syncPopupToSelection() {
 }
 
 bool GlobalMenu::loop() {
-  // Back: open the menu when closed; step out of the popup when entered;
-  // otherwise close the menu.
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
-    if (!opened) {
+  MappedInputManager::Button up;
+  MappedInputManager::Button down;
+  MappedInputManager::Button left;
+  MappedInputManager::Button right;
+
+  auto orientation = renderer.getOrientation();
+
+  if (!opened) {
+    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
       opened = true;
       selectedIndex = 0;
       syncPopupToSelection();
       return true;
     }
-    if (popup_.isEntered()) {
-      popup_.back();  // pop a submenu level, or de-select the root (→ preview)
-      return true;
-    }
-    closeMenu();
-    return true;
-  }
 
-  // only check other buttons while menu is open
-  if (!opened) {
+    // only handle back button while menu is closed
     return false;
   }
-
+  
   // While the popup is entered, navigation routes to it.
   if (popup_.isEntered()) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
+    if (mappedInput.wasPressed(MappedInputManager::DirectionalButton::Down, orientation)) {
       popup_.moveDown();
       return true;
     }
-    if (mappedInput.wasPressed(MappedInputManager::Button::Up)) {
+    if (mappedInput.wasPressed(MappedInputManager::DirectionalButton::Up, orientation)) {
       popup_.moveUp();
       return true;
     }
-    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasPressed(MappedInputManager::DirectionalButton::Left, orientation)) {
+      popup_.back();  // pop a submenu level, or de-select the root (→ preview)
+      return true;
+    }
+    if (mappedInput.wasReleased(MappedInputManager::DirectionalButton::Right, orientation)) {
       if (popup_.activate()) closeMenu();  // a leaf requested the whole menu close
       return true;
     }
@@ -62,21 +63,26 @@ bool GlobalMenu::loop() {
   }
 
   // Nav mode: move the selection (refreshing the preview popup), or act on it.
-  if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
+  if (mappedInput.wasPressed(MappedInputManager::DirectionalButton::Down, orientation)) {
     const auto size = getTopEntries().size() + getBottomEntries().size();
     selectedIndex = (selectedIndex == size - 1) ? 0 : selectedIndex + 1;
     syncPopupToSelection();
     return true;
   }
 
-  if (mappedInput.wasPressed(MappedInputManager::Button::Up)) {
+  if (mappedInput.wasPressed(MappedInputManager::DirectionalButton::Up, orientation)) {
     const auto size = getTopEntries().size() + getBottomEntries().size();
     selectedIndex = (selectedIndex == 0) ? size - 1 : selectedIndex - 1;
     syncPopupToSelection();
     return true;
   }
 
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasPressed(MappedInputManager::DirectionalButton::Left, orientation)) {
+    closeMenu(); 
+    return true;
+  }
+
+  if (mappedInput.wasReleased(MappedInputManager::DirectionalButton::Right, orientation)) {
     auto current = getSelectedEntry();
     if (current.has_value() && !current.value().popupItems.empty()) {
       popup_.activate();  // reveal the initial selection — enters the popup
