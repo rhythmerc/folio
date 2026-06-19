@@ -560,7 +560,20 @@ std::vector<PopupMenuEntry> EpubReaderActivity::toolItems() {
 
 std::vector<PopupMenuEntry> EpubReaderActivity::footnoteItems() {
   std::vector<PopupMenuEntry> items;
-  items.reserve(currentPageFootnotes.size());
+  items.reserve(
+      currentPageFootnotes.size() +
+      footnoteDepth > 0 ? 1 : 0
+  );
+
+  if(footnoteDepth > 0) {
+    items.push_back(PopupMenuEntry{
+        .label = tr(STR_BACK_TO_PREVIOUS),
+        .onSelected = [this]() {
+          restoreSavedPosition();
+          return true;
+        }
+    });
+  }
 
   for (const auto& footnote : currentPageFootnotes) {
     std::string href = footnote.href;
