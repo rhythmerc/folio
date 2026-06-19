@@ -623,14 +623,16 @@ std::vector<MenuRegistryEntry> EpubReaderActivity::buildTallMenuEntries() {
       },
   };
 
+  auto footnotes = footnoteItems();
+
   // Footnotes belongs after the two one-click actions, but only when the page has any.
-  if (!currentPageFootnotes.empty()) {
+  if (footnotes.size() > 0) {
     entries.insert(
       entries.begin() + 2,
       MenuRegistryEntry{
         .icon = {40, 40, Footnote40Icon},
         .name = tr(STR_FOOTNOTES),
-        .popupItems = footnoteItems()
+        .popupItems = footnotes 
       });
   }
   return entries;
