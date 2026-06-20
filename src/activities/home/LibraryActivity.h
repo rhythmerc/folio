@@ -60,11 +60,6 @@ class LibraryActivity final : public Activity {
   // matches the cadence used by every settings list in the app.
   ButtonNavigator buttonNavigator;
 
-  // True when the Confirm release that brought us into this activity should
-  // not also trigger an open-book (typical when launched from a parent menu).
-  bool lockNextConfirmRelease = false;
-  bool lockNextBackRelease = false;
-
   // Fixed-capacity cover cache sized to ONE page of thumbs, backed by its own
   // arena (COVER_ARENA_BYTES). The async prefetch worker decodes + pre-scales
   // each cover to its draw dimensions and stores only the 1bpp raster. On a page
@@ -195,9 +190,6 @@ class LibraryActivity final : public Activity {
   // Rebuild view_ from current settings and reset the grid to the view's
   // default selection (shared by the membership / collections return paths).
   void reloadActiveView();
-  // Swallow the trailing Confirm/Back release after a suspended sub-activity
-  // returns, so it doesn't fall through to doSelect() / popup re-open.
-  void lockSubActivityReturnRelease();
   // Re-sort the index from current settings and reset selection to the top.
   void applySort();
   // Persist the active sort field/direction and re-sort.

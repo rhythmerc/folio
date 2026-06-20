@@ -20,9 +20,6 @@ class FileBrowserActivity final : public Activity {
   size_t selectorIndex = 0;
 
   bool lockLongPressBack = false;
-  // True when this activity was entered while Confirm was already held; we must swallow the next
-  // release so we don't immediately auto-open the first entry.
-  bool lockNextConfirmRelease = false;
 
   Mode mode = Mode::Books;
 

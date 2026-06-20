@@ -46,6 +46,15 @@ class HalGPIO {
   bool lastUsbConnected = false;
   bool usbStateChanged = false;
 
+  // Press/release edge state, recomputed each update(). wasPressed() marks a
+  // button's press as "consumed"; suppressHeldConsumedReleases() then swallows
+  // those buttons' releases so a press handled by one screen/menu doesn't leak
+  // its trailing release to the next one.
+  uint8_t pressedEvents = 0;
+  uint8_t releasedEvents = 0;
+  mutable uint8_t consumedPressMask = 0;  // currently-held buttons whose press wasPressed() returned true for
+  uint8_t suppressReleaseMask = 0;        // releases to swallow until the button is physically released
+
  public:
   enum class DeviceType : uint8_t { X4, X3 };
 
@@ -69,6 +78,12 @@ class HalGPIO {
   bool wasAnyPressed() const;
   bool wasReleased(uint8_t buttonIndex) const;
   bool wasAnyReleased() const;
+
+  // Swallow the trailing release of every button whose press was consumed via
+  // wasPressed() and is still held. Call at a control hand-off (activity switch,
+  // menu close) so the press that triggered it doesn't deliver its release to
+  // whatever gains control next.
+  void suppressHeldConsumedReleases();
   unsigned long getHeldTime() const;
   unsigned long getPowerButtonHeldTime() const;
 

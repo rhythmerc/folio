@@ -129,6 +129,9 @@ void ActivityManager::loop() {
       } else {
         currentActivity = std::move(stackActivities.back());
         stackActivities.pop_back();
+        // The press that finished the sub-activity may still be held; swallow its
+        // release so it doesn't dispatch against the resumed activity.
+        mappedInput.suppressHeldConsumedReleases();
         LOG_DBG("ACT", "Popped from activity stack, new size = %zu", stackActivities.size());
         // Handle result if necessary
         if (currentActivity->resultHandler) {
@@ -176,6 +179,10 @@ void ActivityManager::loop() {
       }
       pendingAction = PendingAction::None;
       currentActivity = std::move(pendingActivity);
+
+      // The button that triggered this navigation may still be held; swallow its
+      // release so it doesn't dispatch against the incoming activity.
+      mappedInput.suppressHeldConsumedReleases();
 
       lock.unlock();  // onEnter may acquire its own lock
       currentActivity->onEnter();

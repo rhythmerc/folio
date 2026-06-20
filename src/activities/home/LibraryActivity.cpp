@@ -92,11 +92,6 @@ static constexpr StrId kSortLabels[] = {StrId::STR_SORT_RECENT, StrId::STR_SORT_
 void LibraryActivity::onEnter() {
   Activity::onEnter();
 
-  // Ignore the Confirm release that brought us here (otherwise we'd
-  // immediately auto-open the first book).
-  lockNextConfirmRelease = mappedInput.isPressed(MappedInputManager::Button::Confirm);
-  lockNextBackRelease = mappedInput.isPressed(MappedInputManager::Button::Back);
-
   LIBRARY_INDEX.loadFromFile();
 
   // New EPUBs trigger a blocking "Indexing library..."
@@ -419,20 +414,6 @@ void LibraryActivity::loop() {
     endRapidJumpIfActive();
   }
 
-  if (lockNextConfirmRelease) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-      lockNextConfirmRelease = false;
-    }
-    return;
-  }
-
-  if (lockNextBackRelease) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-      lockNextBackRelease = false;
-    }
-    return;
-  }
-
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     doSelect();
     return;
@@ -572,7 +553,6 @@ bool LibraryActivity::onSearch() {
       std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_SEARCH), current,
                                               sizeof(SETTINGS.libraryViewName) - 1, InputType::Text),
       [this](const ActivityResult& res) {
-        lockSubActivityReturnRelease();
         if (!res.isCancelled) {
           const auto& kb = std::get<KeyboardResult>(res.data);
           if (!kb.text.empty()) {
@@ -587,15 +567,6 @@ bool LibraryActivity::onSearch() {
         requestUpdate();
       });
   return true;
-}
-
-// Swallow the trailing button release from a suspended sub-activity that
-// finished on a Confirm press (or Back). The sub-activity is restored via its
-// result handler, not onEnter, so without this the release falls through to
-// doSelect()/popup re-open. Mirrors the lock set in onEnter for the same reason.
-void LibraryActivity::lockSubActivityReturnRelease() {
-  lockNextConfirmRelease = mappedInput.isPressed(MappedInputManager::Button::Confirm);
-  lockNextBackRelease = mappedInput.isPressed(MappedInputManager::Button::Back);
 }
 
 void LibraryActivity::reloadActiveView() {
@@ -613,8 +584,6 @@ void LibraryActivity::reloadActiveView() {
 }
 
 void LibraryActivity::onCollectionMembershipChanged() {
-  lockSubActivityReturnRelease();
-
   // Only a collection view's contents depend on membership. Rebuild it so an
   // added/removed book appears/disappears (reloadActiveView swaps the cache);
   // other views (All Books, auto-groups) are unaffected. Repaint either way: a
@@ -628,8 +597,6 @@ void LibraryActivity::onCollectionMembershipChanged() {
 }
 
 void LibraryActivity::onReturnFromCollections(bool viewChanged) {
-  lockSubActivityReturnRelease();
-
   // The picker may have switched the active view (or created collections). When
   // it changed, reloadActiveView swaps the cache (placeholders until covers
   // load); otherwise preserve grid position. Repaint either way.
@@ -921,8 +888,13 @@ std::string LibraryActivity::getHeaderSubtitleText() {
 
   const char* arrow = (SETTINGS.librarySortDirection == CrossPointSettings::LIB_SORT_ASC) ? "(asc)" : "(desc)";
 
-  return std::string(I18n::getInstance().get(sortedKey)) + " " + arrow + "  ·  " +
-         std::to_string(this->gridHelper.currentPage() + 1) + " / " + std::to_string(this->gridHelper.pageCount());
+  return std::string(I18n::getInstance().get(sortedKey)) 
+    + " " 
+    + arrow 
+    + "  ·  " 
+    + std::to_string(view_.size()) 
+    + " " 
+    + tr(STR_BOOKS);
 }
 
 void LibraryActivity::renderLibraryShelf(const Rect& shelfArea) {

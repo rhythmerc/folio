@@ -58,10 +58,6 @@ void FileBrowserActivity::onEnter() {
 
   selectorIndex = 0;
 
-  // If Confirm was held while this activity opened (typical when launched from a menu), ignore
-  // its release — otherwise we'd immediately auto-open whatever is at index 0.
-  lockNextConfirmRelease = mappedInput.isPressed(MappedInputManager::Button::Confirm);
-
   auto root = Storage.open(basepath.c_str());
   if (!root) {
     basepath = "/";
@@ -106,11 +102,6 @@ void FileBrowserActivity::loop() {
   const int pageItems = UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false, pathReserved);
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (lockNextConfirmRelease) {
-      lockNextConfirmRelease = false;
-      return;
-    }
-
     this->onSelectEntry();
 
     return;

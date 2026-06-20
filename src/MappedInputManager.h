@@ -46,6 +46,10 @@ class MappedInputManager {
   // Returns the raw front button index that was pressed this frame (or -1 if none).
   int getPressedFrontButton() const;
 
+  // See HalGPIO::suppressHeldConsumedReleases — call on a control hand-off so a
+  // press handled here doesn't leak its release to the next screen/menu.
+  void suppressHeldConsumedReleases() const { gpio.suppressHeldConsumedReleases(); }
+
  private:
   HalGPIO& gpio;
 

@@ -204,6 +204,26 @@ void HalGPIO::begin() {
 
 void HalGPIO::update() {
   inputMgr.update();
+
+  uint8_t pressed = 0;
+  uint8_t released = 0;
+  uint8_t held = 0;
+  for (uint8_t i = 0; i <= BTN_POWER; ++i) {
+    const uint8_t bit = static_cast<uint8_t>(1u << i);
+    if (inputMgr.wasPressed(i)) pressed |= bit;
+    if (inputMgr.wasReleased(i)) released |= bit;
+    if (inputMgr.isPressed(i)) held |= bit;
+  }
+
+  pressedEvents = pressed;
+  releasedEvents = released & static_cast<uint8_t>(~suppressReleaseMask);
+
+  // Drop both masks for any button no longer physically held. Done after
+  // releasedEvents so a suppressed button's own release edge is still swallowed
+  // on the frame it fires, then stops being tracked.
+  consumedPressMask &= held;
+  suppressReleaseMask &= held;
+
   const bool connected = isUsbConnected();
   usbStateChanged = (connected != lastUsbConnected);
   lastUsbConnected = connected;
@@ -213,13 +233,22 @@ bool HalGPIO::wasUsbStateChanged() const { return usbStateChanged; }
 
 bool HalGPIO::isPressed(uint8_t buttonIndex) const { return inputMgr.isPressed(buttonIndex); }
 
-bool HalGPIO::wasPressed(uint8_t buttonIndex) const { return inputMgr.wasPressed(buttonIndex); }
+bool HalGPIO::wasPressed(uint8_t buttonIndex) const {
+  const uint8_t bit = static_cast<uint8_t>(1u << buttonIndex);
+  if (pressedEvents & bit) {
+    consumedPressMask |= bit;  // claim this press's trailing release for suppressHeldConsumedReleases()
+    return true;
+  }
+  return false;
+}
 
-bool HalGPIO::wasAnyPressed() const { return inputMgr.wasAnyPressed(); }
+bool HalGPIO::wasAnyPressed() const { return pressedEvents != 0; }
 
-bool HalGPIO::wasReleased(uint8_t buttonIndex) const { return inputMgr.wasReleased(buttonIndex); }
+bool HalGPIO::wasReleased(uint8_t buttonIndex) const { return releasedEvents & static_cast<uint8_t>(1u << buttonIndex); }
 
-bool HalGPIO::wasAnyReleased() const { return inputMgr.wasAnyReleased(); }
+bool HalGPIO::wasAnyReleased() const { return releasedEvents != 0; }
+
+void HalGPIO::suppressHeldConsumedReleases() { suppressReleaseMask |= consumedPressMask; }
 
 unsigned long HalGPIO::getHeldTime() const { return inputMgr.getHeldTime(); }
 
