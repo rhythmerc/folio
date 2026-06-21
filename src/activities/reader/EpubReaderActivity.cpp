@@ -28,6 +28,8 @@
 #include "RecentBooksStore.h"
 #include "UiThemeLoader.h"
 #include "components/UITheme.h"
+#include "stores/progress/ProgressStore.h"
+#include "util/PathHash.h"
 #include "components/icons/autoturn40.h"
 #include "components/icons/contents40.h"
 #include "components/icons/footnote40.h"
@@ -130,26 +132,38 @@ void EpubReaderActivity::onEnter() {
 
   epub->setupCacheDir();
 
-  FsFile f;
-  if (Storage.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
-    uint8_t data[6];
-    int dataSize = f.read(data, 6);
-    if (dataSize == 4 || dataSize == 6) {
-      currentSpineIndex = data[0] + (data[1] << 8);
-      nextPageNumber = data[2] + (data[3] << 8);
-      if (nextPageNumber == UINT16_MAX) {
-        // UINT16_MAX is an in-memory navigation sentinel for "open previous
-        // chapter on its last page". It should never be treated as persisted
-        // resume state after sleep or reopen.
-        LOG_DBG("ERS", "Ignoring stale last-page sentinel from progress cache");
-        nextPageNumber = 0;
+  // Resume position: prefer the library-wide store; fall back to the legacy
+  // per-book progress.bin so a book opened for the first time after upgrade
+  // keeps its place (the next saveProgress backfills the store via dual-write).
+  if (const BookProgress* prog = PROGRESS_STORE.find(hashPath(epub->getPath()))) {
+    currentSpineIndex = prog->spineIndex;
+    nextPageNumber = prog->pageNumber;
+    cachedSpineIndex = currentSpineIndex;
+    cachedChapterTotalPageCount = prog->pageCount;
+    LOG_DBG("ERS", "Loaded progress (store): %d, %d", currentSpineIndex, nextPageNumber);
+  } else {
+    FsFile f;
+    if (Storage.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
+      uint8_t data[6];
+      int dataSize = f.read(data, 6);
+      if (dataSize == 4 || dataSize == 6) {
+        currentSpineIndex = data[0] + (data[1] << 8);
+        nextPageNumber = data[2] + (data[3] << 8);
+        cachedSpineIndex = currentSpineIndex;
+        LOG_DBG("ERS", "Loaded progress (legacy bin): %d, %d", currentSpineIndex, nextPageNumber);
       }
-      cachedSpineIndex = currentSpineIndex;
-      LOG_DBG("ERS", "Loaded cache: %d, %d", currentSpineIndex, nextPageNumber);
+      if (dataSize == 6) {
+        cachedChapterTotalPageCount = data[4] + (data[5] << 8);
+      }
     }
-    if (dataSize == 6) {
-      cachedChapterTotalPageCount = data[4] + (data[5] << 8);
-    }
+  }
+
+  if (nextPageNumber == UINT16_MAX) {
+    // UINT16_MAX is an in-memory navigation sentinel for "open previous chapter
+    // on its last page". It should never be treated as persisted resume state
+    // after sleep or reopen.
+    LOG_DBG("ERS", "Ignoring stale last-page sentinel from progress cache");
+    nextPageNumber = 0;
   }
   // We may want a better condition to detect if we are opening for the first time.
   // This will trigger if the book is re-opened at Chapter 0.

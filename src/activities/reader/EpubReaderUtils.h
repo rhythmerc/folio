@@ -4,6 +4,9 @@
 #include <HalStorage.h>
 #include <Logging.h>
 
+#include "stores/progress/ProgressStore.h"
+#include "util/PathHash.h"
+
 namespace EpubReaderUtils {
 
 // Persists reader progress for an EPUB to its cache directory. Returns true on success.
@@ -30,6 +33,12 @@ inline bool saveProgress(Epub& epub, int spineIndex, int pageNumber, int pageCou
     LOG_ERR("ERS", "Short write saving progress: %u/%u bytes", (unsigned)written, (unsigned)sizeof(data));
     return false;
   }
+
+  // Mirror into the library-wide store (the fast path the shelf reads). The
+  // per-book progress.bin above stays as a backup for opt-in recovery.
+  PROGRESS_STORE.put(hashPath(epub.getPath()), static_cast<uint16_t>(spineIndex),
+                     static_cast<uint16_t>(pageNumber), static_cast<uint16_t>(pageCount));
+
   LOG_DBG("ERS", "Progress saved: spine=%d page=%d", spineIndex, pageNumber);
   return true;
 }

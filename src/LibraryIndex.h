@@ -127,9 +127,10 @@ class LibraryIndex {
   const LibraryBook* getAt(int page, int slot, int perPage) const;
   const LibraryBook* getAt(int index) const;
 
-  // Re-read progress.bin for a single book and update the in-memory entry.
-  // Cheap — opens the 6-byte progress file. Persists library.bin if changed.
-  // Called by LibraryActivity after returning from the reader.
+  // Refresh a single book's progress from ProgressStore (updated by the reader)
+  // and update the in-memory entry. No SD read — the store is already resident.
+  // Persists library.bin if changed. Called by LibraryActivity after returning
+  // from the reader.
   void refreshProgress(const std::string& path);
 
   // Bump the matching book's openSequence to (max openSequence across the

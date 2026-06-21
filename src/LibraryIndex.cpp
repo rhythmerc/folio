@@ -11,11 +11,12 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
-#include <functional>
 #include <string_view>
 #include <unordered_map>
 
 #include "components/UITheme.h"
+#include "stores/progress/ProgressStore.h"
+#include "util/PathHash.h"
 
 namespace {
 constexpr char LOG_TAG[] = "LIB";
@@ -46,26 +47,6 @@ constexpr int THUMB_HEIGHT = LibraryIndex::THUMB_HEIGHT;
 // abort the scan rather than exhaust the heap. The reader is a focused
 // tool, not a library manager.
 constexpr int MAX_LIBRARY_BOOKS = 500;
-
-uint32_t hashPath(const std::string& path) { return static_cast<uint32_t>(std::hash<std::string>{}(path)); }
-
-std::string cachePathFor(uint32_t pathHash) { return std::string(CACHE_DIR) + "/epub_" + std::to_string(pathHash); }
-
-// Reads progress.bin into spineIdx (1-based spine position). Leaves spineIdx
-// at 0 if no progress file exists or it's too short — i.e., "unread".
-void readProgress(const std::string& bookCachePath, uint16_t& spineIdx) {
-  spineIdx = 0;
-  FsFile f;
-  const std::string progressPath = bookCachePath + "/progress.bin";
-  if (!Storage.openFileForRead(LOG_TAG, progressPath.c_str(), f)) {
-    return;
-  }
-  uint8_t data[2];
-  const int n = f.read(data, sizeof(data));
-  if (n == sizeof(data)) {
-    spineIdx = static_cast<uint16_t>(data[0] | (data[1] << 8));
-  }
-}
 
 struct DirFrame {
   HalFile dir;
@@ -260,8 +241,9 @@ bool LibraryIndex::refreshFromSdCard(GfxRenderer* progressRenderer) {
     if (it != existingByHash.end() && it->second.path == path) {
       LibraryBook b = std::move(it->second);
       existingByHash.erase(it);
-      uint16_t oldProgress = b.progressSpineIndex;
-      readProgress(cachePathFor(h), b.progressSpineIndex);
+      const uint16_t oldProgress = b.progressSpineIndex;
+      const BookProgress* prog = PROGRESS_STORE.find(h);
+      b.progressSpineIndex = prog ? prog->spineIndex : 0;
       if (b.progressSpineIndex != oldProgress) {
         changed = true;
       }
@@ -292,7 +274,8 @@ bool LibraryIndex::refreshFromSdCard(GfxRenderer* progressRenderer) {
     b.genre = epub.getGenre();
     b.seriesIndex = epub.getSeriesIndex();
     b.spineCount = static_cast<uint16_t>(epub.getSpineItemsCount());
-    readProgress(epub.getCachePath(), b.progressSpineIndex);
+    const BookProgress* prog = PROGRESS_STORE.find(h);
+    b.progressSpineIndex = prog ? prog->spineIndex : 0;
 
     // Best-effort thumbnail. Failures here just mean we'll render a
     // title-only fallback tile in LibraryActivity.
@@ -381,7 +364,8 @@ void LibraryIndex::refreshProgress(const std::string& path) {
   if (it == books.end()) return;
 
   const uint16_t old = it->progressSpineIndex;
-  readProgress(cachePathFor(h), it->progressSpineIndex);
+  const BookProgress* prog = PROGRESS_STORE.find(h);
+  it->progressSpineIndex = prog ? prog->spineIndex : 0;
   if (it->progressSpineIndex != old) {
     saveToFile();
   }
