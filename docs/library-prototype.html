@@ -689,6 +689,43 @@
     pointer-events: none;
   }
   .side-hint[hidden] { display: none; }
+
+  /* ====================================================================== */
+  /*  INDEXING view (full-screen progress; replaces the old static popup)   */
+  /* ====================================================================== */
+  .indexing-body {
+    position: absolute;
+    top: 89px; left: 0; right: 0;
+    height: 671px;
+    padding: 16px 34px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .idx-heading { font-size: 20px; font-weight: 700; line-height: 1.2; margin-bottom: 26px; }
+  /* Big percentage is the at-a-glance signal; the bar + count back it up. */
+  .idx-pct { font-size: 46px; font-weight: 700; line-height: 1; margin-bottom: 16px; }
+  .idx-bar {
+    width: 100%; height: 12px;
+    border: 1px solid var(--ink); background: var(--paper); padding: 1px;
+  }
+  .idx-bar > i { display: block; height: 100%; width: 0; background: var(--ink); }
+  .idx-count { font-size: 14px; margin-top: 12px; }
+  /* Current book gives liveness so a long run never looks frozen. On e-ink the
+     firmware would only repaint every N books / few %, not every title. */
+  .idx-current {
+    font-size: 12px; font-style: italic; opacity: 0.75;
+    margin-top: 6px; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* One-time expectation-setter pinned low so it doesn't crowd the bar. */
+  .idx-note {
+    position: absolute; bottom: 20px; left: 0; right: 0;
+    padding: 0 28px;
+    font-size: 11px; font-style: italic; opacity: 0.55; line-height: 1.4;
+  }
 </style>
 </head>
 <body>
@@ -882,6 +919,32 @@
           <div class="kb-keys" id="kb-keys"></div>
         </section>
         <footer class="footer" data-footer="keyboard"></footer>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  VIEW: INDEXING (full-screen progress)                      -->
+      <!--  Replaces the old static "Indexing…" popup. Shown on a cold  -->
+      <!--  library open while new books are parsed + covers generated. -->
+      <!-- ============================================================ -->
+      <section class="view" id="view-indexing" hidden>
+        <header class="header">
+          <div class="battery"><span class="battery-pct">78%</span>
+            <span class="battery-cell"><span class="battery-fill"></span></span></div>
+          <div class="header-inner">
+            <h1>Indexing Library</h1>
+            <div class="subtitle">Scanning <span class="sep">·</span> /Books</div>
+          </div>
+          <div class="header-border"></div>
+        </header>
+        <section class="indexing-body">
+          <div class="idx-heading">Building your library</div>
+          <div class="idx-pct" id="idx-pct">0%</div>
+          <div class="idx-bar"><i id="idx-fill"></i></div>
+          <div class="idx-count" id="idx-count">0 of 0 books</div>
+          <div class="idx-current" id="idx-current">&nbsp;</div>
+          <div class="idx-note">First-time setup — this runs once, then your library opens instantly.</div>
+        </section>
+        <footer class="footer" data-footer="indexing"></footer>
       </section>
 
     </div><!-- /.screen -->
@@ -1333,6 +1396,7 @@
     const filesSub = [
       { key: 'files:browse', label: 'Browse' },
       { key: 'files:transfer', label: 'Transfer' },
+      { key: 'files:reindex', label: 'Re-index Library' },   // demo trigger for the indexing screen
     ];
     const powerSub = [
       { key: 'power:row', label: 'Next in Row', powerVal: 0 },
@@ -1436,6 +1500,11 @@
       return;
     }
     if (group === 'files') {
+      if (item.key === 'files:reindex') {
+        state.popupOpen = false;          // hand off to the full-screen indexing view
+        Screens.indexing.start();
+        return;
+      }
       alert((item.key === 'files:browse' ? '📂 Browse Files' : '⇅ Transfer') +
             '\n\n(stub — would push the corresponding activity)');
       closePopup();
@@ -1937,6 +2006,45 @@
   }
 
   // ===== Router ============================================================
+  // ---- INDEXING -----------------------------------------------------------
+  // Full-screen progress shown on a cold library open. The determinate bar
+  // needs the total book count up front (see notes in subItemAction): the
+  // firmware does a cheap directory pre-pass to count .epub files before the
+  // (expensive) per-book parse + cover generation. Here we just animate it.
+  Screens.indexing = {
+    _timer: null, _done: 0, _total: 0,
+    start() {
+      this._total = books.length;   // stand-in for the pre-pass count
+      this._done = 0;
+      goScreen('indexing');
+      this._step();
+    },
+    _step() {
+      clearTimeout(this._timer);
+      if (this._done >= this._total) {
+        // Brief "100%" beat, then hand off to the freshly-built library.
+        this._timer = setTimeout(() => goScreen('library'), 650);
+        this.render();
+        return;
+      }
+      this._done++;
+      this.render();
+      this._timer = setTimeout(() => this._step(), 110);
+    },
+    render() {
+      const pct = this._total ? Math.round((this._done / this._total) * 100) : 0;
+      $('#idx-pct').textContent = pct + '%';
+      $('#idx-fill').style.width = pct + '%';
+      $('#idx-count').textContent = `${this._done} of ${this._total} books`;
+      const cur = books[Math.min(this._done, books.length - 1)];
+      $('#idx-current').textContent =
+        this._done >= this._total ? 'Finishing up…' : 'Indexing: ' + (cur ? cur.title : '');
+    },
+    hints(f) { setHints(f, '', '', '', ''); },   // non-interactive during indexing
+    up() {}, down() {}, left() {}, right() {}, confirm() {},
+    back() { clearTimeout(this._timer); goScreen('library'); },  // prototype escape hatch
+  };
+
   function goScreen(name) { state.screen = name; render(); }
   function currentController() { return Screens[state.screen]; }
 
