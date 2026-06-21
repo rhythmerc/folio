@@ -22,6 +22,10 @@
 #include "util/FullScreenMessageActivity.h"
 #include "components/ui/ButtonHints/ButtonHints.h"
 
+#include "components/icons/settingsAlt40.h"
+#include "components/icons/apps40.h"
+#include "components/icons/home40.h"
+
 void ActivityManager::begin() {
   xTaskCreate(&renderTaskTrampoline, "ActivityManagerRender",
               8192,              // Stack size
@@ -359,6 +363,9 @@ std::vector<MenuRegistryEntry> ActivityManager::getCurrentActivityMenuEntries() 
 
 std::vector<MenuRegistryEntry> ActivityManager::getGlobalMenuBottomEntries() {
   const AppId current = currentActivity ? currentActivity->appId() : AppId::None;
+  auto orientation = renderer.getOrientation();
+  bool isLandscape = orientation == GfxRenderer::Orientation::LandscapeClockwise
+    || orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
 
   // The running app gets a Circle marker and a no-op (close the menu without
   // re-launching itself); every other app navigates.
@@ -373,18 +380,33 @@ std::vector<MenuRegistryEntry> ActivityManager::getGlobalMenuBottomEntries() {
         }};
   };
 
-  return std::vector<MenuRegistryEntry>{
+  auto entries = std::vector<MenuRegistryEntry>{
       MenuRegistryEntry{
           .icon = {40, 40, Apps40Icon},
           .name = tr(STR_APPS),
           .popupItems = {
-              appItem(tr(STR_LIBRARY), AppId::Library, [this]() { goHome(); }),
               appItem(tr(STR_FILE_BROWSER), AppId::FileBrowser, [this]() { goToFileBrowser(); }),
               appItem(tr(STR_FILE_TRANSFER), AppId::FileTransfer, [this]() { goToFileTransfer(); })}},
       MenuRegistryEntry{
           .icon = Bitmap1Bit{40, 40, Settingsalt40Icon},
           .name = tr(STR_SETTINGS_TITLE),
-          .onPress = [this]() -> void { this->goToSettings(); }}};
+          .onPress = [this]() -> void { this->goToSettings(); }}
+  };
+
+  if(isLandscape) {
+    entries[1].popupItems.insert(
+        entries[1].popupItems.begin(), 
+        appItem(tr(STR_LIBRARY), AppId::Library, [this]() { goHome(); })
+    );
+  } else if(current != AppId::Library) {
+    entries.insert(entries.begin(), MenuRegistryEntry{
+        .icon = Bitmap1Bit{40, 40, Home40Icon},
+        .name = tr(STR_HOME_NO_CHEVRON),
+        .onPress = [this]() -> void { goHome(); }
+    });
+  }
+
+  return entries;
 }
 
 // RenderLock
