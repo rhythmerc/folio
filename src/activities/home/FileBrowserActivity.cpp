@@ -4,7 +4,7 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
-#include <i18n.h>
+#include <I18n.h>
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "activities/util/ConfirmationActivity.h"

@@ -3,6 +3,7 @@
 #include <FontCacheManager.h>
 #include <GfxRenderer.h>
 #include <HalPowerManager.h>
+#include <I18n.h>
 
 #include <algorithm>
 

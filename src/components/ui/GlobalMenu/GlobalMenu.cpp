@@ -1,8 +1,9 @@
+#include <I18n.h>
+
 #include "GlobalMenu.h"
 #include "components/UITheme.h"
 #include "components/ui/ButtonHints/ButtonHints.h"
 #include "components/ui/UIPage/UIPage.h"
-#include "i18n.h"
 
 static constexpr int navWidth = 64;
 

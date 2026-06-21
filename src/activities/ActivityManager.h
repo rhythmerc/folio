@@ -11,11 +11,8 @@
 
 #include "GfxRenderer.h"
 #include "MappedInputManager.h"
-#include "components/icons/apps40.h"
-#include "components/icons/settingsAlt40.h"
 #include "components/ui/GlobalMenu/GlobalMenu.h"
 #include "util/ScreenshotInfo.h"
-#include "i18n.h"
 
 class Activity;    // forward declaration
 class RenderLock;  // forward declaration
