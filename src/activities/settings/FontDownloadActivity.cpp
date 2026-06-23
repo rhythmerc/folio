@@ -7,7 +7,9 @@
 #include <Logging.h>
 #include <WiFi.h>
 #include <esp_rom_crc.h>
+#include <esp_wifi.h>
 
+#include "FontCacheManager.h"
 #include "MappedInputManager.h"
 #include "ReaderFontSystem.h"
 #include "SilentRestart.h"
@@ -34,6 +36,7 @@ void FontDownloadActivity::onExit() {
   Activity::onExit();
 
   if (WiFi.getMode() != WIFI_MODE_NULL) {
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);  // restore default power-save (parity with OtaUpdater)
     WiFi.disconnect(false);
     delay(30);
     silentRestart();
@@ -45,6 +48,10 @@ void FontDownloadActivity::onWifiSelectionComplete(const bool success) {
     finish();
     return;
   }
+
+  // Modem power-save throttles TCP throughput hard; disable it for the download
+  // (restored in onExit). Same trick as OtaUpdater.
+  esp_wifi_set_ps(WIFI_PS_NONE);
 
   {
     RenderLock lock(*this);
@@ -286,85 +293,81 @@ void FontDownloadActivity::downloadFamily(ManifestFamily& family) {
   for (size_t i = 0; i < family.files.size(); i++) {
     const auto& file = family.files[i];
 
-    {
-      RenderLock lock(*this);
-      fileProgress_ = 0;
-      fileTotal_ = file.size;
-    }
-    requestUpdateAndWait();
-
     char destPath[128];
     FontInstaller::buildFontPath(family.name.c_str(), file.name.c_str(), destPath, sizeof(destPath));
+    const std::string url = baseUrl_ + file.name;
 
-    std::string url = baseUrl_ + file.name;
-
-    auto result = HttpDownloader::downloadToFile(
-        url, destPath,
-        [this](size_t downloaded, size_t total) {
-          fileProgress_ = downloaded;
-          fileTotal_ = total;
-          mappedInput.update();
-          if (mappedInput.isPressed(MappedInputManager::Button::Back) ||
-              mappedInput.wasPressed(MappedInputManager::Button::Back)) {
-            cancelRequested_ = true;
-          }
-          requestUpdate(true);
-        },
-        &cancelRequested_);
-
-    if (result == HttpDownloader::ABORTED) {
-      fontInstaller_.deleteFamily(family.name.c_str());
-      family.installed = false;
-      family.hasUpdate = false;
+    // A short read / corrupt transfer over TLS is transient — re-fetch the file
+    // a couple of times before failing the whole family.
+    constexpr int MAX_ATTEMPTS = 3;
+    bool fileOk = false;
+    for (int attempt = 1; attempt <= MAX_ATTEMPTS && !fileOk; ++attempt) {
       {
         RenderLock lock(*this);
-        state_ = FAMILY_LIST;
+        fileProgress_ = 0;
+        fileTotal_ = file.size;
       }
-      return;
+      requestUpdateAndWait();
+
+      // Reclaim the built-in-font glyph cache (warmed by the list render) so the
+      // transfer isn't heap-starved; self-rewarms on the next render.
+      if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
+
+      const uint32_t dlStart = millis();
+      const auto result = HttpDownloader::downloadToFile(
+          url, destPath,
+          [this](size_t downloaded, size_t total) {
+            fileProgress_ = downloaded;
+            fileTotal_ = total;
+            mappedInput.update();
+            if (mappedInput.isPressed(MappedInputManager::Button::Back) ||
+                mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+              cancelRequested_ = true;
+            }
+            requestUpdate(true);
+          },
+          &cancelRequested_);
+
+      if (result == HttpDownloader::ABORTED) {
+        fontInstaller_.deleteFamily(family.name.c_str());
+        family.installed = false;
+        family.hasUpdate = false;
+        RenderLock lock(*this);
+        state_ = FAMILY_LIST;
+        return;
+      }
+
+      // Treat HTTP error / CRC miss / invalid archive alike: a re-fetch may fix it.
+      uint32_t actualCrc = 0;
+      const char* failReason = nullptr;
+      if (result != HttpDownloader::OK) {
+        failReason = "download";
+      } else if (!computeFileCrc32(destPath, actualCrc)) {
+        failReason = "checksum read";
+      } else if (actualCrc != file.crc32) {
+        failReason = "checksum mismatch";
+      } else if (!fontInstaller_.validateCpfontFile(destPath)) {
+        failReason = "invalid font";
+      }
+
+      if (!failReason) {
+        const uint32_t ms = millis() - dlStart;
+        LOG_INF("FONT", "DL done: %s %u bytes in %u ms (~%u KB/s)", file.name.c_str(),
+                static_cast<unsigned>(file.size), static_cast<unsigned>(ms),
+                ms > 0 ? static_cast<unsigned>(file.size / ms) : 0);
+        fileOk = true;
+        break;
+      }
+      LOG_ERR("FONT", "%s failed (%s), attempt %d/%d", file.name.c_str(), failReason, attempt, MAX_ATTEMPTS);
     }
 
-    if (result != HttpDownloader::OK) {
-      LOG_ERR("FONT", "Download failed: %s (%d)", file.name.c_str(), result);
+    if (!fileOk) {
       fontInstaller_.deleteFamily(family.name.c_str());
       family.installed = false;
       family.hasUpdate = false;
       RenderLock lock(*this);
       state_ = ERROR;
       errorMessage_ = "Download failed: " + file.name;
-      return;
-    }
-
-    uint32_t actualCrc = 0;
-    if (!computeFileCrc32(destPath, actualCrc)) {
-      LOG_ERR("FONT", "Failed to open file for CRC check: %s", destPath);
-      fontInstaller_.deleteFamily(family.name.c_str());
-      family.installed = false;
-      family.hasUpdate = false;
-      RenderLock lock(*this);
-      state_ = ERROR;
-      errorMessage_ = "Failed to compute checksum: " + file.name;
-      return;
-    }
-    if (actualCrc != file.crc32) {
-      LOG_ERR("FONT", "CRC32 mismatch for %s: got %08x expected %08x", file.name.c_str(), actualCrc, file.crc32);
-      fontInstaller_.deleteFamily(family.name.c_str());
-      family.installed = false;
-      family.hasUpdate = false;
-      RenderLock lock(*this);
-      state_ = ERROR;
-      errorMessage_ = "Checksum mismatch: " + file.name;
-      return;
-    }
-    LOG_DBG("FONT", "Downloaded %s (size=%zu crc32=%08x)", file.name.c_str(), file.size, actualCrc);
-
-    if (!fontInstaller_.validateCpfontFile(destPath)) {
-      LOG_ERR("FONT", "Invalid .cpfont: %s", destPath);
-      fontInstaller_.deleteFamily(family.name.c_str());
-      family.installed = false;
-      family.hasUpdate = false;
-      RenderLock lock(*this);
-      state_ = ERROR;
-      errorMessage_ = "Invalid font file: " + file.name;
       return;
     }
     currentFileIndex_++;

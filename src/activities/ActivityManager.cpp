@@ -170,14 +170,12 @@ void ActivityManager::loop() {
           stackActivities.back()->onExit();
           stackActivities.pop_back();
         }
-        // Full navigation: reset the global, self-warming font glyph/group
-        // caches so the memory the outgoing screen(s) warmed (tens of KB,
-        // otherwise scattered + persistent across activities) coalesces back
-        // before the next screen allocates. Held under the render lock, so no
-        // concurrent drawText. Push/Pop (startActivityForResult) deliberately
-        // skip this — they resume the same screen and reuse its warm glyphs.
+        // Reset the font cache to reclaim heap 
         if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
       } else if (pendingAction == PendingAction::Push) {
+        // Reset the font cache to reclaim heap 
+        if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
+
         // Move current activity to stack
         stackActivities.push_back(std::move(currentActivity));
         LOG_DBG("ACT", "Pushed to activity stack, new size = %zu", stackActivities.size());

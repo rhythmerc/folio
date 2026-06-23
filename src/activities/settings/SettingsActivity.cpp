@@ -17,6 +17,9 @@
 #include "SdFirmwareUpdateActivity.h"
 #include "SettingsList.h"
 #include "StatusBarSettingsActivity.h"
+#include "ThemeDownloadActivity.h"
+#include "ThemeSelectionActivity.h"
+#include "UiThemeLoader.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "components/ui/ButtonHints/ButtonHints.h"
@@ -61,6 +64,13 @@ void SettingsActivity::rebuildSettingsLists() {
   readerSettings.insert(readerSettings.begin() + 1,
                         SettingInfo::Action(StrId::STR_MANAGE_FONTS, SettingAction::DownloadFonts));
   readerSettings.push_back(SettingInfo::Action(StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar));
+
+  // Insert "Download Themes" directly above the UI Theme picker in Display
+  {
+    auto it = std::find_if(displaySettings.begin(), displaySettings.end(),
+                           [](const SettingInfo& s) { return s.nameId == StrId::STR_UI_THEME; });
+    displaySettings.insert(it, SettingInfo::Action(StrId::STR_DOWNLOAD_THEMES, SettingAction::DownloadThemes));
+  }
 
   // Update currentSettings pointer and count for the active category
   switch (selectedCategoryIndex) {
@@ -203,6 +213,16 @@ void SettingsActivity::toggleCurrentSetting() {
                              });
       return;
     }
+    if (setting.nameId == StrId::STR_UI_THEME) {
+      // Launch theme picker instead of cycling
+      startActivityForResult(std::make_unique<ThemeSelectionActivity>(renderer, mappedInput, &UI_THEMES),
+                             [this](const ActivityResult&) {
+                               SETTINGS.saveToFile();
+                               UITheme::getInstance().reload(renderer);
+                               rebuildSettingsLists();
+                             });
+      return;
+    }
     const uint8_t totalValues = setting.enumStringValues.empty()
                                     ? static_cast<uint8_t>(setting.enumValues.size())
                                     : static_cast<uint8_t>(setting.enumStringValues.size());
@@ -245,6 +265,13 @@ void SettingsActivity::toggleCurrentSetting() {
         break;
       case SettingAction::DownloadFonts:
         startActivityForResult(std::make_unique<FontDownloadActivity>(renderer, mappedInput),
+                               [this](const ActivityResult&) {
+                                 SETTINGS.saveToFile();
+                                 rebuildSettingsLists();
+                               });
+        break;
+      case SettingAction::DownloadThemes:
+        startActivityForResult(std::make_unique<ThemeDownloadActivity>(renderer, mappedInput),
                                [this](const ActivityResult&) {
                                  SETTINGS.saveToFile();
                                  rebuildSettingsLists();
