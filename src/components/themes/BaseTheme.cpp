@@ -743,9 +743,8 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
     // dither to logical x so a 1px line stays visible at any y — unlike
     // fillRectDither(LightGray), whose y-keyed pattern vanished on odd rows
     // (e.g. Folio's row height landed dividers on a blank scanline). Skipped on
-    // the selected row (its fill covers it) and the last visible row; card
-    // styles supply their own gaps.
-    if (m.list.showDividers && !selected && m.list.selectionStyle != SelectionStyle::RoundedRowAlways &&
+    // the last visible row; card styles supply their own gaps.
+    if (m.list.showDividers  && m.list.selectionStyle != SelectionStyle::RoundedRowAlways &&
         !isLastVisible(i)) {
       renderer.drawDitheredLine(rect.x + contentPad, itemY + rowHeight - 1, contentWidth - contentPad * 2);
     }
