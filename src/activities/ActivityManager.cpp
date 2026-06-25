@@ -15,6 +15,7 @@
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/LibraryActivity.h"
+#include "home/LibraryIndexingActivity.h"
 #include "home/RecentBooksActivity.h"
 #include "network/CrossPointWebServerActivity.h"
 #include "reader/ReaderActivity.h"
@@ -270,7 +271,12 @@ void ActivityManager::goToFullScreenMessage(std::string message, EpdFontFamily::
   replaceActivity(std::make_unique<FullScreenMessageActivity>(renderer, mappedInput, std::move(message), style));
 }
 
-void ActivityManager::goHome() { replaceActivity(std::make_unique<LibraryActivity>(renderer, mappedInput)); }
+void ActivityManager::goHome() {
+  // Route through the indexing screen: it populates LIBRARY_INDEX (with a progress UI
+  // when there's work) and hands off to LibraryActivity. Warm cache paints nothing and
+  // falls straight through.
+  replaceActivity(std::make_unique<LibraryIndexingActivity>(renderer, mappedInput));
+}
 void ActivityManager::goToCrashReport() { replaceActivity(std::make_unique<CrashActivity>(renderer, mappedInput)); }
 
 void ActivityManager::pushActivity(std::unique_ptr<Activity>&& activity) {

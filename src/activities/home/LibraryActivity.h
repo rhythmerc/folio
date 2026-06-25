@@ -131,10 +131,6 @@ class LibraryActivity final : public Activity {
   void renderPageRail(const Rect& railArea);
   void renderBookTile(const Rect& cell, const LibraryBook& book, bool selected);
   void renderEmptyState(const Rect& body);
-  // Full-screen indexing progress (header + body VStack, no button-hint band).
-  // Drawn directly during onEnter's refresh callback; the normal library render
-  // overwrites it once indexing completes.
-  void renderIndexingProgress(int done, int total, const char* label);
   bool onSortSelect(CrossPointSettings::LIBRARY_SORT_FIELD sortType);
   std::optional<PopupMenu::Glyph> getSortGlyph(CrossPointSettings::LIBRARY_SORT_FIELD sortType);
 
