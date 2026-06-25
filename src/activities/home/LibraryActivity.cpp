@@ -12,11 +12,11 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "CrossPointSettings.h"
 #include "LibraryIndex.h"
+#include "LibrarySubsetManager.h"
 #include "MappedInputManager.h"
 #include "activities/ActivityManager.h"
 #include "activities/ActivityResult.h"
@@ -80,6 +80,41 @@ inline Rect computeSelectionFrame(const Rect& cell, int contentBottom) {
 constexpr int RAIL_PAD_TOP = 8;
 static constexpr StrId kSortLabels[] = {StrId::STR_SORT_RECENT, StrId::STR_SORT_TITLE, StrId::STR_SORT_AUTHOR,
                                             StrId::STR_SORT_PROGRESS};
+
+// Translate the persisted view settings into a subset spec (deserialization, not
+// filtering). The string_views point into SETTINGS.libraryViewName, which outlives the
+// resolve() call they're handed to.
+LibrarySubsetManager::Spec specFromSettings() {
+  using SM = LibrarySubsetManager;
+  switch (SETTINGS.libraryViewKind) {
+    case CrossPointSettings::LIB_VIEW_COLLECTION:
+      return SM::CollectionRef{SETTINGS.libraryViewCollectionId};
+    case CrossPointSettings::LIB_VIEW_SERIES:
+      return SM::MetadataGroup{SM::MetadataGroup::Series, SETTINGS.libraryViewName};
+    case CrossPointSettings::LIB_VIEW_AUTHOR:
+      return SM::MetadataGroup{SM::MetadataGroup::Author, SETTINGS.libraryViewName};
+    case CrossPointSettings::LIB_VIEW_GENRE:
+      return SM::MetadataGroup{SM::MetadataGroup::Genre, SETTINGS.libraryViewName};
+    case CrossPointSettings::LIB_VIEW_SEARCH:
+      return SM::Search{SETTINGS.libraryViewName};
+    default:
+      return SM::All{};
+  }
+}
+
+bool isAutoGroup(uint8_t kind) {
+  return kind == CrossPointSettings::LIB_VIEW_SERIES || kind == CrossPointSettings::LIB_VIEW_AUTHOR ||
+         kind == CrossPointSettings::LIB_VIEW_GENRE;
+}
+
+// Reset the persisted active view to All Books and save. Used as the fallback when the
+// active view no longer resolves to anything (stale collection / emptied auto-group).
+void resetViewToAll() {
+  SETTINGS.libraryViewKind = CrossPointSettings::LIB_VIEW_ALL;
+  SETTINGS.libraryViewCollectionId = 0;
+  SETTINGS.libraryViewName[0] = '\0';
+  SETTINGS.saveToFile();
+}
 }  // namespace
 
 
@@ -384,99 +419,25 @@ const LibraryBook* LibraryActivity::bookForGridIndex(int gridIndex) const {
 }
 
 void LibraryActivity::rebuildView() {
-  view_.clear();
-  hasBackTile_ = false;
-
-  const auto& books = LIBRARY_INDEX.getBooks();
-  view_.reserve(books.size());
-
-  uint8_t kind = SETTINGS.libraryViewKind;
-
-  // Validate a COLLECTION view up front: a stale id falls back to All Books.
-  const Collection* coll = nullptr;
-  if (kind == CrossPointSettings::LIB_VIEW_COLLECTION) {
-    if (!COLLECTION_STORE.isLoaded()) COLLECTION_STORE.loadFromFile();
-    coll = COLLECTION_STORE.findById(SETTINGS.libraryViewCollectionId);
-    if (coll == nullptr) kind = CrossPointSettings::LIB_VIEW_ALL;
+  // Degenerate persisted state: an empty search query is just All Books.
+  if (SETTINGS.libraryViewKind == CrossPointSettings::LIB_VIEW_SEARCH && SETTINGS.libraryViewName[0] == '\0') {
+    resetViewToAll();
   }
 
-  auto fallBackToAll = [&]() {
-    view_.clear();
-    for (const auto& b : books) view_.push_back(&b);
-    hasBackTile_ = false;
-    viewTitle_ = tr(STR_LIBRARY);
+  const uint8_t kind = SETTINGS.libraryViewKind;
+  std::optional<LibrarySubsetManager::Resolved> resolved = LibrarySubsetManager::resolve(specFromSettings());
 
-    if (SETTINGS.libraryViewKind == CrossPointSettings::LIB_VIEW_ALL) {
-      return;
-    }
-
-    SETTINGS.libraryViewKind = CrossPointSettings::LIB_VIEW_ALL;
-    SETTINGS.libraryViewCollectionId = 0;
-    SETTINGS.libraryViewName[0] = '\0';
-    SETTINGS.saveToFile();
-  };
-
-  if (kind == CrossPointSettings::LIB_VIEW_ALL) {
-    fallBackToAll();
-    return;
+  // Fallback policy (view/persistence concern, kept here): a stale collection
+  // (resolve -> nullopt) or an auto-group that now matches nothing resets to All Books.
+  // An empty-but-valid collection and a zero-hit search are valid states — keep them.
+  if (!resolved || (isAutoGroup(kind) && resolved->books.empty())) {
+    resetViewToAll();
+    resolved = LibrarySubsetManager::resolve(LibrarySubsetManager::All{});
   }
 
-  if (kind == CrossPointSettings::LIB_VIEW_COLLECTION) {
-    const std::unordered_set<uint32_t> members(coll->members.begin(), coll->members.end());
-    for (const auto& b : books) {
-      if (members.count(b.pathHash)) view_.push_back(&b);
-    }
-    hasBackTile_ = true;
-    viewTitle_ = coll->name;  // empty collection is allowed (back-tile-only view)
-    return;
-  }
-
-  if (kind == CrossPointSettings::LIB_VIEW_SEARCH) {
-    const std::string query = SETTINGS.libraryViewName;
-    if (query.empty()) {
-      fallBackToAll();
-      return;
-    }
-    // No-results is a valid state: keep the back tile so the user can return.
-    view_ = LIBRARY_INDEX.search(query);
-    hasBackTile_ = true;
-    viewTitle_ = query;
-    return;
-  }
-
-  // Auto-group: series / author / genre by exact name match.
-  const std::string name = SETTINGS.libraryViewName;
-  for (const auto& b : books) {
-    // Genre holds multiple newline-joined subjects: a book belongs to the group
-    // if any of its subjects matches the selected genre name.
-    if (kind == CrossPointSettings::LIB_VIEW_GENRE) {
-      bool match = false;
-      forEachGenre(b.genre, [&](std::string_view g) {
-        if (g == name) match = true;
-      });
-      if (match) view_.push_back(&b);
-      continue;
-    }
-    const std::string* field = nullptr;
-    switch (kind) {
-      case CrossPointSettings::LIB_VIEW_SERIES:
-        field = &b.series;
-        break;
-      case CrossPointSettings::LIB_VIEW_AUTHOR:
-        field = &b.author;
-        break;
-    }
-    if (field != nullptr && *field == name) view_.push_back(&b);
-  }
-
-  if (view_.empty()) {
-    // The group no longer matches any book (e.g. the book was removed) — reset.
-    fallBackToAll();
-    return;
-  }
-
-  hasBackTile_ = true;
-  viewTitle_ = name;
+  view_ = std::move(resolved->books);
+  hasBackTile_ = (SETTINGS.libraryViewKind != CrossPointSettings::LIB_VIEW_ALL);
+  viewTitle_ = resolved->title.empty() ? std::string(tr(STR_LIBRARY)) : resolved->title;
 }
 
 void LibraryActivity::activateBack() {
