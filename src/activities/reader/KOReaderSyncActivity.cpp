@@ -176,7 +176,7 @@ void KOReaderSyncActivity::performSync() {
     return;
   }
 
-  KOReaderPosition koPos = {remoteProgress.progress, remoteProgress.percentage};
+  SavedProgressPosition koPos = {remoteProgress.progress, remoteProgress.percentage};
   remotePosition = ProgressMapper::toCrossPoint(epub, koPos, renderer, currentSpineIndex, totalPagesInSpine);
 
   // localProgress was pre-computed in EpubReaderActivity before the Epub was released.

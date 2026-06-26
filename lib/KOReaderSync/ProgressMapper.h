@@ -22,7 +22,7 @@ struct CrossPointPosition {
 /**
  * Progress position representation.
  */
-struct KOReaderPosition {
+struct SavedProgressPosition {
   std::string xpath;  // XPath-like progress string
   float percentage;   // Progress percentage (0.0 to 1.0)
 };
@@ -46,7 +46,7 @@ class ProgressMapper {
    * @param pos CrossPoint position
    * @return SavedProgress position
    */
-  static KOReaderPosition toKOReader(const std::shared_ptr<Epub>& epub, const CrossPointPosition& pos);
+  static SavedProgressPosition toSavedProgress(const std::shared_ptr<Epub>& epub, const CrossPointPosition& pos);
 
   /**
    * Convert SavedProgress position to CrossPoint format.
@@ -61,7 +61,7 @@ class ProgressMapper {
    * @param totalPagesInCurrentSpine Total pages in the current spine item (for density estimation)
    * @return CrossPoint position
    */
-  static CrossPointPosition toCrossPoint(const std::shared_ptr<Epub>& epub, const KOReaderPosition& savedPos,
+  static CrossPointPosition toCrossPoint(const std::shared_ptr<Epub>& epub, const SavedProgressPosition& savedPos,
                                          GfxRenderer& renderer, int currentSpineIndex = -1,
                                          int totalPagesInCurrentSpine = 0, int fallbackTotalPages = 0);
 
