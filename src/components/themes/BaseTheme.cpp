@@ -130,6 +130,8 @@ int BaseTheme::resolveFontRole(const ThemeData& data, FontRole role) {
       return data.fonts.captionIdCompact != 0 ? data.fonts.captionIdCompact : data.fonts.captionId;
     case FontRole::AccentCompact:
       return data.fonts.accentIdCompact != 0 ? data.fonts.accentIdCompact : data.fonts.accentId;
+    case FontRole::BodyLarge:
+      return data.fonts.bodyIdLarge != 0 ? data.fonts.bodyIdLarge : data.fonts.bodyId;
   }
   return data.fonts.bodyId;
 }

@@ -17,7 +17,7 @@ constexpr char LOG_TAG[] = "THMFNT";
 
 constexpr const char* kRoleNames[] = {
     "title", "heading", "body", "caption", "accent",
-    "body-compact", "caption-compact", "accent-compact"};
+    "body-compact", "caption-compact", "accent-compact", "body-large"};
 
 uint32_t fnvHash(const char* str) {
   uint32_t hash = 2166136261u;
@@ -53,9 +53,9 @@ ThemeFontManager::LoadedFontIds ThemeFontManager::loadRoles(
   LoadedFontIds out;
   LOG_INF(LOG_TAG, "loadRoles: heap free=%u, maxAlloc=%u", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
-  int* idSlots[] = {&out.title,        &out.heading,        &out.body,
-                    &out.caption,      &out.accent,         &out.bodyCompact,
-                    &out.captionCompact, &out.accentCompact};
+  int* idSlots[] = {&out.title,          &out.heading,       &out.body,
+                    &out.caption,        &out.accent,        &out.bodyCompact,
+                    &out.captionCompact, &out.accentCompact, &out.bodyLarge};
 
   for (int i = 0; i < kFontRoleCount; ++i) {
     const auto& role = fontSpec.roles[i];

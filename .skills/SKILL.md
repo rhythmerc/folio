@@ -509,11 +509,15 @@ void onExit()   { /* free: vTaskDelete, free buffer, close member FsFiles */ Act
 **Source**: [src/main.cpp:40-115](../src/main.cpp)
 
 **All fonts are loaded as global static objects** at firmware startup:
-- Noto Serif: 12, 14, 16, 18pt (4 styles each: regular, bold, italic, bold-italic)
-- Noto Sans: 12, 14, 16, 18pt (4 styles each)
-- Ubuntu UI fonts: 10, 12pt (2 styles)
+- Noto Serif: 5, 6, 8, 10, 12, 14, 16, 18pt (4 styles each: regular, bold, italic, bold-italic)
+- Noto Sans: 12, 14, 16, 18pt (4 styles each), plus 8pt regular (`SMALL_FONT`)
+- Literata: 10pt (4 styles) — the default reading **body** font
+- The UI has no dedicated face: `UI_10`/`UI_12` are repointed to the active theme's
+  Body/Title role families on every theme apply (`UITheme::repointUiFonts`). Hebrew is a
+  shipped UI language, so the Title (NotoSerif 14) and Body (Literata 10) regular+bold faces
+  are built with NotoSansHebrew merged in. There is no built-in OpenDyslexic or Ubuntu face.
 
-**Total**: ~80+ global `EpdFont` and `EpdFontFamily` objects
+**Total**: ~70+ global `EpdFont` and `EpdFontFamily` objects
 
 **Compilation Flag**:
 ```cpp

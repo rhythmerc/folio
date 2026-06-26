@@ -9,12 +9,25 @@ LITERATA_FONT_SIZES=(10)
 NOTOSERIF_FONT_SIZES=(10 12 14 16 18)
 NOTOSANS_FONT_SIZES=(12 14 16 18)
 
+# Faces that back the Title (notoserif 14) and Body (literata 10) theme roles
+# are also what UI chrome resolves to (UI_12/UI_10 ids, see UITheme::repointUiFonts),
+# replacing the dropped Ubuntu UI font. Hebrew is a shipped UI language but
+# NotoSerif/Literata lack it, so merge NotoSansHebrew (Regular/Bold only) into
+# those faces. Echoes extra fontstack+intervals args for the relevant faces.
+maybe_hebrew() {
+  local family="$1" size="$2" style="$3"
+  if { [[ "$family" == "literata" && "$size" == "10" ]] || [[ "$family" == "notoserif" && "$size" == "14" ]]; } \
+     && { [[ "$style" == "Regular" ]] || [[ "$style" == "Bold" ]]; }; then
+    echo "../builtinFonts/source/NotoSansHebrew/NotoSansHebrew-${style}.ttf --additional-intervals 0x05D0,0x05EA"
+  fi
+}
+
 for size in ${LITERATA_FONT_SIZES[@]}; do
   for style in ${READER_FONT_STYLES[@]}; do
     font_name="literata_${size}_$(echo $style | tr '[:upper:]' '[:lower:]')"
     font_path="../builtinFonts/source/Literata/Literata-${style}.ttf"
     output_path="../builtinFonts/${font_name}.h"
-    python fontconvert.py $font_name $size $font_path --2bit --compress --pnum > $output_path
+    python fontconvert.py $font_name $size $font_path $(maybe_hebrew literata $size $style) --2bit --compress --pnum > $output_path
     echo "Generated $output_path"
   done
 done
@@ -24,7 +37,7 @@ for size in ${NOTOSERIF_FONT_SIZES[@]}; do
     font_name="notoserif_${size}_$(echo $style | tr '[:upper:]' '[:lower:]')"
     font_path="../builtinFonts/source/NotoSerif/NotoSerif-${style}.ttf"
     output_path="../builtinFonts/${font_name}.h"
-    python fontconvert.py $font_name $size $font_path --2bit --compress --pnum > $output_path
+    python fontconvert.py $font_name $size $font_path $(maybe_hebrew notoserif $size $style) --2bit --compress --pnum > $output_path
     echo "Generated $output_path"
   done
 done
@@ -35,26 +48,6 @@ for size in ${NOTOSANS_FONT_SIZES[@]}; do
     font_path="../builtinFonts/source/NotoSans/NotoSans-${style}.ttf"
     output_path="../builtinFonts/${font_name}.h"
     python fontconvert.py $font_name $size $font_path --2bit --compress --pnum > $output_path
-    echo "Generated $output_path"
-  done
-done
-
-UI_FONT_SIZES=(10 12)
-UI_FONT_STYLES=("Regular" "Bold")
-
-for size in ${UI_FONT_SIZES[@]}; do
-  for style in ${UI_FONT_STYLES[@]}; do
-    font_name="ubuntu_${size}_$(echo $style | tr '[:upper:]' '[:lower:]')"
-    font_path="../builtinFonts/source/Ubuntu/Ubuntu-${style}.ttf"
-    hebrew_path="../builtinFonts/source/NotoSansHebrew/NotoSansHebrew-${style}.ttf"
-    # Ubuntu lacks the Latin Extended Additional block (U+1EA0-U+1EF9) used for
-    # Vietnamese tone marks. Append a Vietnamese-only Ubuntu cut so those glyphs
-    # are filled from it while every glyph Ubuntu already has stays unchanged
-    # (fontstack is ordered by descending priority).
-    viet_path="../builtinFonts/source/Ubuntu/Ubuntu-Vietnamese-${style}.ttf"
-    output_path="../builtinFonts/${font_name}.h"
-    python fontconvert.py $font_name $size $font_path $hebrew_path $viet_path \
-      --additional-intervals 0x05D0,0x05EA > $output_path
     echo "Generated $output_path"
   done
 done

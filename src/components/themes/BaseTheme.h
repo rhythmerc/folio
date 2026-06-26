@@ -47,6 +47,8 @@ enum class FontRole {
   BodyCompact,
   CaptionCompact,
   AccentCompact,
+
+  BodyLarge,  // 12pt UI chrome (UI_12); larger than Body, smaller than Title
 };
 
 // The single concrete theme implementation. All four built-in themes share

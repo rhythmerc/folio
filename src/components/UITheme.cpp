@@ -6,8 +6,22 @@
 
 #include "UiThemeLoader.h"
 #include "components/themes/BaseTheme.h"
+#include "fontIds.h"
 
 UITheme UITheme::instance;
+
+void UITheme::repointUiFonts(GfxRenderer& renderer) {
+  const auto& fontMap = renderer.getFontMap();
+  const int bodyLargeId = currentTheme->getFontForRole(FontRole::BodyLarge);
+  const int bodyId = currentTheme->getFontForRole(FontRole::Body);
+  // Skip a degenerate theme that points its own BodyLarge/Body back at the UI ids.
+  if (auto it = fontMap.find(bodyLargeId); it != fontMap.end() && bodyLargeId != UI_12_FONT_ID) {
+    renderer.insertFont(UI_12_FONT_ID, it->second);
+  }
+  if (auto it = fontMap.find(bodyId); it != fontMap.end() && bodyId != UI_10_FONT_ID) {
+    renderer.insertFont(UI_10_FONT_ID, it->second);
+  }
+}
 
 UITheme::UITheme() {
   auto themeType = static_cast<CrossPointSettings::UI_THEME>(SETTINGS.uiTheme);
@@ -33,6 +47,7 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type, GfxRenderer& renderer)
       } else {
         currentTheme->setData(sdData);
       }
+      repointUiFonts(renderer);
       return;
     }
     LOG_ERR("UI", "SD theme '%s' failed to load; falling back to Folio", SETTINGS.sdThemeName);
@@ -41,6 +56,7 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type, GfxRenderer& renderer)
   }
 
   setTheme(CrossPointSettings::FOLIO);
+  repointUiFonts(renderer);
 }
 
 void UITheme::setTheme(CrossPointSettings::UI_THEME type) {

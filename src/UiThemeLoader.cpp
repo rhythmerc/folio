@@ -98,6 +98,7 @@ bool UiThemeLoader::loadTheme(const char* themeId, GfxRenderer& renderer) {
   if (ids.bodyCompact != 0)    themeData_->fonts.bodyIdCompact    = ids.bodyCompact;
   if (ids.captionCompact != 0) themeData_->fonts.captionIdCompact = ids.captionCompact;
   if (ids.accentCompact != 0)  themeData_->fonts.accentIdCompact  = ids.accentCompact;
+  if (ids.bodyLarge != 0)      themeData_->fonts.bodyIdLarge       = ids.bodyLarge;
 
   LOG_INF(LOG_TAG, "Loaded SD theme '%s' (%s)", nameBuf_, idBuf_);
   return true;

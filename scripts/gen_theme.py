@@ -175,6 +175,7 @@ def generate_header(schema: dict) -> str:
     lines.append("    int bodyIdCompact;\n")
     lines.append("    int captionIdCompact;\n")
     lines.append("    int accentIdCompact;\n")
+    lines.append("    int bodyIdLarge;\n")
     lines.append("  } fonts;\n")
     lines.append("\n")
 
@@ -210,7 +211,7 @@ def _emit_struct_group(lines: list[str], group: dict, schema: dict, indent: int)
 
 FONT_ROLES = [
     "titleId", "headingId", "bodyId", "captionId", "accentId",
-    "bodyIdCompact", "captionIdCompact", "accentIdCompact",
+    "bodyIdCompact", "captionIdCompact", "accentIdCompact", "bodyIdLarge",
 ]
 
 

@@ -31,6 +31,7 @@ class ThemeFontManager {
     int bodyCompact = 0;
     int captionCompact = 0;
     int accentCompact = 0;
+    int bodyLarge = 0;
   };
 
   // Load every role described in `fontSpec` from the extracted cache dir.

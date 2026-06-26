@@ -50,11 +50,12 @@ folio:
     titleId:          NOTOSERIF_14_FONT_ID
     headingId:        NOTOSERIF_14_FONT_ID
     bodyId:           LITERATA_10_FONT_ID
-    captionId:        NOTOSERIF_10_FONT_ID
-    accentId:         NOTOSERIF_10_FONT_ID
+    captionId:        LITERATA_10_FONT_ID
+    accentId:         LITERATA_10_FONT_ID
     bodyIdCompact:    NOTOSERIF_8_FONT_ID
     captionIdCompact: NOTOSERIF_6_FONT_ID
     accentIdCompact:  NOTOSERIF_5_FONT_ID
+    bodyIdLarge:      NOTOSERIF_12_FONT_ID
 
 # Theme-owned enums. Generator emits `enum class X : uint8_t { ... };`
 enums:

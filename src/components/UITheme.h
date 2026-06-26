@@ -36,6 +36,11 @@ class UITheme {
   static int getProgressBarHeight();
 
  private:
+  // Point the UI_12/UI_10 font ids at the active theme's Title/Body families so
+  // UI chrome tracks the theme's fonts (lets us ship without a dedicated UI
+  // font face). Called on every theme apply.
+  void repointUiFonts(GfxRenderer& renderer);
+
   std::unique_ptr<BaseTheme> currentTheme;
 };
 

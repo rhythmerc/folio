@@ -41,8 +41,9 @@ constexpr BuiltinFontEntry kBuiltinFonts[] = {
 
 // ─── Font spec parsing ─────────────────────────────────────────────
 
-const char* kRoleKeys[] = {"title", "heading", "body", "caption", "accent",
-                           "body-compact", "caption-compact", "accent-compact"};
+const char* kRoleKeys[] = {"title",        "heading",         "body",
+                           "caption",      "accent",          "body-compact",
+                           "caption-compact", "accent-compact", "body-large"};
 
 void parseFontSpecs(JsonObjectConst fonts, ThemeFontSpec& spec) {
   memset(&spec, 0, sizeof(spec));

@@ -6,7 +6,7 @@
 
 struct ThemeData;
 
-static constexpr int kFontRoleCount = 8;
+static constexpr int kFontRoleCount = 9;
 
 struct ThemeFontSpec {
   struct RoleSpec {
