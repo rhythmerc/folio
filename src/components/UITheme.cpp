@@ -118,9 +118,10 @@ UIIcon UITheme::getFileIcon(const std::string& filename) {
 
 int UITheme::getStatusBarHeight() {
   const auto& td = *getInstance().getTheme().getData();
-  const bool showStatusBar = SETTINGS.statusBarChapterPageCount || SETTINGS.statusBarBookProgressPercentage ||
-                             SETTINGS.statusBarTitle != CrossPointSettings::STATUS_BAR_TITLE::HIDE_TITLE ||
-                             SETTINGS.statusBarBattery;
+  const bool showStatusBar =
+      SETTINGS.statusBarChapterPageCount || SETTINGS.statusBarBookProgressPercentage ||
+      SETTINGS.statusBarTitle != CrossPointSettings::STATUS_BAR_TITLE::HIDE_TITLE || SETTINGS.statusBarBattery ||
+      SETTINGS.statusBarClock != CrossPointSettings::STATUS_BAR_CLOCK_MODE::STATUS_BAR_CLOCK_HIDE;
   const bool showProgressBar =
       SETTINGS.statusBarProgressBar != CrossPointSettings::STATUS_BAR_PROGRESS_BAR::HIDE_PROGRESS;
   return (showStatusBar ? (td.statusBar.verticalMargin) : 0) +

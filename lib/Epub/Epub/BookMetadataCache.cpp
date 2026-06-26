@@ -2,6 +2,7 @@
 
 #include <Logging.h>
 #include <Serialization.h>
+#include <Utf8.h>
 #include <ZipFile.h>
 
 #include <deque>
@@ -9,7 +10,7 @@
 #include "FsHelpers.h"
 
 namespace {
-constexpr uint8_t BOOK_CACHE_VERSION = 9;
+constexpr uint8_t BOOK_CACHE_VERSION = 10;  // v10: rebase onto upstream — invalidate pre-rebase v9 caches (two-tier index + NFC TOC + series/genre/language metadata)
 constexpr char bookBinFile[] = "/book.bin";
 constexpr char tmpSpineBinFile[] = "/spine.bin.tmp";
 constexpr char tmpTocBinFile[] = "/toc.bin.tmp";
@@ -282,7 +283,7 @@ bool BookMetadataCache::cleanupTmpFiles() const {
   return true;
 }
 
-uint32_t BookMetadataCache::writeSpineEntry(FsFile& file, const SpineEntry& entry) const {
+uint32_t BookMetadataCache::writeSpineEntry(HalFile& file, const SpineEntry& entry) const {
   const uint32_t pos = file.position();
   serialization::writeString(file, entry.href);
   serialization::writePod(file, entry.cumulativeSize);
@@ -290,7 +291,7 @@ uint32_t BookMetadataCache::writeSpineEntry(FsFile& file, const SpineEntry& entr
   return pos;
 }
 
-uint32_t BookMetadataCache::writeTocEntry(FsFile& file, const TocEntry& entry) const {
+uint32_t BookMetadataCache::writeTocEntry(HalFile& file, const TocEntry& entry) const {
   const uint32_t pos = file.position();
   serialization::writeString(file, entry.title);
   serialization::writeString(file, entry.href);
@@ -354,7 +355,9 @@ void BookMetadataCache::createTocEntry(const std::string& title, const std::stri
     }
   }
 
-  const TocEntry entry(title, href, anchor, level, spineIndex);
+  // Compose the title to NFC at index time so the cache stores precomposed glyphs;
+  // device fonts have no combining-mark positioning, so NFD titles render broken.
+  const TocEntry entry(utf8ComposeNfc(title), href, anchor, level, spineIndex);
   writeTocEntry(tocFile, entry);
   tocCount++;
 }
@@ -435,7 +438,7 @@ BookMetadataCache::TocEntry BookMetadataCache::getTocEntry(const int index) {
   return readTocEntry(bookFile);
 }
 
-BookMetadataCache::SpineEntry BookMetadataCache::readSpineEntry(FsFile& file) const {
+BookMetadataCache::SpineEntry BookMetadataCache::readSpineEntry(HalFile& file) const {
   SpineEntry entry;
   serialization::readString(file, entry.href);
   serialization::readPod(file, entry.cumulativeSize);
@@ -443,7 +446,7 @@ BookMetadataCache::SpineEntry BookMetadataCache::readSpineEntry(FsFile& file) co
   return entry;
 }
 
-BookMetadataCache::TocEntry BookMetadataCache::readTocEntry(FsFile& file) const {
+BookMetadataCache::TocEntry BookMetadataCache::readTocEntry(HalFile& file) const {
   TocEntry entry;
   serialization::readString(file, entry.title);
   serialization::readString(file, entry.href);

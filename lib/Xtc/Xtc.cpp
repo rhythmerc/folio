@@ -166,7 +166,7 @@ bool Xtc::generateCoverBmp() const {
   }
 
   // Create BMP file
-  FsFile coverBmp;
+  HalFile coverBmp;
   if (!Storage.openFileForWrite("XTC", getCoverBmpPath(), coverBmp)) {
     LOG_DBG("XTC", "Failed to create cover BMP file");
     free(pageBuffer);
@@ -305,7 +305,7 @@ bool Xtc::generateThumbBmp(int maxWidth, int maxHeight) const {
     // Page is already small enough, just use cover.bmp
     // Copy cover.bmp to thumb.bmp
     if (generateCoverBmp()) {
-      FsFile src, dst;
+      HalFile src, dst;
       if (Storage.openFileForRead("XTC", getCoverBmpPath(), src)) {
         if (Storage.openFileForWrite("XTC", getThumbBmpPath(maxHeight), dst)) {
           uint8_t buffer[512];
@@ -349,7 +349,7 @@ bool Xtc::generateThumbBmp(int maxWidth, int maxHeight) const {
   }
 
   // Create thumbnail BMP file - use 1-bit format for fast home screen rendering (no gray passes)
-  FsFile thumbBmp;
+  HalFile thumbBmp;
   if (!Storage.openFileForWrite("XTC", getThumbBmpPath(maxHeight), thumbBmp)) {
     LOG_DBG("XTC", "Failed to create thumb BMP file");
     free(pageBuffer);

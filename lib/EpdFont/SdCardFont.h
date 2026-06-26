@@ -84,9 +84,9 @@ class SdCardFont {
   bool hasAdvanceTable() const;
   // --- End reader-only layout API ------------------------------------------
 
-  // Free mini data for all styles, restore stub EpdFontData.
-  // Also clears the temporary advance table (built per layout pass) but
-  // preserves the persistent advance cache (reused across passes).
+  // Free mini data for all styles and restore stub EpdFontData.
+  // Preserves the persistent advance cache so repeated layout passes can reuse
+  // previously fetched metrics.
   void clearCache();
 
   // Drop the persistent advance cache. Call when unloading the SD font or

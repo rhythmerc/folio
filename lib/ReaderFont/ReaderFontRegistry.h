@@ -18,6 +18,7 @@ struct ReaderFontFamilyInfo {
   std::vector<ReaderFontFileInfo> files;
 
   const ReaderFontFileInfo* findFile(uint8_t size, uint8_t style = 0) const;
+  const ReaderFontFileInfo* findClosestReaderSize(uint8_t fontSizeEnum, uint8_t style = 0) const;
   bool hasSize(uint8_t size) const;
   std::vector<uint8_t> availableSizes() const;
 };

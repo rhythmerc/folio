@@ -101,6 +101,9 @@ static uint8_t lookupKernClass(const EpdKernClassEntry* entries, const uint16_t 
 }
 
 int8_t EpdFont::getKerning(const uint32_t leftCp, const uint32_t rightCp) const {
+  if (utf8IsCjkBreakable(leftCp) || utf8IsCjkBreakable(rightCp)) {
+    return 0;
+  }
   // Resolving a kern value needs the class tables (resident in both the
   // matrix-resident and on-demand-row cases) plus a source for the cell:
   // either a resident kernMatrix or an on-demand kernRowHandler.

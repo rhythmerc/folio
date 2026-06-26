@@ -12,10 +12,12 @@
 HalStorage HalStorage::instance;
 
 HalStorage::HalStorage() {
-  // Recursive so HalFile::~Impl can re-acquire from contexts that already
-  // hold the lock — e.g. HalStorage::openFileForRead's move-assignment runs
-  // the previous HalFile's destructor (which closes under the lock) while
-  // the lock is still held by the open() call itself.
+  // Recursive so the same task can re-enter StorageLock without self-deadlock.
+  // openFileForRead/Write take the lock and then assign to a HalFile&
+  // out-param; if that out-param already held an Impl, its destructor takes
+  // the lock again to close the prior FsFile under serialization (see
+  // HalFile::Impl::~Impl below). Priority inheritance still applies to
+  // recursive mutexes.
   storageMutex = xSemaphoreCreateRecursiveMutex();
   assert(storageMutex != nullptr);
 }
@@ -77,13 +79,9 @@ class HalFile::Impl {
 };
 
 HalFile::HalFile() = default;
-
 HalFile::HalFile(std::unique_ptr<Impl> impl) : impl(std::move(impl)) {}
-
 HalFile::~HalFile() = default;
-
 HalFile::HalFile(HalFile&&) = default;
-
 HalFile& HalFile::operator=(HalFile&&) = default;
 
 HalFile HalStorage::open(const char* path, const oflag_t oflag) {

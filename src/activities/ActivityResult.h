@@ -25,11 +25,20 @@ struct PercentResult {
   int percent = 0;
 };
 
+struct IntervalResult {
+  uint32_t value = 0;
+};
+
 struct PageResult {
   uint32_t page = 0;
 };
 
 struct SyncResult {
+  int spineIndex = 0;
+  int page = 0;
+};
+
+struct ProgressChangeResult {
   int spineIndex = 0;
   int page = 0;
 };
@@ -48,8 +57,9 @@ struct FilePathResult {
   std::string path;
 };
 
-using ResultVariant = std::variant<std::monostate, WifiResult, KeyboardResult, ChapterResult, PercentResult,
-                                   PageResult, SyncResult, NetworkModeResult, FootnoteResult, FilePathResult>;
+using ResultVariant =
+    std::variant<std::monostate, WifiResult, KeyboardResult, ChapterResult, PercentResult, IntervalResult, PageResult,
+                 SyncResult, ProgressChangeResult, NetworkModeResult, FootnoteResult, FilePathResult>;
 
 struct ActivityResult {
   bool isCancelled = false;

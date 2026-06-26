@@ -33,7 +33,7 @@ struct TabInfo {
 // directly, including layout/sizing fields that were previously grouped
 // under a separate ThemeMetrics struct.
 
-enum UIIcon { Folder, Text, Image, Book, File, Recent, Settings, Transfer, Library, Wifi, Hotspot };
+enum UIIcon { None = 0, Folder, Text, Image, Book, File, Recent, Settings, Transfer, Library, Wifi, Hotspot, Bookmark };
 
 enum class KeyboardKeyType { Normal, Shift, Mode, Space, Del, Ok, Disabled };
 
@@ -79,6 +79,7 @@ class BaseTheme {
   void drawBatteryLeft(const GfxRenderer& renderer, Rect rect, bool showPercentage = true) const;
   void drawBatteryRight(const GfxRenderer& renderer, Rect rect, bool showPercentage = true) const;
   void fillBatteryIcon(const GfxRenderer& renderer, Rect rect, uint16_t percentage) const;
+  int getListPageItems(int contentHeight, bool hasSubtitle) const;
   void drawList(const GfxRenderer& renderer, Rect rect, int itemCount, int selectedIndex,
                 const std::function<std::string(int index)>& rowTitle,
                 const std::function<std::string(int index)>& rowSubtitle = nullptr,
@@ -96,7 +97,8 @@ class BaseTheme {
   Rect drawPopup(const GfxRenderer& renderer, const char* message) const;
   void fillPopupProgress(const GfxRenderer& renderer, const Rect& layout, int progress) const;
   void drawStatusBar(GfxRenderer& renderer, float bookProgress, int currentPage, int pageCount, std::string title,
-                     int paddingBottom = 0, int textYOffset = 0) const;
+                     int paddingBottom = 0, int textYOffset = 0, bool fillMargin = true,
+                     bool isPageBookmarked = false) const;
   void drawHelpText(const GfxRenderer& renderer, Rect rect, const char* label) const;
   void drawTextField(const GfxRenderer& renderer, Rect rect, int textWidth, bool cursorMode = false,
                      int contentStartX = 0, int contentWidth = 0) const;

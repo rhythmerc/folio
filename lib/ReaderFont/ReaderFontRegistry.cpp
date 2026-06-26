@@ -15,6 +15,60 @@ const ReaderFontFileInfo* ReaderFontFamilyInfo::findFile(uint8_t size, uint8_t s
   return nullptr;
 }
 
+const ReaderFontFileInfo* ReaderFontFamilyInfo::findClosestReaderSize(const uint8_t fontSizeEnum,
+                                                                      const uint8_t style) const {
+  if (files.empty()) return nullptr;
+
+  // Collect sizes matching the requested style, sorted ascending.
+  std::vector<uint8_t> sizes;
+  for (const auto& f : files) {
+    if (f.style != style) continue;
+    sizes.push_back(f.pointSize);
+  }
+  if (sizes.empty()) return nullptr;
+  std::sort(sizes.begin(), sizes.end());
+
+  // When the family provides at least 4 sizes, use ordinal (index-based)
+  // selection so custom-built font sets (e.g. 10/12/14/16) map SMALL to
+  // the smallest file, not to a hardcoded 12pt target.
+  if (sizes.size() >= 4) {
+    uint8_t idx = fontSizeEnum;
+    if (idx >= sizes.size()) idx = sizes.size() - 1;
+    return findFile(sizes[idx], style);
+  }
+
+  // Fewer sizes than enum slots (e.g. CJK packs with only 2-3 sizes):
+  // fall back to closest-match against the built-in reader targets.
+  uint8_t target = 14;
+  switch (fontSizeEnum) {
+    case 0:
+      target = 12;
+      break;
+    case 2:
+      target = 16;
+      break;
+    case 3:
+      target = 18;
+      break;
+    case 1:
+    default:
+      target = 14;
+      break;
+  }
+
+  const ReaderFontFileInfo* best = nullptr;
+  uint8_t bestDelta = 255;
+  for (const auto& f : files) {
+    if (f.style != style) continue;
+    const uint8_t delta = f.pointSize > target ? f.pointSize - target : target - f.pointSize;
+    if (!best || delta < bestDelta || (delta == bestDelta && f.pointSize < best->pointSize)) {
+      best = &f;
+      bestDelta = delta;
+    }
+  }
+  return best;
+}
+
 bool ReaderFontFamilyInfo::hasSize(uint8_t size) const {
   for (const auto& f : files) {
     if (f.pointSize == size) return true;
@@ -77,12 +131,12 @@ bool ReaderFontRegistry::parseFilename(const char* filename, uint8_t& size, uint
 }
 
 void ReaderFontRegistry::scanDirectory(const char* dirPath, ReaderFontFamilyInfo& family) {
-  FsFile dir = Storage.open(dirPath);
+  HalFile dir = Storage.open(dirPath);
   if (!dir || !dir.isDirectory()) return;
 
   char nameBuffer[128];
   while (true) {
-    FsFile entry = dir.openNextFile();
+    HalFile entry = dir.openNextFile();
     if (!entry) break;
     if (entry.isDirectory()) {
       entry.close();
@@ -126,7 +180,7 @@ void ReaderFontRegistry::scanDirectory(const char* dirPath, ReaderFontFamilyInfo
 // Skips families whose names already exist in `out` (de-duplicates between
 // the hidden and visible roots — first scan wins).
 void ReaderFontRegistry::scanRoot(const char* rootPath, std::vector<ReaderFontFamilyInfo>& out) {
-  FsFile root = Storage.open(rootPath);
+  HalFile root = Storage.open(rootPath);
   if (!root) {
     LOG_DBG("RDRREG", "Fonts directory not found: %s", rootPath);
     return;
@@ -138,7 +192,7 @@ void ReaderFontRegistry::scanRoot(const char* rootPath, std::vector<ReaderFontFa
 
   char nameBuffer[128];
   while (true) {
-    FsFile entry = root.openNextFile();
+    HalFile entry = root.openNextFile();
     if (!entry) break;
     if (entry.isDirectory()) {
       entry.getName(nameBuffer, sizeof(nameBuffer));

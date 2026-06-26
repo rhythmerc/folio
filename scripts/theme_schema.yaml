@@ -183,6 +183,12 @@ struct:
       - { cpp: height,    type: int, default: 40 }
       - { cpp: sideWidth, type: int, default: 30 }
 
+  - group: fontPreview
+    struct_name: FontPreview
+    fields:
+      - { cpp: padding,       type: int, default: 12 }
+      - { cpp: heightPercent, type: int, default: 30 }
+
   - group: tabBar
     struct_name: TabBar
     fields:
