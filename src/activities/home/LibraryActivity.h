@@ -1,138 +1,68 @@
 #pragma once
-#include <BitmapCacheManager.h>
-#include <I18n.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
-
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "CoverPrefetcher.h"
-#include "LibraryIndex.h"
+#include "CrossPointSettings.h"
+#include "LibraryGridView.h"
 #include "activities/Activity.h"
 #include "components/themes/BaseTheme.h"  // for Rect
-#include "util/ButtonNavigator.h"
-#include "util/GridHelper.h"
-#include "CrossPointSettings.h"
 
+// The Library shell: a thin coordinator around a LibraryGridView. It owns the page
+// scaffold (header, scroll indicator, empty state), resolves the active subset from
+// settings (with the fallback policy), and hosts the sort/collections/search menu. All
+// grid state, navigation, cover prefetching, and tile rendering live in the view.
 class LibraryActivity final : public Activity {
  private:
-  // ---- Layout constants ---------------------------------------------------
-  static constexpr int COLS = 3;
-  static constexpr int ROWS = 3;
-  static constexpr int PER_PAGE = COLS * ROWS;
+  LibraryGridView gridView_{renderer, mappedInput};
 
-  // ---- View state ---------------------------------------------------------
-  // GridHelper
-  GridHelper gridHelper = GridHelper(0, 0, 0, 0);
-
-  // The active library view (All Books vs. a collection / auto-group filter).
-  // view_ holds pointers into LIBRARY_INDEX in sorted order, filtered to the
-  // active view. Rebuilt after every sort and on entry. When the view is
-  // filtered, a synthetic "back tile" occupies grid slot 0 (page 0) — so the
-  // grid item count is view_.size() + (hasBackTile_ ? 1 : 0). Pointers are
-  // only valid between sorts (sortBy reorders the index in place), so view_
-  // is always rebuilt immediately after sortBy.
-  std::vector<const LibraryBook*> view_;
-  bool hasBackTile_ = false;
-  // Cached header title for the active view ("Library" for All Books,
-  // otherwise the collection / series / author / genre name).
-  std::string viewTitle_;
-
-  // Drives Up/Down hold-to-page-jump (every 500ms after a 500ms hold) and
-  // suppresses the tap callback when a continuous fired. Default 500/500
-  // matches the cadence used by every settings list in the app.
-  ButtonNavigator buttonNavigator;
-
-  // Cover cache + async prefetch worker. Fed a flat item index → cover pathHash by
-  // the resolver closure below (which adapts the grid view model). Created in
-  // onEnter (start), joined/freed in onExit (stop). Hold prefetcher_.lockCache()
-  // around cache reads in the render path AND around any rebuildView/sortBy (the
-  // worker reads view_ via the resolver under that same lock).
-  CoverPrefetcher prefetcher_{renderer, PER_PAGE, [this](int itemIndex) -> std::optional<uint32_t> {
-                                const LibraryBook* b = bookForGridIndex(itemIndex);  // null = back tile / OOB
-                                return b ? std::optional<uint32_t>(b->pathHash) : std::nullopt;
-                              }};
-
-  // True while a rapid-jump (continuous Up/Down) hold is in progress. We don't
-  // decode pages flicked past, so the render path peeks and shows placeholders
-  // for the uncached page; release (endRapidJumpIfActive) loads the landed page
-  // for real. Volatile because the render task reads it without the cache lock.
-  volatile bool rapidJumping_ = false;
-
-  // ---- Navigation helpers ------------------------------------------------
-  // Launch the collection-membership picker for the book under the cursor.
-  // Returns true (close the popup) when there's no book to edit; false while
-  // the picker is launched (the return handler closes the popup on resume).
+  // ---- Collections / menu -------------------------------------------------
+  // Launch the collection-membership picker for the selected book. Returns true (close
+  // the popup) when there's no book to edit; false while the picker is launched.
   bool openCollectionPicker(bool add);
 
-  void moveUp();
-  void moveDown();
-  void moveLeft();
-  void moveRight();
-  void moveNext();
-  void jumpPageBack();
-  void jumpPageForward();
-  // Resume normal prefetch + render-side cache loading after a rapid-jump
-  // continuous-hold ends. No-op if not currently rapid-jumping.
-  void endRapidJumpIfActive();
-
-  // ---- Active view helpers ------------------------------------------------
-  // Read the persisted active view from settings, validate it (a missing
-  // collection or an empty auto-group falls back to All Books and resaves),
-  // then rebuild view_ / hasBackTile_ / viewTitle_ from the (sorted) index.
-  // Call after every sortBy and on entry.
-  void rebuildView();
-  // Number of grid items in the active view (filtered books + back tile).
-  int viewItemCount() const;
-  // True when gridIndex addresses the synthetic back tile (slot 0, filtered).
-  bool isBackTileIndex(int gridIndex) const;
-  // The book at a grid index, or nullptr for the back tile / out of range.
-  const LibraryBook* bookForGridIndex(int gridIndex) const;
-  // Switch back to All Books (used by the back tile), persist, and repaint.
-  void activateBack();
-  void renderBackTile(const Rect& cell, bool selected);
-
+  // Confirm: open the selected book, or return to All Books from the back tile.
   void doSelect();
-  // Launch the keyboard to enter a search query; on confirm, switch the shelf to
-  // the LIB_VIEW_SEARCH filter for that query. Returns true (closes the popup).
+  // Launch the keyboard for a search query; on confirm switch to the SEARCH view.
   bool onSearch();
-  // Close the popup and refresh after the collection-membership picker returns.
-  // Only a collection view's contents depend on membership, so the view is
-  // rebuilt only then; otherwise the grid is just repainted in place.
+  // After the membership picker returns: rebuild a collection view (its contents
+  // changed).
   void onCollectionMembershipChanged();
-  // Refresh after the (suspended) CollectionsActivity returns. Rebuilds the
-  // active view only when it changed, preserving grid position otherwise.
+  // After CollectionsActivity returns: rebuild only when the active view changed.
   void onReturnFromCollections(bool viewChanged);
-  // Rebuild view_ from current settings and reset the grid to the view's
-  // default selection (shared by the membership / collections return paths).
+  // Re-resolve the active subset and reset selection to the first book.
   void reloadActiveView();
-  // Re-sort the index from current settings and reset selection to the top.
+  // Switch back to All Books (the back tile), persist, repaint.
+  void activateBack();
+  // Re-sort the index from settings and reset selection to the top.
   void applySort();
-  // Persist the active sort field/direction and re-sort.
   void setSort(uint8_t field, uint8_t direction);
+  bool onSortSelect(CrossPointSettings::LIBRARY_SORT_FIELD sortType);
+  std::optional<PopupMenu::Glyph> getSortGlyph(
+    CrossPointSettings::LIBRARY_SORT_FIELD sortType
+  );
 
-  // ---- Rendering helpers --------------------------------------------------
-  // Compute the cover-slot rect for a grid cell by replaying the same flex
-  // layout the render path uses (no drawing). Cells are uniform, so this is the
-  // draw envelope for every cover, handed to prefetcher_ (start / setCoverBox) so it
-  // scales covers to the exact dims the render path requests.
-  Rect computeCoverSlot() const;
+  // ---- Subset resolution --------------------------------------------------
+  // Resolve the persisted active view (kind + collection id / name) into a subset for
+  // the grid view via LibrarySubsetManager, applying the fallback policy (a stale
+  // collection or an emptied auto-group resets to All Books and resaves settings).
+  LibraryGridView::Subset resolveSubset();
 
-  // Body of the render: header + library shelf or menu + footer hints.
-  // Split out from render() so the prewarming and clear/display bookends
-  // stay tidy.
+  // ---- Render scaffold ----------------------------------------------------
   void renderPasses();
   void renderBattery(const Rect& headerBox);
   std::string getHeaderSubtitleText();
-  void renderLibraryShelf(const Rect& shelfArea);
-  void renderPageRail(const Rect& railArea);
-  void renderBookTile(const Rect& cell, const LibraryBook& book, bool selected);
+  // The shelf content rect: the page scaffold down to the body/rail split. Sizes the
+  // grid view's prefetcher and is the area the view renders into. Mirrors the render
+  // path's scaffold (UIPage + body/rail Hstack) without drawing — keep in sync.
+  Rect computeContentRect();
+  // The pagination indicator in the rail. Reads only page state (not the grid), so
+  // swapping to a different scroll indicator later is a shell-only change.
+  void renderScrollIndicator(
+    const Rect& railArea, uint8_t currentPage, uint8_t pageCount
+  );
   void renderEmptyState(const Rect& body);
-  bool onSortSelect(CrossPointSettings::LIBRARY_SORT_FIELD sortType);
-  std::optional<PopupMenu::Glyph> getSortGlyph(CrossPointSettings::LIBRARY_SORT_FIELD sortType);
 
  public:
   explicit LibraryActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
@@ -143,8 +73,8 @@ class LibraryActivity final : public Activity {
   void loop() override;
   void render(RenderLock&&) override;
 
-  // Power-button override: short-press advances linearly through the
-  // library (delegates to moveNext()), wrapping at the end.
+  // Power-button override: short-press advances through the library (next book / next in
+  // row, per settings).
   bool handlePowerShortPress() override;
 
   std::vector<MenuRegistryEntry> getGlobalMenuEntries() override;
