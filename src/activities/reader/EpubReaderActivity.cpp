@@ -1089,7 +1089,17 @@ void EpubReaderActivity::render(RenderLock&& lock) {
     LOG_DBG("ERS", "Rendered page in %dms", millis() - start);
   }
   silentIndexNextChapterIfNeeded(viewportWidth, viewportHeight);
-  saveProgress(currentSpineIndex, section->currentPage, section->pageCount);
+  // Only persist when the position actually changed; render() re-runs on every
+  // button press while the global menu is open, and an unguarded SD write there
+  // dominated re-render latency (and burns SPIFFS erase cycles).
+  if (currentSpineIndex != savedSpineIndex || section->currentPage != savedPageNumber ||
+      section->pageCount != savedPageCount) {
+    if (saveProgress(currentSpineIndex, section->currentPage, section->pageCount)) {
+      savedSpineIndex = currentSpineIndex;
+      savedPageNumber = section->currentPage;
+      savedPageCount = section->pageCount;
+    }
+  }
 
   showPendingSyncSaveError();
 

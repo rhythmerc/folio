@@ -21,6 +21,12 @@ class EpubReaderActivity final : public Activity {
   // Consecutive page-load failures. Bounds the rebuild retry so a corrupt
   // page can't spin render() forever. Reset to 0 on any successful load.
   int pageLoadRetries = 0;
+  // Last position persisted by render()'s per-render progress save. Guards the
+  // SD write so re-renders that don't move the page (e.g. every button press
+  // with the global menu open) skip the ~tens-of-ms write. -1 forces a save.
+  int savedSpineIndex = -1;
+  int savedPageNumber = -1;
+  int savedPageCount = -1;
   int currentSpineIndex = 0;
   int nextPageNumber = 0;
   std::optional<uint16_t> pendingPageJump;
