@@ -27,6 +27,9 @@ class EpubReaderActivity final : public Activity {
   int savedSpineIndex = -1;
   int savedPageNumber = -1;
   int savedPageCount = -1;
+  // True while the GlobalMenu is open: tells image rendering to build/use a RAM
+  // BW cache so menu re-renders don't re-stream the image from SD.
+  bool bwImageCacheActive = false;
   int currentSpineIndex = 0;
   int nextPageNumber = 0;
   std::optional<uint16_t> pendingPageJump;
@@ -133,6 +136,11 @@ class EpubReaderActivity final : public Activity {
   void onExit() override;
   void loop() override;
   void render(RenderLock&& lock) override;
+  void onGlobalMenuOpened() override { bwImageCacheActive = true; }
+  void onGlobalMenuClosed() override {
+    bwImageCacheActive = false;
+    if (cachedPage) cachedPage->releaseImageCaches();
+  }
   bool isReaderActivity() const override { return true; }
   std::optional<GlobalMenuConfig> getGlobalMenuConfig() override {
     // clearFontCacheOnClose reclaims the UI-font RAM so the grayscale framebuffer snapshot has headroom.

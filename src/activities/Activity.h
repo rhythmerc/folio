@@ -39,6 +39,12 @@ class Activity {
 
   virtual void render(RenderLock&&) {}
 
+  // Fired by ActivityManager when the GlobalMenu opens/closes over this
+  // activity, so it can prepare or release menu-scoped resources (e.g. a
+  // transient BW image cache). Default no-op.
+  virtual void onGlobalMenuOpened() {}
+  virtual void onGlobalMenuClosed() {}
+
   // If immediate is true, the update will be triggered immediately.
   // Otherwise, it will be deferred until the end of the current loop iteration.
   virtual void requestUpdate(bool immediate = false);

@@ -1730,6 +1730,11 @@ void GfxRenderer::blit1Bit(const uint8_t* src, const int srcStride, const int w,
   }
 }
 
+void GfxRenderer::blitImage1Bit(const uint8_t* src, const int srcStride, const int w, const int h, const int x,
+                                const int y) const {
+  blit1Bit<BlitMode::Opaque>(src, srcStride, w, h, x, y, 0);
+}
+
 template bool GfxRenderer::drawCachedBitmap<false>(BitmapCacheManager&, const char*, int, int, int, int, int) const;
 template bool GfxRenderer::drawCachedBitmap<true>(BitmapCacheManager&, const char*, int, int, int, int, int) const;
 

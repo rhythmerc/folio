@@ -1,9 +1,13 @@
 #include "ImageBlock.h"
 
+#include <Arduino.h>
 #include <FontCacheManager.h>
 #include <GfxRenderer.h>
 #include <Logging.h>
+#include <Memory.h>
 #include <Serialization.h>
+
+#include <cstring>
 
 #include "Epub/converters/DirectPixelWriter.h"
 #include "Epub/converters/ImageDecoderFactory.h"
@@ -142,8 +146,24 @@ void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
     return;
   }
 
+  // BW-only RAM cache (GlobalMenu re-renders force BW). renderMode == BW also
+  // excludes grayscale strip passes, so a partial strip can never poison it.
+  const bool bwMode = renderer.getRenderMode() == GfxRenderer::BW;
+  if (bwCache && bwMode) {
+    blitBwCache(renderer, x, y);
+    return;
+  }
+
   // Try to render from cache first
   std::string cachePath = getCachePath(imagePath);
+
+  if (bwMode && renderer.bwImageCacheEnabled()) {
+    if (buildAndBlitBwCache(renderer, cachePath, x, y)) {
+      return;  // built + drew this frame; future re-renders blit from RAM
+    }
+    // build skipped/failed (no .pxc / OOM) — fall through to streaming
+  }
+
   if (renderFromCache(renderer, cachePath, x, y, width, height)) {
     return;  // Successfully rendered from cache
   }
@@ -191,6 +211,98 @@ void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
   }
 
   LOG_DBG("IMG", "Decode successful");
+}
+
+void ImageBlock::blitBwCache(GfxRenderer& renderer, int x, int y) const {
+  // One orientation-aware, byte-marching blit instead of a per-pixel walk.
+  renderer.blitImage1Bit(bwCache.get(), (bwCacheWidth + 7) / 8, bwCacheWidth, bwCacheHeight, x, y);
+}
+
+bool ImageBlock::buildAndBlitBwCache(GfxRenderer& renderer, const std::string& cachePath, int x, int y) {
+  HalFile cacheFile;
+  if (!Storage.openFileForRead("IMG", cachePath, cacheFile)) {
+    return false;
+  }
+  uint16_t cw, ch;
+  if (cacheFile.read(&cw, 2) != 2 || cacheFile.read(&ch, 2) != 2) {
+    return false;
+  }
+  if (abs(cw - width) > 1 || abs(ch - height) > 1) {
+    LOG_ERR("IMG", "BW cache dim mismatch: %dx%d vs %dx%d", cw, ch, width, height);
+    return false;
+  }
+
+  const int bytesPerRow2 = (cw + 3) / 4;  // source: 2 bits/pixel
+  const int bytesPerRow1 = (cw + 7) / 8;  // dest:   1 bit/pixel
+  const size_t total = static_cast<size_t>(bytesPerRow1) * ch;
+
+  // ponytail: fixed 24KB reserve. If the 1bpp copy plus headroom for the menu's
+  // own draw won't fit, skip the cache and stream as before — no cache, no crash.
+  constexpr size_t RESERVE = 24 * 1024;
+  if (ESP.getFreeHeap() < total + RESERVE) {
+    LOG_DBG("IMG", "Skip BW cache: heap %u < need %u", (unsigned)ESP.getFreeHeap(), (unsigned)(total + RESERVE));
+    return false;
+  }
+  auto buf = makeUniqueNoThrow<uint8_t[]>(total);
+  if (!buf) {
+    LOG_ERR("IMG", "OOM: BW cache %u bytes", (unsigned)total);
+    return false;
+  }
+  memset(buf.get(), 0, total);
+
+  // Stream the 2bpp .pxc through a small batched buffer (mirrors renderFromCache)
+  // — never hold the whole 2bpp image — thresholding each pixel into buf.
+  int rowsPerRead = 4096 / bytesPerRow2;
+  if (rowsPerRead < 1) rowsPerRead = 1;
+  if (rowsPerRead > ch) rowsPerRead = ch;
+  auto readBuffer = makeUniqueNoThrow<uint8_t[]>(static_cast<size_t>(rowsPerRead) * bytesPerRow2);
+  if (!readBuffer) {
+    rowsPerRead = 1;
+    readBuffer = makeUniqueNoThrow<uint8_t[]>(bytesPerRow2);
+  }
+  if (!readBuffer) {
+    LOG_ERR("IMG", "OOM: BW cache row buffer");
+    return false;
+  }
+
+  // buf is zeroed (all bits 0 = ink/black per blit1Bit's convention); set a bit
+  // only for white pixels (2-bit value == 3, matching the BW draw threshold).
+  int rowsInBuffer = 0;
+  int bufferRow = 0;
+  for (int row = 0; row < ch; row++) {
+    if (bufferRow >= rowsInBuffer) {
+      const int toRead = (ch - row < rowsPerRead) ? (ch - row) : rowsPerRead;
+      const size_t bytes = static_cast<size_t>(toRead) * bytesPerRow2;
+      if (cacheFile.read(readBuffer.get(), bytes) != static_cast<int>(bytes)) {
+        LOG_ERR("IMG", "BW cache build read error at row %d", row);
+        return false;  // buf discarded; caller streams/decodes and redraws fully
+      }
+      rowsInBuffer = toRead;
+      bufferRow = 0;
+    }
+
+    const uint8_t* srcRow = readBuffer.get() + static_cast<size_t>(bufferRow) * bytesPerRow2;
+    bufferRow++;
+    uint8_t* dstRow = buf.get() + static_cast<size_t>(row) * bytesPerRow1;
+
+    for (int col = 0; col < cw; col++) {
+      const int byteIdx = col >> 2;
+      const int bitShift = 6 - (col & 3) * 2;  // MSB-first within byte
+      const uint8_t value = (srcRow[byteIdx] >> bitShift) & 0x03;
+      if (value == 3) {  // white => background bit set; black (value < 3) stays 0
+        dstRow[col >> 3] |= (0x80 >> (col & 7));
+      }
+    }
+  }
+
+  bwCache = std::move(buf);
+  bwCacheWidth = cw;
+  bwCacheHeight = ch;
+  LOG_DBG("IMG", "Built BW cache: %dx%d (%u bytes)", cw, ch, (unsigned)total);
+
+  // Draw this first frame from the freshly built cache (same fast blit path).
+  blitBwCache(renderer, x, y);
+  return true;
 }
 
 bool ImageBlock::serialize(HalFile& file) {

@@ -95,6 +95,13 @@ void ActivityManager::loop() {
         requestUpdate();
       }
 
+      // General hook: let the activity react to the menu opening/closing.
+      if (!wasOpen && globalMenu.isOpen()) {
+        currentActivity->onGlobalMenuOpened();
+      } else if (wasOpen && !globalMenu.isOpen()) {
+        currentActivity->onGlobalMenuClosed();
+      }
+
       // On menu close, reclaim the font-cache RAM the menu warmed (opt-in: the
       // reader needs the headroom back for its grayscale framebuffer snapshot).
       // The next render re-warms the screen's fonts on demand.

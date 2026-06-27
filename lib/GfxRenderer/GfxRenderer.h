@@ -96,6 +96,9 @@ class GfxRenderer {
   // only via FlushGuard.
   mutable bool displaySuppressed_ = false;
 
+  // See setBwImageCacheEnabled(): hint for image blocks to keep a BW RAM copy.
+  bool bwImageCacheEnabled_ = false;
+
 
  public:
   // RAII: silence displayBuffer() for its lifetime so a base frame can be drawn
@@ -294,6 +297,12 @@ class GfxRenderer {
                   float cropY = 0) const;
   void drawBitmap1Bit(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight) const;
 
+  // Opaque blit of a full logical-space 1-bit raster (MSB-first, `0` = black /
+  // `1` = white, row stride `srcStride`) at logical (x, y). Orientation-aware
+  // fast path (the shared blit1Bit core). Writes the full framebuffer, so use
+  // only for full-frame BW — not during a grayscale strip pass.
+  void blitImage1Bit(const uint8_t* src, int srcStride, int w, int h, int x, int y) const;
+
   // ─── Image cache ─────────────────────────────────────────────────────
   // Path-keyed bitmap cache. The renderer doesn't own the storage — the
   // caller (typically an activity that knows its working set) supplies a
@@ -366,6 +375,12 @@ class GfxRenderer {
   // Grayscale functions
   void setRenderMode(const RenderMode mode) { this->renderMode = mode; }
   RenderMode getRenderMode() const { return renderMode; }
+
+  // Transient hint: when set, image blocks may build/keep a RAM-resident BW
+  // copy of their pixels (for fast re-renders, e.g. under the GlobalMenu)
+  // instead of re-streaming from SD. Only honored in BW render mode.
+  void setBwImageCacheEnabled(bool enabled) { bwImageCacheEnabled_ = enabled; }
+  bool bwImageCacheEnabled() const { return bwImageCacheEnabled_; }
   // Grayscale preconditioning settle pass (no-op on X4). The rect overload
   // takes the gray region in LOGICAL screen coordinates and rotates it to the
   // panel; the no-arg overload settles the full frame. Call after the BW base

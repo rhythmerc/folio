@@ -1168,6 +1168,10 @@ void EpubReaderActivity::renderContents(const Page& page, const int orientedMarg
     }
   };
 
+  // Under the GlobalMenu (BW re-renders), let images keep a RAM BW copy so each
+  // menu keypress doesn't re-stream the image from SD. No-op while reading
+  // (flag false); grayscale passes never see it (menu-open returns before them).
+  renderer.setBwImageCacheEnabled(bwImageCacheActive);
   page.render(renderer, fontId, orientedMarginLeft, orientedMarginTop);
   renderStatusBar();
   const auto tBwRender = millis();

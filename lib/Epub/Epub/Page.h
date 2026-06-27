@@ -54,6 +54,7 @@ class PageImage final : public PageElement {
   PageElementTag getTag() const override { return TAG_PageImage; }
   static std::unique_ptr<PageImage> deserialize(HalFile& file);
   const ImageBlock& getImageBlock() const { return *imageBlock; }
+  void releaseImageCache() { imageBlock->releaseBwCache(); }
 };
 
 class PageHorizontalRule final : public PageElement {
@@ -89,6 +90,15 @@ class Page {
 
   void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) const;
   void renderImages(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) const;
+
+  // Free any RAM-resident BW image caches held by this page's images.
+  void releaseImageCaches() {
+    for (auto& el : elements) {
+      if (el->getTag() == TAG_PageImage) {
+        static_cast<PageImage&>(*el).releaseImageCache();
+      }
+    }
+  }
   bool serialize(HalFile& file) const;
   static std::unique_ptr<Page> deserialize(HalFile& file);
 
