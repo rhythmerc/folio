@@ -245,6 +245,14 @@ bool LibraryIndex::refreshFromSdCard(const IndexProgressFn& onProgress) {
     epubPaths.push_back(frame.path + "/" + nameBuf);
   }
 
+  // Final `books` size == one entry per discovered EPUB. Reserve it once now,
+  // while the heap's largest block is still large. Without this the vector
+  // doubles 16→32→…→256 mid-loop; each doubling needs old+new contiguous
+  // simultaneously, and at 128→256 (~45KB) that abort()s once theme fonts have
+  // lowered the ceiling. std::vector growth uses plain operator new — not
+  // nothrow under -fno-exceptions. (CLAUDE.md rule 7.)
+  books.reserve(epubPaths.size());
+
   // --- Partition: reuse cached metadata for known books, collect the rest as
   // the work list. Reused books are added straight to `books`. ---
   std::vector<std::string> newPaths;
@@ -274,6 +282,12 @@ bool LibraryIndex::refreshFromSdCard(const IndexProgressFn& onProgress) {
   for (int i = 0; i < total; ++i) {
     std::string& path = newPaths[i];
     if (onProgress) onProgress(i, total, epubLabel(path).c_str());
+
+    // ponytail: OOM diagnostic — watch maxAlloc, not free. PNG cover decode
+    // needs a 32KB contiguous block (InflateReader ring buffer); theme fonts
+    // fragment the heap. Remove once the indexing OOM is root-caused.
+    LOG_INF(LOG_TAG, "index[%d/%d] free=%u maxAlloc=%u %s", i, total,
+            ESP.getFreeHeap(), ESP.getMaxAllocHeap(), epubLabel(path).c_str());
 
     const uint32_t h = hashPath(path);
     Epub epub(path, CACHE_DIR);
