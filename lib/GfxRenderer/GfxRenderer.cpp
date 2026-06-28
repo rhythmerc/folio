@@ -285,7 +285,7 @@ static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode 
           if (renderMode == GfxRenderer::BW) {
             // Fast mode dithers the 4-level alpha into the single BW pass;
             // otherwise threshold-ink any non-white pixel (legacy behavior).
-            if (renderer.isDitherBwActive()) {
+            if (renderer.isDitherBwActive() && pixelState) {
               renderer.drawPixelBlueNoise(screenX, screenY, bmpVal);
             } else if (bmpVal < 3) {
               renderer.drawPixel(screenX, screenY, pixelState);
