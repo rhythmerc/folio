@@ -2281,12 +2281,17 @@ size_t GfxRenderer::getBufferSize() const { return frameBufferSize; }
 // void GfxRenderer::grayscaleRevert() const { display.grayscaleRevert(); }
 
 void GfxRenderer::displayGrayscaleBase(HalDisplay::RefreshMode fallback) const {
+  if (displaySuppressed_) return;
   display.displayGrayscaleBase(fallback, fadingFix);
 }
 
-void GfxRenderer::preconditionGrayscale() const { display.preconditionGrayscale(); }
+void GfxRenderer::preconditionGrayscale() const {
+  if (displaySuppressed_) return;
+  display.preconditionGrayscale();
+}
 
 void GfxRenderer::preconditionGrayscale(int x, int y, int w, int h) const {
+  if (displaySuppressed_) return;
   if (w <= 0 || h <= 0) return;
   // Rotate the logical rect's opposite corners to physical panel coords; the
   // physical bbox stays axis-aligned for all four orientations.
@@ -2304,9 +2309,15 @@ void GfxRenderer::preconditionGrayscale(int x, int y, int w, int h) const {
                                 static_cast<uint16_t>(x1 - x0 + 1), static_cast<uint16_t>(y1 - y0 + 1));
 }
 
-void GfxRenderer::copyGrayscaleLsbBuffers() const { display.copyGrayscaleLsbBuffers(frameBuffer); }
+void GfxRenderer::copyGrayscaleLsbBuffers() const {
+  if (displaySuppressed_) return;
+  display.copyGrayscaleLsbBuffers(frameBuffer);
+}
 
-void GfxRenderer::copyGrayscaleMsbBuffers() const { display.copyGrayscaleMsbBuffers(frameBuffer); }
+void GfxRenderer::copyGrayscaleMsbBuffers() const {
+  if (displaySuppressed_) return;
+  display.copyGrayscaleMsbBuffers(frameBuffer);
+}
 
 void GfxRenderer::displayGrayBuffer() const { 
   if (displaySuppressed_) return;
@@ -2314,6 +2325,7 @@ void GfxRenderer::displayGrayBuffer() const {
 }
 
 void GfxRenderer::writeGrayscalePlaneStrip(bool lsbPlane, const uint8_t* scratch, int yStart, int numRows) const {
+  if (displaySuppressed_) return;
   // Guard the uint16_t casts below: a negative would wrap to a huge length.
   assert(yStart >= 0 && numRows > 0 && yStart <= static_cast<int>(panelHeight) - numRows);
   display.writeGrayscalePlaneStrip(lsbPlane, scratch, static_cast<uint16_t>(yStart), static_cast<uint16_t>(numRows));
@@ -2408,6 +2420,7 @@ void GfxRenderer::restoreBwBuffer() {
  * Use this when BW buffer was re-rendered instead of stored/restored.
  */
 void GfxRenderer::cleanupGrayscaleWithFrameBuffer() const {
+  if (displaySuppressed_) return;
   if (frameBuffer) {
     display.cleanupGrayscaleBuffers(frameBuffer);
   }

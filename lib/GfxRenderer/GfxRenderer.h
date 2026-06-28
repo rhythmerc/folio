@@ -90,10 +90,12 @@ class GfxRenderer {
   mutable int _stripRows = 0;
   mutable bool _stripActive = false;
 
-  // While true, displayBuffer() is a no-op. Lets an overlay (e.g. GlobalMenu)
-  // draw a base frame into the framebuffer without pushing it, then composite
-  // and push exactly once. Mutable because displayBuffer() is const. Toggled
-  // only via FlushGuard.
+  // While true, ALL panel output is a no-op: displayBuffer() and the grayscale
+  // plane pushes (displayGrayscaleBase / displayGrayBuffer / copyGrayscale* /
+  // preconditionGrayscale / writeGrayscalePlaneStrip / cleanupGrayscaleWithFrameBuffer).
+  // Lets an overlay (e.g. GlobalMenu) draw a base BW frame into the framebuffer
+  // without pushing it, then composite and push exactly once. Mutable because the
+  // display methods are const. Toggled only via FlushGuard.
   mutable bool displaySuppressed_ = false;
 
   // See setBwImageCacheEnabled(): hint for image blocks to keep a BW RAM copy.
@@ -101,9 +103,10 @@ class GfxRenderer {
 
 
  public:
-  // RAII: silence displayBuffer() for its lifetime so a base frame can be drawn
-  // without a panel push, to be composited under an overlay before a single
-  // push. Nested class — has access to the private displaySuppressed_ flag.
+  // RAII: silence ALL panel output (displayBuffer + grayscale plane pushes) for
+  // its lifetime so a base BW frame can be drawn without a panel push, to be
+  // composited under an overlay before a single push. Nested class — has access
+  // to the private displaySuppressed_ flag.
   class FlushGuard {
     const GfxRenderer& r_;
 
@@ -375,6 +378,10 @@ class GfxRenderer {
   // Grayscale functions
   void setRenderMode(const RenderMode mode) { this->renderMode = mode; }
   RenderMode getRenderMode() const { return renderMode; }
+
+  // True while panel output is suppressed (FlushGuard active, e.g. the GlobalMenu
+  // overlay). Lets callers skip an expensive grayscale pass that would be silenced.
+  bool displaySuppressed() const { return displaySuppressed_; }
 
   // Transient hint: when set, image blocks may build/keep a RAM-resident BW
   // copy of their pixels (for fast re-renders, e.g. under the GlobalMenu)

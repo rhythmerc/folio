@@ -75,6 +75,11 @@ inline void displayWithRefreshCycle(const GfxRenderer& renderer, int& pagesUntil
 // Kept as a template to avoid std::function overhead; instantiated once per reader type.
 template <typename RenderFn>
 void renderAntiAliased(GfxRenderer& renderer, RenderFn&& renderFn) {
+  // Under an overlay composite (e.g. GlobalMenu), panel output is suppressed and the
+  // grayscale plane pushes would no-op anyway — skip the 48KB BW snapshot + both render
+  // passes entirely. The framebuffer already holds the BW page the caller just drew.
+  if (renderer.displaySuppressed()) return;
+
   if (!renderer.storeBwBuffer()) {
     LOG_ERR("READER", "Failed to store BW buffer for anti-aliasing");
     return;
