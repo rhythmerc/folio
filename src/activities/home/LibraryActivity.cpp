@@ -32,6 +32,7 @@
 #include "components/ui/CascadingPopupMenu/CascadingPopupMenu.h"
 #include "components/ui/UIPage/UIPage.h"
 #include "stores/collections/CollectionStore.h"
+#include "components/ui/TextBlock/TextBlock.h"
 #include "util/Flex.h"
 
 namespace {
@@ -513,14 +514,19 @@ void LibraryActivity::renderScrollIndicator(
 }
 
 void LibraryActivity::renderEmptyState(const Rect& body) {
-  // "No books on SD card" — italic heading, centered both axes inside the
-  // body region.
-  const int font = libFont(FontRole::Heading);
-  const char* msg = tr(STR_LIBRARY_NO_BOOKS);
-  const int textW = renderer.getTextWidth(font, msg, EpdFontFamily::ITALIC);
-  const int textH = renderer.getLineHeight(font);
-  const Rect at = flex::center(body, textW, textH);
-  renderer.drawText(font, at.x, at.y, msg, true, EpdFontFamily::ITALIC);
+  const TextBlock::Line lines[]{
+    TextBlock::Line{ 
+      .text = tr(STR_LIBRARY_NO_BOOKS_TITLE),
+      .fontId = libFont(FontRole::Title)
+    },
+    TextBlock::Line{
+      .text = tr(STR_LIBRARY_NO_BOOKS_SUBTITLE),
+      .fontId = libFont(FontRole::BodyCompact),
+      .gapBefore = 8 
+    },
+  };
+
+  TextBlock::render(renderer, body, lines, 2);
 }
 
 bool LibraryActivity::onSortSelect(CrossPointSettings::LIBRARY_SORT_FIELD sortType) {

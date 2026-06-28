@@ -133,7 +133,6 @@ void CollectionGroupActivity::render(RenderLock&&) {
 
   if (groups.empty()) {
     const int y = body.y + (body.height - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
-    renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_LIBRARY_NO_BOOKS));
   } else {
     GUI.drawList(
         renderer, body, static_cast<int>(groups.size()), selectedIndex,
