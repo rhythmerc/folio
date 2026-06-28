@@ -351,17 +351,24 @@ void TxtReaderActivity::render(RenderLock&&) {
   if (currentPage < 0) currentPage = 0;
   if (currentPage >= totalPages) currentPage = totalPages - 1;
 
-  // Load current page content
-  size_t offset = pageOffsets[currentPage];
-  size_t nextOffset;
-  currentPageLines.clear();
-  loadPageAtOffset(offset, currentPageLines, nextOffset);
+  // Only re-read + re-wrap the page from SD when it actually changed. Menu
+  // re-composites (GlobalMenu overlay) re-render the same page every frame, so
+  // reusing the cached lines avoids an SD read + progress write per keypress.
+  const bool pageChanged = currentPageLines.empty() || loadedPageLinesFor != currentPage;
+  if (pageChanged) {
+    size_t offset = pageOffsets[currentPage];
+    size_t nextOffset;
+    currentPageLines.clear();
+    loadPageAtOffset(offset, currentPageLines, nextOffset);
+    loadedPageLinesFor = currentPage;
+  }
 
   renderer.clearScreen();
   renderPage();
 
-  // Save progress
-  saveProgress();
+  if (pageChanged) {
+    saveProgress();
+  }
 }
 
 void TxtReaderActivity::renderPage() {

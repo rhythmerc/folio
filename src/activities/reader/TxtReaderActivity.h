@@ -17,6 +17,9 @@ class TxtReaderActivity final : public Activity {
   // Streaming text reader - stores file offsets for each page
   std::vector<size_t> pageOffsets;  // File offset for start of each page
   std::vector<std::string> currentPageLines;
+  // Page index currentPageLines was wrapped for (-1 = none). Lets render() skip the
+  // SD reload + progress save when the page is unchanged (e.g. GlobalMenu re-composites).
+  int loadedPageLinesFor = -1;
   int linesPerPage = 0;
   int viewportWidth = 0;
   bool initialized = false;
