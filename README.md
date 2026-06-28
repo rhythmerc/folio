@@ -1,12 +1,37 @@
 # Folio
 
-Folio is open-source e-reader firmware - community-built, fully hackable, free forever. It's maintained by a growing community of developers and readers who believe your device should do what you want - not what a manufacturer decided for you.
+Folio is a fork/extension of the excellent [CrossPoint Reader](https://github.com/crosspoint-reader/crosspoint-reader) focused on library management and consistent UX.
+
+We replace CrossPoint's home screen with an extensive **library**, displaying your entire collection in an easy-to-browse
+grid with support for sorting, search, and custom collections. You can browse your entire library or dig into books by
+author, series, or genre.
+
+Additionally, we introduce the new **global nav menu**, Folio's menu for performing actions across activities. The nav menu lets you 
+setup your library view, rename/delete files in the file browser, get to your bookmarks in the reader, etc., and it allows you
+to get around Folio by jumping directly into apps and settings.
+
+We introduce **downloadable themes** for customizing the Folio experience. Themes bundle styling and UI font-sets to
+create distinct looks across the entire Folio interface.
+
+Finally, Folio **optimizes** CrossPoint across several key areas to enhance the user experience.
+
+Welcome to Folio!
+
+![Folio running on Xteink X4](./docs/images/cover.png)
 
 **Now running on:** ESP32C3-based Xteink [X4](https://www.xteink.com/products/xteink-x4) and [X3](https://www.xteink.com/products/xteink-x3).
 
-![Folio running on Xteink device](./docs/images/cover.png)
+# Original (CrossPoint) README
 
-## What can Folio do?
+[![Fund contributors](https://img.shields.io/badge/%F0%9F%91%91_Fund_contributors-royalty.dev-BB953A?style=for-the-badge&labelColor=1a1a1a)](https://app.royalty.dev/crosspoint-reader/crosspoint-reader)
+
+CrossPoint is open-source e-reader firmware - community-built, fully hackable, free forever. It's maintained by a growing community of developers and readers who believe your device should do what you want - not what a manufacturer decided for you.
+
+**Now running on:** ESP32C3-based Xteink [X4](https://www.xteink.com/products/xteink-x4) and [X3](https://www.xteink.com/products/xteink-x3).
+
+![CrossPoint Reader running on Xteink device](./docs/images/cover.jpg)
+
+## What can CrossPoint do?
 
 - **Reader engine**: EPUB 2/3 rendering with embedded-style option, image handling, hyphenation, kerning, chapter navigation, footnotes, bookmarks, go-to-percent, auto page turn, orientation control, focus reading, KOReader progress sync and more. 
 
@@ -50,7 +75,7 @@ Folio is open-source e-reader firmware - community-built, fully hackable, free f
 
 Some Xteink units purchased from third-party stores (e.g. AliExpress) ship with USB flashing locked from the factory.
 If your device is locked, you will need to use the **Xteink Unlocker** tool available at
-https://crosspointreader.com/#unlock-tool before you can flash Folio.
+https://crosspointreader.com/#unlock-tool before you can flash CrossPoint.
 
 **You do not need this tool if you bought your device directly from xteink.com.** Those units are not locked.
 
@@ -201,7 +226,7 @@ Minor adjustments may be required for Windows.
 
 ## Internals
 
-Folio is pretty aggressive about caching data down to the SD card to minimise RAM usage. The ESP32-C3 only has ~380KB of usable RAM, so we have to be careful. A lot of the decisions made in the design of the firmware were based on this constraint.
+CrossPoint Reader is pretty aggressive about caching data down to the SD card to minimise RAM usage. The ESP32-C3 only has ~380KB of usable RAM, so we have to be careful. A lot of the decisions made in the design of the firmware were based on this constraint.
 
 ### Data caching
 
@@ -241,7 +266,7 @@ Everyone here is a volunteer, so please be respectful and patient. For governanc
 
 ## Community forks
 
-Folio is itself a hard fork of CrossPoint. One of the best things about open source is that anyone can take the code in a different direction. The forks below branch from CrossPoint, Folio's upstream — not from Folio itself — but if you need something outside Folio's [scope](./SCOPE.md), one of them may suit you:
+One of the best things about open source is that anyone can take the code in a different direction. If you need something outside CrossPoint's [scope](./SCOPE.md), check out the community forks:
 
 - [CrossInk](https://github.com/uxjulia/CrossInk) — Typography and reading tracking: Bionic Reading (bolds word stems to create fixation points), guide dots between words, improved paragraph indents, and replaces the default fonts with ChareInk/Lexend/Bitter.
 
