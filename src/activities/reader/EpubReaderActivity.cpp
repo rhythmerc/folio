@@ -1169,6 +1169,37 @@ void EpubReaderActivity::renderContents(const Page& page, const int orientedMarg
     }
   };
 
+  // Fast render mode: dither the smooth content (text when AA is on, images
+  // always) straight into the single BW framebuffer and flush once. No
+  // storeBwBuffer, no LSB/MSB grayscale planes, no grayscale waveform — far
+  // faster perceived page turn. Self-contained; the Quality path below is
+  // untouched.
+  if (SETTINGS.grayscaleRenderMode == CrossPointSettings::GR_FAST && needsAnyGrayscale) {
+    renderer.setBwImageCacheEnabled(bwImageCacheActive);
+    if (needsTextGrayscale) {
+      // AA on: one dithered pass covers text and images together.
+      renderer.setDitherBw(true);
+      page.render(renderer, fontId, orientedMarginLeft, orientedMarginTop);
+      renderer.setDitherBw(false);
+      renderStatusBar();
+    } else {
+      // AA off: keep threshold text, dither images only. Blank the image box
+      // first so the threshold ink from the main pass doesn't bleed through.
+      page.render(renderer, fontId, orientedMarginLeft, orientedMarginTop);
+      renderStatusBar();
+      int16_t imgX, imgY, imgW, imgH;
+      if (page.getImageBoundingBox(imgX, imgY, imgW, imgH)) {
+        renderer.fillRect(imgX + orientedMarginLeft, imgY + orientedMarginTop, imgW, imgH, false);
+        renderer.setDitherBw(true);
+        page.renderImages(renderer, fontId, orientedMarginLeft, orientedMarginTop);
+        renderer.setDitherBw(false);
+      }
+    }
+    ReaderUtils::displayWithRefreshCycle(renderer, pagesUntilFullRefresh);
+    LOG_DBG("ERS", "Page render (fast dither): prewarm=%lums total=%lums", tPrewarm - t0, millis() - t0);
+    return;
+  }
+
   // Under the GlobalMenu (BW re-renders), let images keep a RAM BW copy so each
   // menu keypress doesn't re-stream the image from SD. No-op while reading
   // (flag false); grayscale passes never see it (menu-open returns before them).

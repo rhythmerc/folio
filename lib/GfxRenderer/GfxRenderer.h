@@ -101,6 +101,13 @@ class GfxRenderer {
   // See setBwImageCacheEnabled(): hint for image blocks to keep a BW RAM copy.
   bool bwImageCacheEnabled_ = false;
 
+  // Fast (dithered BW) render path. While true, BW-mode glyph and image writes
+  // map their 4-level intensity onto a single BW pass via blue-noise ordered
+  // dither (drawPixelBlueNoise / DirectPixelWriter) instead of threshold-inking
+  // or rendering the slow LSB/MSB grayscale planes. Mutable because the render
+  // path is const; toggled by the readers around the content render.
+  mutable bool _ditherBwActive = false;
+
 
  public:
   // RAII: silence ALL panel output (displayBuffer + grayscale plane pushes) for
@@ -255,6 +262,14 @@ class GfxRenderer {
 
   // Drawing
   void drawPixel(int x, int y, bool state = true) const;
+  // Blue-noise ordered-dithered BW ink for the Fast render path. `val` is the
+  // 4-level glyph/image intensity (0=darkest .. 3=white); inks via blueNoiseInk
+  // (BlueNoise64.h) so AA edges approximate grayscale in a single BW pass.
+  void drawPixelBlueNoise(int x, int y, uint8_t val) const;
+
+  // Fast (dithered BW) render path toggle. See _ditherBwActive.
+  void setDitherBw(bool active) const { _ditherBwActive = active; }
+  bool isDitherBwActive() const { return _ditherBwActive; }
   void drawLine(int x1, int y1, int x2, int y2, bool state = true) const;
   void drawLine(int x1, int y1, int x2, int y2, int lineWidth, bool state) const;
   // Fast 1px-tall half-tone rule from (x, y) spanning `length` logical pixels.
