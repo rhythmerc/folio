@@ -117,10 +117,13 @@ bool FontDecompressor::decompressGroup(const EpdFontData* fontData, uint16_t gro
 
 uint32_t FontDecompressor::getAlignedOffset(const EpdFontData* fontData, uint16_t groupIndex, uint32_t glyphIndex) {
   uint32_t offset = 0;
+  const bool is2Bit = fontData->is2Bit;
 
   auto accumGlyph = [&](const EpdGlyph& g) {
     if (g.width > 0 && g.height > 0) {
-      offset += ((g.width + 3) / 4) * g.height;
+      // Byte-aligned row stride: 4 px/byte for 2-bit, 8 px/byte for 1-bit.
+      const uint32_t rowStride = is2Bit ? ((g.width + 3) / 4) : ((g.width + 7) / 8);
+      offset += rowStride * g.height;
     }
   };
 
@@ -143,10 +146,15 @@ uint32_t FontDecompressor::getAlignedOffset(const EpdFontData* fontData, uint16_
 }
 
 void FontDecompressor::compactSingleGlyph(const uint8_t* alignedSrc, uint8_t* packedDst, uint8_t width,
-                                          uint8_t height) {
+                                          uint8_t height, bool is2Bit) {
   if (width == 0 || height == 0) return;
-  const uint32_t rowStride = (width + 3) / 4;
-  if (width % 4 == 0) {
+  // Reverse to_byte_aligned(): pack byte-aligned rows back into the continuous
+  // bitstream renderCharImpl expects. bits/pixel and px/byte depend on depth.
+  const uint8_t bits = is2Bit ? 2 : 1;
+  const uint8_t pxPerByte = is2Bit ? 4 : 8;
+  const uint8_t mask = is2Bit ? 0x3 : 0x1;
+  const uint32_t rowStride = (width + pxPerByte - 1) / pxPerByte;
+  if (width % pxPerByte == 0) {
     memcpy(packedDst, alignedSrc, rowStride * height);
     return;
   }
@@ -154,8 +162,9 @@ void FontDecompressor::compactSingleGlyph(const uint8_t* alignedSrc, uint8_t* pa
   uint32_t writeIdx = 0;
   for (uint8_t y = 0; y < height; y++) {
     for (uint8_t x = 0; x < width; x++) {
-      outByte = (outByte << 2) | ((alignedSrc[y * rowStride + x / 4] >> ((3 - (x % 4)) * 2)) & 0x3);
-      outBits += 2;
+      const uint8_t pixel = (alignedSrc[y * rowStride + x / pxPerByte] >> (((pxPerByte - 1) - (x % pxPerByte)) * bits)) & mask;
+      outByte = (outByte << bits) | pixel;
+      outBits += bits;
       if (outBits == 8) {
         packedDst[writeIdx++] = outByte;
         outByte = 0;
@@ -200,7 +209,7 @@ const uint8_t* FontDecompressor::getBitmap(const EpdFontData* fontData, const Ep
   }
 
   uint32_t alignedOff = getAlignedOffset(fontData, groupIndex, glyphIndex);
-  compactSingleGlyph(&(*group)[alignedOff], hotGlyphBuf.data(), glyph->width, glyph->height);
+  compactSingleGlyph(&(*group)[alignedOff], hotGlyphBuf.data(), glyph->width, glyph->height, fontData->is2Bit);
   stats.getBitmapTimeUs += micros() - tStart;
   return hotGlyphBuf.data();
 }

@@ -422,15 +422,13 @@ void TxtReaderActivity::renderPage() {
   // Self-warming: no prewarm scan pass — the real render warms the SdCardFont
   // overflow + kern-row caches on demand (flash fonts self-warm via the
   // FontDecompressor group-LRU). Experiment: measure page-turn latency.
-  // Fast mode dithers the body text straight into the single BW pass (no
-  // grayscale planes); status bar stays crisp threshold. Quality keeps the
+  // Fast mode only dithers images, and txt has none, so body text renders
+  // straight to the single BW pass (1-bit, no dither). Quality keeps the
   // grayscale AA pass below unchanged.
   const bool fast =
       SETTINGS.textAntiAliasing && SETTINGS.grayscaleRenderMode == CrossPointSettings::GR_FAST;
 
-  if (fast) renderer.setDitherBw(true);
   renderLines();
-  if (fast) renderer.setDitherBw(false);
   renderStatusBar();
 
   ReaderUtils::displayWithRefreshCycle(renderer, pagesUntilFullRefresh);

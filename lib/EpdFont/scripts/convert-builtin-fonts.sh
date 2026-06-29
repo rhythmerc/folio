@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 READER_FONT_STYLES=("Regular" "Italic" "Bold" "BoldItalic")
 LITERATA_FONT_SIZES=(10)
-NOTOSERIF_FONT_SIZES=(10 12 14 16 18)
+NOTOSERIF_FONT_SIZES=(5 6 8 10 12 14 16 18)
 NOTOSANS_FONT_SIZES=(12 14 16 18)
 
 # Faces that back the Title (notoserif 14) and Body (literata 10) theme roles
@@ -27,7 +27,7 @@ for size in ${LITERATA_FONT_SIZES[@]}; do
     font_name="literata_${size}_$(echo $style | tr '[:upper:]' '[:lower:]')"
     font_path="../builtinFonts/source/Literata/Literata-${style}.ttf"
     output_path="../builtinFonts/${font_name}.h"
-    python fontconvert.py $font_name $size $font_path $(maybe_hebrew literata $size $style) --2bit --compress --pnum > $output_path
+    python fontconvert.py $font_name $size $font_path $(maybe_hebrew literata $size $style) --compress --pnum > $output_path
     echo "Generated $output_path"
   done
 done
@@ -37,7 +37,7 @@ for size in ${NOTOSERIF_FONT_SIZES[@]}; do
     font_name="notoserif_${size}_$(echo $style | tr '[:upper:]' '[:lower:]')"
     font_path="../builtinFonts/source/NotoSerif/NotoSerif-${style}.ttf"
     output_path="../builtinFonts/${font_name}.h"
-    python fontconvert.py $font_name $size $font_path $(maybe_hebrew notoserif $size $style) --2bit --compress --pnum > $output_path
+    python fontconvert.py $font_name $size $font_path $(maybe_hebrew notoserif $size $style) --compress --pnum > $output_path
     echo "Generated $output_path"
   done
 done
@@ -47,7 +47,7 @@ for size in ${NOTOSANS_FONT_SIZES[@]}; do
     font_name="notosans_${size}_$(echo $style | tr '[:upper:]' '[:lower:]')"
     font_path="../builtinFonts/source/NotoSans/NotoSans-${style}.ttf"
     output_path="../builtinFonts/${font_name}.h"
-    python fontconvert.py $font_name $size $font_path --2bit --compress --pnum > $output_path
+    python fontconvert.py $font_name $size $font_path --compress --pnum > $output_path
     echo "Generated $output_path"
   done
 done

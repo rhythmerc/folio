@@ -773,36 +773,38 @@ compress = args.compress
 
 
 def to_byte_aligned(packed, width, height):
-    """Convert packed 2-bit bitmap to byte-aligned format (rows padded to byte boundary).
+    """Convert a packed bitmap to byte-aligned format (rows padded to byte boundary).
 
-    In packed format, pixels flow continuously across row boundaries (4 pixels/byte).
-    In byte-aligned format, each row starts at a byte boundary, padding the last byte
-    of each row with zero bits if width % 4 != 0. This improves DEFLATE compression
-    because identical pixel rows produce identical byte patterns regardless of position.
+    In packed format, pixels flow continuously across row boundaries (4 px/byte for
+    2-bit, 8 px/byte for 1-bit). In byte-aligned format each row starts on a byte
+    boundary, zero-padding the last byte of each row. This improves DEFLATE
+    compression because identical pixel rows produce identical byte patterns
+    regardless of position. The on-device decompressor reverses this in
+    FontDecompressor::compactSingleGlyph (which must use the same bit depth).
     """
     if width == 0 or height == 0:
         return b''
-    row_stride = (width + 3) // 4  # bytes per byte-aligned row
+    if is2Bit:
+        px_per_byte, bits = 4, 2
+    else:
+        px_per_byte, bits = 8, 1
+    row_stride = (width + px_per_byte - 1) // px_per_byte  # bytes per byte-aligned row
+    mask = (1 << bits) - 1
     aligned = bytearray(row_stride * height)
     for y in range(height):
         for x in range(width):
             # Read pixel from packed format (continuous bit stream)
             packed_pos = y * width + x
-            packed_byte_idx = packed_pos // 4
-            packed_shift = (3 - (packed_pos % 4)) * 2
-            pixel = (packed[packed_byte_idx] >> packed_shift) & 0x3
+            packed_shift = ((px_per_byte - 1) - (packed_pos % px_per_byte)) * bits
+            pixel = (packed[packed_pos // px_per_byte] >> packed_shift) & mask
 
             # Write pixel to byte-aligned format (row-aligned)
-            aligned_byte_idx = y * row_stride + x // 4
-            aligned_shift = (3 - (x % 4)) * 2
-            aligned[aligned_byte_idx] |= (pixel << aligned_shift)
+            aligned_shift = ((px_per_byte - 1) - (x % px_per_byte)) * bits
+            aligned[y * row_stride + x // px_per_byte] |= (pixel << aligned_shift)
     return bytes(aligned)
 
 
 # Build groups for compression
-if compress and not is2Bit:
-    print("Error: --compress requires --2bit (byte-aligned compression only supports 2-bit format)", file=sys.stderr)
-    sys.exit(1)
 if compress:
     # Script-based grouping: glyphs that co-occur in typical text rendering
     # are grouped together for efficient LRU caching on the embedded target.
@@ -853,10 +855,12 @@ if compress:
 
     for i, (props, _) in enumerate(all_glyphs):
         sg = get_script_group(props.code_point)
-        # Use the byte-aligned size (4-pixel-aligned row stride) rather than
-        # the packed length, since the decompressor consumes byte-aligned
-        # buffers. Empty glyphs contribute zero.
-        glyph_aligned_size = (((props.width + 3) // 4) * props.height
+        # Use the byte-aligned size (row stride padded to a byte boundary)
+        # rather than the packed length, since the decompressor consumes
+        # byte-aligned buffers. Stride depends on bit depth (4 px/byte for
+        # 2-bit, 8 px/byte for 1-bit). Empty glyphs contribute zero.
+        px_per_byte = 4 if is2Bit else 8
+        glyph_aligned_size = ((((props.width + px_per_byte - 1) // px_per_byte) * props.height)
                               if props.width > 0 and props.height > 0 else 0)
         if glyph_aligned_size > GROUP_MAX_UNCOMPRESSED_BYTES:
             raise ValueError(
