@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """Build SD card fonts from a declarative YAML config.
 
-Reads sd-fonts.yaml, downloads any missing source fonts, runs
+Reads a font catalog YAML, downloads any missing source fonts, runs
 fontconvert_sdcard.py in parallel for each family, and optionally
 generates the fonts.json manifest.
 
+The canonical catalog (sd-fonts.yaml) lives in the folio-fonts repo, not
+here — pass it with --config. The folio-fonts release workflow checks out
+this repo as the build engine and runs `build-sd-fonts.py --config sd-fonts.yaml`.
+
 Usage:
     # Generate fonts (output in ./output/)
-    python3 build-sd-fonts.py
+    python3 build-sd-fonts.py --config /path/to/folio-fonts/sd-fonts.yaml
 
     # Generate fonts + manifest
-    python3 build-sd-fonts.py --manifest --base-url "http://localhost:8000/"
+    python3 build-sd-fonts.py --config sd-fonts.yaml --manifest --base-url "http://localhost:8000/"
 
-    # Custom config / output paths
-    python3 build-sd-fonts.py --config my-fonts.yaml --output-dir dist/
+    # Custom output path / specific families
+    python3 build-sd-fonts.py --config sd-fonts.yaml --output-dir dist/ --only Literata
 
     # Generate only specific families
     python3 build-sd-fonts.py --only Literata,IBMPlexMono
