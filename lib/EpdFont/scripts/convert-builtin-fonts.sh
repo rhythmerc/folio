@@ -5,18 +5,19 @@ set -e
 cd "$(dirname "$0")"
 
 READER_FONT_STYLES=("Regular" "Italic" "Bold" "BoldItalic")
-LITERATA_FONT_SIZES=(10)
-NOTOSERIF_FONT_SIZES=(5 6 8 10 12 14 16 18)
+# Literata is the single built-in serif: the reader serif face AND the faces the
+# UI Title (14) / Body (10) / BodyLarge (12) / compact (5/6/8) roles resolve to.
+LITERATA_FONT_SIZES=(5 6 8 10 12 14 16 18)
 NOTOSANS_FONT_SIZES=(12 14 16 18)
 
-# Faces that back the Title (notoserif 14) and Body (literata 10) theme roles
-# are also what UI chrome resolves to (UI_12/UI_10 ids, see UITheme::repointUiFonts),
-# replacing the dropped Ubuntu UI font. Hebrew is a shipped UI language but
-# NotoSerif/Literata lack it, so merge NotoSansHebrew (Regular/Bold only) into
-# those faces. Echoes extra fontstack+intervals args for the relevant faces.
+# The Body (Literata 10) and Title (Literata 14) faces back UI chrome
+# (UI_10/UI_12 ids, see UITheme::repointUiFonts), replacing the dropped Ubuntu UI
+# font. Hebrew is a shipped UI language but Literata lacks it, so merge
+# NotoSansHebrew (Regular/Bold only) into those two faces. Echoes extra
+# fontstack+intervals args for the relevant faces.
 maybe_hebrew() {
   local family="$1" size="$2" style="$3"
-  if { [[ "$family" == "literata" && "$size" == "10" ]] || [[ "$family" == "notoserif" && "$size" == "14" ]]; } \
+  if [[ "$family" == "literata" ]] && { [[ "$size" == "10" ]] || [[ "$size" == "14" ]]; } \
      && { [[ "$style" == "Regular" ]] || [[ "$style" == "Bold" ]]; }; then
     echo "../builtinFonts/source/NotoSansHebrew/NotoSansHebrew-${style}.ttf --additional-intervals 0x05D0,0x05EA"
   fi
@@ -28,16 +29,6 @@ for size in ${LITERATA_FONT_SIZES[@]}; do
     font_path="../builtinFonts/source/Literata/Literata-${style}.ttf"
     output_path="../builtinFonts/${font_name}.h"
     python fontconvert.py $font_name $size $font_path $(maybe_hebrew literata $size $style) --compress --pnum > $output_path
-    echo "Generated $output_path"
-  done
-done
-
-for size in ${NOTOSERIF_FONT_SIZES[@]}; do
-  for style in ${READER_FONT_STYLES[@]}; do
-    font_name="notoserif_${size}_$(echo $style | tr '[:upper:]' '[:lower:]')"
-    font_path="../builtinFonts/source/NotoSerif/NotoSerif-${style}.ttf"
-    output_path="../builtinFonts/${font_name}.h"
-    python fontconvert.py $font_name $size $font_path $(maybe_hebrew notoserif $size $style) --compress --pnum > $output_path
     echo "Generated $output_path"
   done
 done
