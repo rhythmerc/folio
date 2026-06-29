@@ -594,6 +594,12 @@ def rasterize_font_style(fontfile, size, intervals, style_id=0, force_autohint=F
         fallback_face.set_char_size(size << 6, size << 6, 150, 150)
 
     load_flags = freetype.FT_LOAD_RENDER
+    if is_1bit:
+        # 1-bit fonts: rasterise with FreeType's native monochrome renderer
+        # (hinted, drop-out controlled) instead of rendering antialiased grey and
+        # thresholding. Crisper, evenly-weighted stems at small UI sizes. Still
+        # 1 bit/pixel, so glyph metrics and packed bitmap size are unchanged.
+        load_flags |= freetype.FT_LOAD_TARGET_MONO
     if force_autohint:
         load_flags |= freetype.FT_LOAD_FORCE_AUTOHINT
 
@@ -645,49 +651,24 @@ def rasterize_font_style(fontfile, size, intervals, style_id=0, force_autohint=F
 
             bitmap = f.glyph.bitmap
 
-            # Build 4-bit greyscale bitmap (same logic as fontconvert.py).
-            #
-            # FreeType returns the buffer with bitmap.pitch as the row stride
-            # in bytes, which can be negative when the bitmap is stored
-            # bottom-up. Iterating bitmap.buffer linearly assumes
-            # pitch == width and a top-down layout — that holds in the common
-            # case but breaks on padded or flipped bitmaps and corrupts the
-            # output. Walk by (row, col) using the real pitch instead.
-            #
-            # Cache bitmap.buffer in a local — ctypes struct field access
-            # creates a new Python wrapper object each time, so re-evaluating
-            # it per pixel is catastrophically slow.
-            pixels4g = []
-            px = 0
-            buf = bitmap.buffer
-            abs_pitch = abs(bitmap.pitch)
-            for y in range(bitmap.rows):
-                row_offset = y * abs_pitch if bitmap.pitch >= 0 else (bitmap.rows - 1 - y) * abs_pitch
-                for x in range(bitmap.width):
-                    v = buf[row_offset + x]
-                    if x % 2 == 0:
-                        px = (v >> 4)
-                    else:
-                        px = px | (v & 0xF0)
-                        pixels4g.append(px)
-                        px = 0
-                if bitmap.width % 2 > 0:
-                    pixels4g.append(px)
-                    px = 0
-
             if is_1bit:
-                # Downsample to 1-bit bitmap (8 px/byte, MSB-first).
-                # Any 4g grey value >= 2 in the nibble is treated as on,
-                # matching the threshold in fontconvert.py:339.
+                # FreeType rendered this glyph in native monochrome
+                # (FT_LOAD_TARGET_MONO): one bit per source pixel in a
+                # row-padded, MSB-first buffer. Repack into the firmware's
+                # continuous (non-row-padded) 1-bit bitstream — crisper,
+                # evenly-weighted stems at small UI sizes than the old
+                # greyscale-then-threshold path. pitch can be negative when the
+                # bitmap is stored bottom-up; walk by (row, col) using it.
                 pixelsbw = []
                 px = 0
-                pitch = (bitmap.width // 2) + (bitmap.width % 2)
+                buf = bitmap.buffer
+                src_pitch = abs(bitmap.pitch)
                 for y in range(bitmap.rows):
+                    row_offset = y * src_pitch if bitmap.pitch >= 0 else (bitmap.rows - 1 - y) * src_pitch
                     for x in range(bitmap.width):
-                        px = px << 1
-                        bm = pixels4g[y * pitch + (x // 2)]
-                        if ((x & 1) == 0 and (bm & 0x0E) > 0) or ((x & 1) == 1 and (bm & 0xE0) > 0):
-                            px += 1
+                        src_byte = buf[row_offset + (x >> 3)]
+                        bit = (src_byte >> (7 - (x & 7))) & 1
+                        px = (px << 1) | bit
                         if (y * bitmap.width + x) % 8 == 7:
                             pixelsbw.append(px)
                             px = 0
@@ -696,6 +677,36 @@ def rasterize_font_style(fontfile, size, intervals, style_id=0, force_autohint=F
                     pixelsbw.append(px)
                 packed = bytes(pixelsbw)
             else:
+                # Build 4-bit greyscale bitmap (same logic as fontconvert.py).
+                #
+                # FreeType returns the buffer with bitmap.pitch as the row stride
+                # in bytes, which can be negative when the bitmap is stored
+                # bottom-up. Iterating bitmap.buffer linearly assumes
+                # pitch == width and a top-down layout — that holds in the common
+                # case but breaks on padded or flipped bitmaps and corrupts the
+                # output. Walk by (row, col) using the real pitch instead.
+                #
+                # Cache bitmap.buffer in a local — ctypes struct field access
+                # creates a new Python wrapper object each time, so re-evaluating
+                # it per pixel is catastrophically slow.
+                pixels4g = []
+                px = 0
+                buf = bitmap.buffer
+                abs_pitch = abs(bitmap.pitch)
+                for y in range(bitmap.rows):
+                    row_offset = y * abs_pitch if bitmap.pitch >= 0 else (bitmap.rows - 1 - y) * abs_pitch
+                    for x in range(bitmap.width):
+                        v = buf[row_offset + x]
+                        if x % 2 == 0:
+                            px = (v >> 4)
+                        else:
+                            px = px | (v & 0xF0)
+                            pixels4g.append(px)
+                            px = 0
+                    if bitmap.width % 2 > 0:
+                        pixels4g.append(px)
+                        px = 0
+
                 # Downsample to 2-bit bitmap
                 pixels2b = []
                 px = 0
