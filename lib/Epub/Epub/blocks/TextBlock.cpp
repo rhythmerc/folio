@@ -7,7 +7,7 @@
 
 #include <cstring>
 
-void TextBlock::render(const GfxRenderer& renderer, const int fontId, const int x, const int y) const {
+void TextBlock::render(const GfxRenderer& renderer, const int x, const int y) const {
   // Focus annotations are optional: empty vectors mean no word in this block has a split.
   // When present, they must be sized in lockstep with words[].
   const bool hasFocus = !wordFocusBoundary.empty();
@@ -98,6 +98,9 @@ bool TextBlock::serialize(HalFile& file) const {
     for (auto sx : wordFocusSuffixX) serialization::writePod(file, sx);
   }
 
+  // This line's font id (block-level CSS font-size; equals the body font for normal text).
+  serialization::writePod(file, fontId);
+
   // Style (alignment + margins/padding/indent)
   serialization::writePod(file, blockStyle.alignment);
   serialization::writePod(file, blockStyle.textAlignDefined);
@@ -153,6 +156,10 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
     for (auto& sx : wordFocusSuffixX) serialization::readPod(file, sx);
   }
 
+  // This line's font id (block-level CSS font-size).
+  int fontId;
+  serialization::readPod(file, fontId);
+
   // Style (alignment + margins/padding/indent)
   serialization::readPod(file, blockStyle.alignment);
   serialization::readPod(file, blockStyle.textAlignDefined);
@@ -170,6 +177,6 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   serialization::readPod(file, blockStyle.directionDefined);
 
   return std::unique_ptr<TextBlock>(new TextBlock(std::move(words), std::move(wordXpos), std::move(wordStyles),
-                                                  std::move(wordFocusBoundary), std::move(wordFocusSuffixX),
+                                                  std::move(wordFocusBoundary), std::move(wordFocusSuffixX), fontId,
                                                   blockStyle));
 }

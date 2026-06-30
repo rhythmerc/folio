@@ -140,6 +140,43 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
   }
 }
 
+uint8_t ChapterHtmlSlimParser::computeChildPt(const uint8_t parentPt, const CssStyle& css) const {
+  if (!css.hasFontSize()) return parentPt;
+  const CssLength& fs = css.fontSize;
+  float pt;
+  switch (fs.unit) {
+    case CssUnit::Em:
+      pt = parentPt * fs.value;
+      break;
+    case CssUnit::Rem:
+      pt = baseFontPt * fs.value;
+      break;
+    case CssUnit::Percent:
+      pt = parentPt * fs.value / 100.0f;
+      break;
+    case CssUnit::Points:
+      pt = fs.value;
+      break;
+    case CssUnit::Pixels:
+      // px is absolute; map onto the point scale using the engine's pt->px factor (1.33).
+      pt = fs.value / 1.33f;
+      break;
+    default:
+      pt = parentPt;
+      break;
+  }
+  if (pt < 1.0f) pt = 1.0f;
+  if (pt > 255.0f) pt = 255.0f;
+  return static_cast<uint8_t>(pt + 0.5f);
+}
+
+int ChapterHtmlSlimParser::resolveBlockFontId() const {
+  if (!fontIdForPt) return fontId;
+  const uint8_t pt = blockPtStack.empty() ? baseFontPt : blockPtStack.back();
+  const int id = fontIdForPt(pt);
+  return id != 0 ? id : fontId;
+}
+
 void ChapterHtmlSlimParser::flushPendingAnchor() {
   if (pendingAnchorId.empty()) return;
 
@@ -203,6 +240,7 @@ void ChapterHtmlSlimParser::startNewTextBlock(const BlockStyle& blockStyle) {
       // the container's vertical spacing.
       const auto style = currentTextBlock->getBlockStyle();
       currentTextBlock->setBlockStyle(style.getCombinedBlockStyle(blockStyle, BlockStyle::CombineAxis::Vertical));
+      currentTextBlock->setBlockFontId(resolveBlockFontId());
 
       flushPendingAnchor();
       return;
@@ -214,6 +252,7 @@ void ChapterHtmlSlimParser::startNewTextBlock(const BlockStyle& blockStyle) {
   // block is flushed so the chapter starts on a fresh page.
   flushPendingAnchor();
   currentTextBlock.reset(new ParsedText(extraParagraphSpacing, hyphenationEnabled, focusReadingEnabled, blockStyle));
+  currentTextBlock->setBlockFontId(resolveBlockFontId());
   wordsExtractedInBlock = 0;
 }
 
@@ -809,6 +848,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     const auto accumulated =
         self->blockStyleStack.back().getCombinedBlockStyle(headerBlockStyle, BlockStyle::CombineAxis::Horizontal);
     self->blockStyleStack.push_back(accumulated);
+    self->blockPtStack.push_back(self->computeChildPt(self->blockPtStack.back(), cssStyle));
     self->startNewTextBlock(accumulated.withoutBottom());
     self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
     self->updateEffectiveInlineStyle();
@@ -824,6 +864,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       const auto accumulated = self->blockStyleStack.back().getCombinedBlockStyle(userAlignmentBlockStyle,
                                                                                   BlockStyle::CombineAxis::Horizontal);
       self->blockStyleStack.push_back(accumulated);
+      self->blockPtStack.push_back(self->computeChildPt(self->blockPtStack.back(), cssStyle));
       self->startNewTextBlock(accumulated.withoutBottom());
       self->updateEffectiveInlineStyle();
 
@@ -1257,6 +1298,9 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         self->currentTextBlock->setBlockStyle(style.addBottom(self->blockStyleStack.back()));
       }
       self->blockStyleStack.pop_back();
+      if (self->blockPtStack.size() > 1) {
+        self->blockPtStack.pop_back();
+      }
     }
   }
 }
@@ -1272,6 +1316,11 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   blockStyleStack.clear();
   blockStyleStack.reserve(8);
   blockStyleStack.push_back(rootBlockStyle);
+
+  // Root computed font size = body reader size ("1em"); CSS font-size scales relative to it.
+  blockPtStack.clear();
+  blockPtStack.reserve(8);
+  blockPtStack.push_back(baseFontPt);
 
   auto paragraphAlignmentBlockStyle = BlockStyle();
   paragraphAlignmentBlockStyle.textAlignDefined = true;
@@ -1358,7 +1407,8 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
 }
 
 void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
-  const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
+  // Line height follows the line's own (block-level) font so scaled blocks space correctly.
+  const int lineHeight = renderer.getLineHeight(line->getFontId()) * lineCompression;
 
   if (!currentPage) {
     currentPage.reset(new Page());
@@ -1398,7 +1448,10 @@ void ChapterHtmlSlimParser::makePages() {
     currentPageNextY = 0;
   }
 
-  const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
+  // This paragraph's resolved (snapped) font — body font for normal text, scaled for blocks
+  // carrying a CSS font-size.
+  const int blockFontId = currentTextBlock->getBlockFontId() ? currentTextBlock->getBlockFontId() : fontId;
+  const int lineHeight = renderer.getLineHeight(blockFontId) * lineCompression;
 
   // Apply top spacing before the paragraph (stored in pixels)
   const BlockStyle& blockStyle = currentTextBlock->getBlockStyle();
@@ -1415,7 +1468,7 @@ void ChapterHtmlSlimParser::makePages() {
       (horizontalInset < viewportWidth) ? static_cast<uint16_t>(viewportWidth - horizontalInset) : viewportWidth;
 
   currentTextBlock->layoutAndExtractLines(
-      renderer, fontId, effectiveWidth,
+      renderer, blockFontId, effectiveWidth,
       [this](const std::shared_ptr<TextBlock>& textBlock) { addLineToPage(textBlock); });
 
   // Fallback: transfer any remaining pending footnotes to current page.

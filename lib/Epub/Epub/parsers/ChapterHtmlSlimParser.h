@@ -54,6 +54,8 @@ class ChapterHtmlSlimParser {
   std::string contentBase;
   std::string imageBasePath;
   int imageCounter = 0;
+  uint8_t baseFontPt;                      // body reader point size = "1em" base for CSS font-size
+  std::function<int(uint8_t)> fontIdForPt; // resolves a point size to a registered font id
 
   // Style tracking (replaces depth-based approach)
   struct StyleStackEntry {
@@ -68,6 +70,9 @@ class ChapterHtmlSlimParser {
   };
   std::vector<StyleStackEntry> inlineStyleStack;
   std::vector<BlockStyle> blockStyleStack;  // accumulated block styles from open ancestor elements
+  // Computed font point size per open block element (CSS font-size, inherited + compounding).
+  // Lockstep with blockStyleStack push/pop. Root entry = baseFontPt.
+  std::vector<uint8_t> blockPtStack;
   CssStyle currentCssStyle;
   bool effectiveBold = false;
   bool effectiveItalic = false;
@@ -97,6 +102,11 @@ class ChapterHtmlSlimParser {
   int wordsExtractedInBlock = 0;
 
   void updateEffectiveInlineStyle();
+  // Computed point size for a child block given its parent's computed pt and CSS font-size.
+  // em is relative to the parent, rem to the body, % to the parent, pt absolute, px = px/1.33.
+  uint8_t computeChildPt(uint8_t parentPt, const CssStyle& css) const;
+  // Registered font id for the current block's computed point size (falls back to body fontId).
+  int resolveBlockFontId() const;
   void startNewTextBlock(const BlockStyle& blockStyle);
   void flushPendingAnchor();
   void flushPartWordBuffer();
@@ -119,7 +129,8 @@ class ChapterHtmlSlimParser {
                                  const bool embeddedStyle, const std::string& contentBase,
                                  const std::string& imageBasePath, const uint8_t imageRendering = 0,
                                  std::vector<std::string> tocAnchors = {},
-                                 const std::function<void()>& popupFn = nullptr, const CssParser* cssParser = nullptr)
+                                 const std::function<void()>& popupFn = nullptr, const CssParser* cssParser = nullptr,
+                                 const uint8_t baseFontPt = 0, std::function<int(uint8_t)> fontIdForPt = nullptr)
 
       : epub(epub),
         filepath(filepath),
@@ -139,6 +150,8 @@ class ChapterHtmlSlimParser {
         imageRendering(imageRendering),
         contentBase(contentBase),
         imageBasePath(imageBasePath),
+        baseFontPt(baseFontPt),
+        fontIdForPt(std::move(fontIdForPt)),
         tocAnchors(std::move(tocAnchors)) {}
 
   ~ChapterHtmlSlimParser() = default;

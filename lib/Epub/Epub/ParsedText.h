@@ -24,6 +24,7 @@ class ParsedText {
   bool focusReadingEnabled;
   bool isNaturalAlign;
   bool hasRtlWord;
+  int blockFontId = 0;  // resolved (snapped) font id for this block; 0 = use the body font
   std::vector<std::string> reorderedWordsScratch;
   std::vector<EpdFontFamily::Style> reorderedStylesScratch;
   std::vector<uint16_t> reorderedWidthsScratch;
@@ -62,6 +63,8 @@ class ParsedText {
   void addWord(std::string word, EpdFontFamily::Style fontStyle, bool underline = false, bool attachToPrevious = false);
   void setBlockStyle(const BlockStyle& blockStyle) { this->blockStyle = blockStyle; }
   BlockStyle& getBlockStyle() { return blockStyle; }
+  void setBlockFontId(const int id) { blockFontId = id; }
+  int getBlockFontId() const { return blockFontId; }
   size_t size() const { return words.size(); }
   bool isEmpty() const { return words.empty(); }
   void layoutAndExtractLines(const GfxRenderer& renderer, int fontId, uint16_t viewportWidth,

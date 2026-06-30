@@ -438,3 +438,14 @@ int CrossPointSettings::getReaderFontId() const {
   }
   return builtinFontId(fontFamily, fontSize);
 }
+
+int CrossPointSettings::readerFontIdForPointSize(uint8_t pt) const {
+  // ponytail: only the sizes actually built/registered exist, so closestSize()
+  // clamps both ends — e.g. a 3.2em title (~45pt) snaps to the max face (18pt)
+  // and a 0.6em caption snaps to the family minimum. We don't synthesize faces.
+  if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
+    int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, pt);
+    if (id != 0) return id;
+  }
+  return builtinFontId(fontFamily, pt);
+}

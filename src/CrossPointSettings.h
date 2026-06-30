@@ -349,6 +349,10 @@ class CrossPointSettings {
     return (shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP) ? 10 : 400;
   }
   int getReaderFontId() const;
+  // Like getReaderFontId() but for an arbitrary target point size (used to honor
+  // CSS relative font-size). Snaps to the nearest available size of the active
+  // reader family (SD or built-in).
+  int readerFontIdForPointSize(uint8_t pt) const;
 
   // Available built-in reader point sizes for a FONT_FAMILY value
   // (NOTOSERIF: 8/10/12/14/16/18; NOTOSANS: 12/14/16/18). Sorted ascending.

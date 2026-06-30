@@ -21,7 +21,8 @@ void renderFilteredPageElements(const std::vector<std::shared_ptr<PageElement>>&
 }  // namespace
 
 void PageLine::render(GfxRenderer& renderer, const int fontId, const int xOffset, const int yOffset) {
-  block->render(renderer, fontId, xPos + xOffset, yPos + yOffset);
+  (void)fontId;  // each line renders at its own TextBlock::fontId
+  block->render(renderer, xPos + xOffset, yPos + yOffset);
 }
 
 bool PageLine::serialize(HalFile& file) {

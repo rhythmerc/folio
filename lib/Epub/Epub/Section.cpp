@@ -10,8 +10,8 @@
 #include "parsers/ChapterHtmlSlimParser.h"
 
 namespace {
-// v27: words NFC-composed at layout time; bump invalidates NFD section caches.
-constexpr uint8_t SECTION_FILE_VERSION = 27;
+// v28: per-block font id (CSS block-level font-size) added to TextBlock serialization.
+constexpr uint8_t SECTION_FILE_VERSION = 28;
 constexpr uint32_t HEADER_SIZE = sizeof(uint8_t) + sizeof(int) + sizeof(float) + sizeof(bool) + sizeof(uint8_t) +
                                  sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(bool) + sizeof(bool) +
                                  sizeof(uint8_t) + sizeof(bool) + sizeof(uint32_t) + sizeof(uint32_t) +
@@ -152,8 +152,8 @@ bool Section::clearCache() const {
 bool Section::createSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
                                 const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                 const uint16_t viewportHeight, const bool hyphenationEnabled, const bool embeddedStyle,
-                                const uint8_t imageRendering, const bool focusReadingEnabled,
-                                const std::function<void()>& popupFn) {
+                                const uint8_t imageRendering, const bool focusReadingEnabled, const uint8_t baseFontPt,
+                                const std::function<int(uint8_t)>& fontIdForPt, const std::function<void()>& popupFn) {
   const auto localPath = epub->getSpineItem(spineIndex).href;
   const auto tmpHtmlPath = epub->getCachePath() + "/.tmp_" + std::to_string(spineIndex) + ".html";
 
@@ -241,7 +241,8 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
       [this, &lut](std::unique_ptr<Page> page, const uint16_t paragraphIndex, const uint16_t listItemIndex) {
         lut.push_back({this->onPageComplete(std::move(page)), paragraphIndex, listItemIndex});
       },
-      embeddedStyle, contentBase, imageBasePath, imageRendering, std::move(tocAnchors), popupFn, cssParser);
+      embeddedStyle, contentBase, imageBasePath, imageRendering, std::move(tocAnchors), popupFn, cssParser, baseFontPt,
+      fontIdForPt);
   Hyphenator::setPreferredLanguage(epub->getLanguage());
   success = visitor.parseAndBuildPages();
 

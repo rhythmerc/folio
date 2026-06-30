@@ -68,6 +68,7 @@ struct CssPropertyFlags {
   uint16_t fontWeight : 1;
   uint16_t textDecoration : 1;
   uint16_t textIndent : 1;
+  uint16_t fontSize : 1;
   uint16_t marginTop : 1;
   uint16_t marginBottom : 1;
   uint16_t marginLeft : 1;
@@ -88,6 +89,7 @@ struct CssPropertyFlags {
         fontWeight(0),
         textDecoration(0),
         textIndent(0),
+        fontSize(0),
         marginTop(0),
         marginBottom(0),
         marginLeft(0),
@@ -103,13 +105,13 @@ struct CssPropertyFlags {
         verticalAlign(0) {}
 
   [[nodiscard]] bool anySet() const {
-    return textAlign || fontStyle || fontWeight || textDecoration || textIndent || marginTop || marginBottom ||
-           marginLeft || marginRight || paddingTop || paddingBottom || paddingLeft || paddingRight || imageHeight ||
-           imageWidth || display || direction || verticalAlign;
+    return textAlign || fontStyle || fontWeight || textDecoration || textIndent || fontSize || marginTop ||
+           marginBottom || marginLeft || marginRight || paddingTop || paddingBottom || paddingLeft || paddingRight ||
+           imageHeight || imageWidth || display || direction || verticalAlign;
   }
 
   void clearAll() {
-    textAlign = fontStyle = fontWeight = textDecoration = textIndent = 0;
+    textAlign = fontStyle = fontWeight = textDecoration = textIndent = fontSize = 0;
     marginTop = marginBottom = marginLeft = marginRight = 0;
     paddingTop = paddingBottom = paddingLeft = paddingRight = 0;
     imageHeight = imageWidth = display = direction = verticalAlign = 0;
@@ -131,6 +133,7 @@ struct CssStyle {
   CssTextDirection direction = CssTextDirection::Ltr;
 
   CssLength textIndent;     // First-line indent (deferred resolution)
+  CssLength fontSize;       // Relative/absolute font size (deferred resolution)
   CssLength marginTop;      // Vertical spacing before block
   CssLength marginBottom;   // Vertical spacing after block
   CssLength marginLeft;     // Horizontal spacing left of block
@@ -168,6 +171,10 @@ struct CssStyle {
     if (base.hasTextIndent()) {
       textIndent = base.textIndent;
       defined.textIndent = 1;
+    }
+    if (base.hasFontSize()) {
+      fontSize = base.fontSize;
+      defined.fontSize = 1;
     }
     if (base.hasMarginTop()) {
       marginTop = base.marginTop;
@@ -228,6 +235,7 @@ struct CssStyle {
   [[nodiscard]] bool hasFontWeight() const { return defined.fontWeight; }
   [[nodiscard]] bool hasTextDecoration() const { return defined.textDecoration; }
   [[nodiscard]] bool hasTextIndent() const { return defined.textIndent; }
+  [[nodiscard]] bool hasFontSize() const { return defined.fontSize; }
   [[nodiscard]] bool hasMarginTop() const { return defined.marginTop; }
   [[nodiscard]] bool hasMarginBottom() const { return defined.marginBottom; }
   [[nodiscard]] bool hasMarginLeft() const { return defined.marginLeft; }
@@ -249,6 +257,7 @@ struct CssStyle {
     textDecoration = CssTextDecoration::None;
     direction = CssTextDirection::Ltr;
     textIndent = CssLength{};
+    fontSize = CssLength{};
     marginTop = marginBottom = marginLeft = marginRight = CssLength{};
     paddingTop = paddingBottom = paddingLeft = paddingRight = CssLength{};
     imageHeight = imageWidth = CssLength{};

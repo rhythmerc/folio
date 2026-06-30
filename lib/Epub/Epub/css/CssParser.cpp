@@ -329,6 +329,12 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
   } else if (iequalsAscii(name, "text-indent")) {
     style.textIndent = interpretLength(value);
     style.defined.textIndent = 1;
+  } else if (iequalsAscii(name, "font-size")) {
+    CssLength len;
+    if (tryInterpretLength(value, len)) {
+      style.fontSize = len;
+      style.defined.fontSize = 1;
+    }
   } else if (iequalsAscii(name, "margin-top")) {
     style.marginTop = interpretLength(value);
     style.defined.marginTop = 1;
@@ -725,6 +731,7 @@ bool CssParser::saveToCache() const {
     };
 
     writeLength(style.textIndent);
+    writeLength(style.fontSize);
     writeLength(style.marginTop);
     writeLength(style.marginBottom);
     writeLength(style.marginLeft);
@@ -758,6 +765,7 @@ bool CssParser::saveToCache() const {
     if (style.defined.display) definedBits |= 1 << 15;
     if (style.defined.direction) definedBits |= 1 << 16;
     if (style.defined.verticalAlign) definedBits |= 1 << 17;
+    if (style.defined.fontSize) definedBits |= 1 << 18;
     file.write(reinterpret_cast<const uint8_t*>(&definedBits), sizeof(definedBits));
   }
 
@@ -805,7 +813,7 @@ bool CssParser::loadFromCache() {
     return static_cast<size_t>(file.available()) >= neededBytes;
   };
 
-  constexpr size_t CSS_LENGTH_FIELD_COUNT = 11;
+  constexpr size_t CSS_LENGTH_FIELD_COUNT = 12;
   constexpr size_t CSS_LENGTH_BYTES = sizeof(float) + sizeof(uint8_t);
   constexpr size_t CSS_FIXED_STYLE_BYTES =
       5 * sizeof(uint8_t) + (CSS_LENGTH_FIELD_COUNT * CSS_LENGTH_BYTES) + sizeof(uint8_t) + sizeof(uint32_t);
@@ -889,7 +897,8 @@ bool CssParser::loadFromCache() {
       return true;
     };
 
-    if (!readLength(style.textIndent) || !readLength(style.marginTop) || !readLength(style.marginBottom) ||
+    if (!readLength(style.textIndent) || !readLength(style.fontSize) || !readLength(style.marginTop) ||
+        !readLength(style.marginBottom) ||
         !readLength(style.marginLeft) || !readLength(style.marginRight) || !readLength(style.paddingTop) ||
         !readLength(style.paddingBottom) || !readLength(style.paddingLeft) || !readLength(style.paddingRight) ||
         !readLength(style.imageHeight) || !readLength(style.imageWidth)) {
@@ -937,6 +946,7 @@ bool CssParser::loadFromCache() {
     style.defined.display = (definedBits & 1 << 15) != 0;
     style.defined.direction = (definedBits & 1 << 16) != 0;
     style.defined.verticalAlign = (definedBits & 1 << 17) != 0;
+    style.defined.fontSize = (definedBits & 1 << 18) != 0;
 
     rulesBySelector_[selector] = style;
   }
