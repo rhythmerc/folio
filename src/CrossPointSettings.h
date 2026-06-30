@@ -101,9 +101,8 @@ class CrossPointSettings {
   enum SIDE_BUTTON_LAYOUT { PREV_NEXT = 0, NEXT_PREV = 1, SIDE_BUTTONS_DISABLED = 2, SIDE_BUTTON_LAYOUT_COUNT };
 
   // Font family options (built-in fonts only; SD card fonts use sdFontFamilyName)
-  // Value 0 was NOTOSERIF before the built-in serif became Literata; the
-  // persisted setting is unchanged (still the serif option), now Literata.
-  enum FONT_FAMILY { LITERATA = 0, NOTOSANS = 1, FONT_FAMILY_COUNT };
+  // Value 0 is the serif option (NotoSerif); value 1 is NotoSans.
+  enum FONT_FAMILY { NOTOSERIF = 0, NOTOSANS = 1, FONT_FAMILY_COUNT };
   static constexpr uint8_t LEGACY_OPENDYSLEXIC = 2;
   static constexpr uint8_t BUILTIN_FONT_COUNT = FONT_FAMILY_COUNT;
   // Legacy font-size buckets. `fontSize` now stores an actual point size (see
@@ -264,7 +263,7 @@ class CrossPointSettings {
   uint8_t frontButtonLeft = FRONT_HW_LEFT;
   uint8_t frontButtonRight = FRONT_HW_RIGHT;
   // Reader font settings
-  uint8_t fontFamily = LITERATA;
+  uint8_t fontFamily = NOTOSERIF;
   // Actual reader point size (e.g. 12, 14). Selected from the current font's
   // available sizes; snaps to the closest available when the font changes.
   uint8_t fontSize = DEFAULT_POINT_SIZE;
@@ -352,7 +351,7 @@ class CrossPointSettings {
   int getReaderFontId() const;
 
   // Available built-in reader point sizes for a FONT_FAMILY value
-  // (LITERATA: 8/10/12/14/16/18; NOTOSANS: 12/14/16/18). Sorted ascending.
+  // (NOTOSERIF: 8/10/12/14/16/18; NOTOSANS: 12/14/16/18). Sorted ascending.
   static std::vector<uint8_t> builtinAvailableSizes(uint8_t family);
   // Built-in font id for (family, point size); falls back to the closest
   // available size when `pt` isn't built. Returns 0 if the family has none.

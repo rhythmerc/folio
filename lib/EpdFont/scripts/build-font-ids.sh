@@ -20,9 +20,12 @@ emit_id() {
   echo "#define ${macro}_FONT_ID (${hash})"
 }
 
-# Literata is the single built-in serif (reader serif + UI Title/Body/BodyLarge/compact roles).
-for size in 5 6 8 10 12 14 16 18; do
-  emit_id "LITERATA_${size}" "literata_${size}"
+# NotoSerif is the built-in serif (reader serif + UI Title/BodyLarge/compact roles).
+# Literata 10 is the lone retained Literata face (Body/Caption/Accent roles).
+emit_id "LITERATA_10" "literata_10"
+
+for size in 6 8 10 12 14 16 18; do
+  emit_id "NOTOSERIF_${size}" "notoserif_${size}"
 done
 
 for size in 12 14 16 18; do
@@ -44,7 +47,8 @@ ruby -rdigest -e 'puts ARGV.map{|f| Digest::SHA256.hexdigest(File.read(f)).to_i(
 echo ""
 echo "// Font ID 0 is reserved as the \"not found\" sentinel."
 echo "// Guard against any hash accidentally producing 0."
-for id in LITERATA_5 LITERATA_6 LITERATA_8 LITERATA_10 LITERATA_12 LITERATA_14 LITERATA_16 LITERATA_18 \
+for id in LITERATA_10 \
+          NOTOSERIF_6 NOTOSERIF_8 NOTOSERIF_10 NOTOSERIF_12 NOTOSERIF_14 NOTOSERIF_16 NOTOSERIF_18 \
           NOTOSANS_12 NOTOSANS_14 NOTOSANS_16 NOTOSANS_18 \
           UI_10 UI_12 SMALL; do
   echo "static_assert(${id}_FONT_ID != 0, \"Font ID collision with sentinel\");"

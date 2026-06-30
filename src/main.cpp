@@ -45,57 +45,59 @@ FontCacheManager fontCacheManager(renderer.getSdCardFonts());
 static unsigned long allowSleepAt = 0;
 
 // Fonts
-// Literata is the single built-in serif: the reader serif face plus the faces
-// the UI Title (14) / Body (10) / BodyLarge (12) / compact (5/6/8) roles
-// resolve to (see UITheme::repointUiFonts and the Folio theme defaults).
-EpdFont literata5RegularFont(&literata_5_regular);
-EpdFont literata5BoldFont(&literata_5_bold);
-EpdFont literata5ItalicFont(&literata_5_italic);
-EpdFont literata5BoldItalicFont(&literata_5_bolditalic);
-EpdFontFamily literata5FontFamily(&literata5RegularFont, &literata5BoldFont, &literata5ItalicFont,
-                                  &literata5BoldItalicFont);
-EpdFont literata6RegularFont(&literata_6_regular);
-EpdFont literata6BoldFont(&literata_6_bold);
-EpdFont literata6ItalicFont(&literata_6_italic);
-EpdFont literata6BoldItalicFont(&literata_6_bolditalic);
-EpdFontFamily literata6FontFamily(&literata6RegularFont, &literata6BoldFont, &literata6ItalicFont,
-                                  &literata6BoldItalicFont);
-EpdFont literata8RegularFont(&literata_8_regular);
-EpdFont literata8BoldFont(&literata_8_bold);
-EpdFont literata8ItalicFont(&literata_8_italic);
-EpdFont literata8BoldItalicFont(&literata_8_bolditalic);
-EpdFontFamily literata8FontFamily(&literata8RegularFont, &literata8BoldFont, &literata8ItalicFont,
-                                  &literata8BoldItalicFont);
+// NotoSerif is the built-in serif: the reader serif face plus the faces the UI
+// Title (14) / BodyLarge (12) / compact (6/8) roles resolve to. Literata 10 is
+// the lone retained Literata face, backing the Folio Body/Caption/Accent roles
+// (see UITheme::repointUiFonts and the Folio theme defaults).
+EpdFont notoserif6RegularFont(&notoserif_6_regular);
+EpdFont notoserif6BoldFont(&notoserif_6_bold);
+EpdFont notoserif6ItalicFont(&notoserif_6_italic);
+EpdFont notoserif6BoldItalicFont(&notoserif_6_bolditalic);
+EpdFontFamily notoserif6FontFamily(&notoserif6RegularFont, &notoserif6BoldFont, &notoserif6ItalicFont,
+                                   &notoserif6BoldItalicFont);
+EpdFont notoserif8RegularFont(&notoserif_8_regular);
+EpdFont notoserif8BoldFont(&notoserif_8_bold);
+EpdFont notoserif8ItalicFont(&notoserif_8_italic);
+EpdFont notoserif8BoldItalicFont(&notoserif_8_bolditalic);
+EpdFontFamily notoserif8FontFamily(&notoserif8RegularFont, &notoserif8BoldFont, &notoserif8ItalicFont,
+                                   &notoserif8BoldItalicFont);
+EpdFont notoserif10RegularFont(&notoserif_10_regular);
+EpdFont notoserif10BoldFont(&notoserif_10_bold);
+EpdFont notoserif10ItalicFont(&notoserif_10_italic);
+EpdFont notoserif10BoldItalicFont(&notoserif_10_bolditalic);
+EpdFontFamily notoserif10FontFamily(&notoserif10RegularFont, &notoserif10BoldFont, &notoserif10ItalicFont,
+                                    &notoserif10BoldItalicFont);
+EpdFont notoserif12RegularFont(&notoserif_12_regular);
+EpdFont notoserif12BoldFont(&notoserif_12_bold);
+EpdFont notoserif12ItalicFont(&notoserif_12_italic);
+EpdFont notoserif12BoldItalicFont(&notoserif_12_bolditalic);
+EpdFontFamily notoserif12FontFamily(&notoserif12RegularFont, &notoserif12BoldFont, &notoserif12ItalicFont,
+                                    &notoserif12BoldItalicFont);
+EpdFont notoserif14RegularFont(&notoserif_14_regular);
+EpdFont notoserif14BoldFont(&notoserif_14_bold);
+EpdFont notoserif14ItalicFont(&notoserif_14_italic);
+EpdFont notoserif14BoldItalicFont(&notoserif_14_bolditalic);
+EpdFontFamily notoserif14FontFamily(&notoserif14RegularFont, &notoserif14BoldFont, &notoserif14ItalicFont,
+                                    &notoserif14BoldItalicFont);
+EpdFont notoserif16RegularFont(&notoserif_16_regular);
+EpdFont notoserif16BoldFont(&notoserif_16_bold);
+EpdFont notoserif16ItalicFont(&notoserif_16_italic);
+EpdFont notoserif16BoldItalicFont(&notoserif_16_bolditalic);
+EpdFontFamily notoserif16FontFamily(&notoserif16RegularFont, &notoserif16BoldFont, &notoserif16ItalicFont,
+                                    &notoserif16BoldItalicFont);
+EpdFont notoserif18RegularFont(&notoserif_18_regular);
+EpdFont notoserif18BoldFont(&notoserif_18_bold);
+EpdFont notoserif18ItalicFont(&notoserif_18_italic);
+EpdFont notoserif18BoldItalicFont(&notoserif_18_bolditalic);
+EpdFontFamily notoserif18FontFamily(&notoserif18RegularFont, &notoserif18BoldFont, &notoserif18ItalicFont,
+                                    &notoserif18BoldItalicFont);
+
 EpdFont literata10RegularFont(&literata_10_regular);
 EpdFont literata10BoldFont(&literata_10_bold);
 EpdFont literata10ItalicFont(&literata_10_italic);
 EpdFont literata10BoldItalicFont(&literata_10_bolditalic);
 EpdFontFamily literata10FontFamily(&literata10RegularFont, &literata10BoldFont, &literata10ItalicFont,
                                    &literata10BoldItalicFont);
-EpdFont literata12RegularFont(&literata_12_regular);
-EpdFont literata12BoldFont(&literata_12_bold);
-EpdFont literata12ItalicFont(&literata_12_italic);
-EpdFont literata12BoldItalicFont(&literata_12_bolditalic);
-EpdFontFamily literata12FontFamily(&literata12RegularFont, &literata12BoldFont, &literata12ItalicFont,
-                                   &literata12BoldItalicFont);
-EpdFont literata14RegularFont(&literata_14_regular);
-EpdFont literata14BoldFont(&literata_14_bold);
-EpdFont literata14ItalicFont(&literata_14_italic);
-EpdFont literata14BoldItalicFont(&literata_14_bolditalic);
-EpdFontFamily literata14FontFamily(&literata14RegularFont, &literata14BoldFont, &literata14ItalicFont,
-                                   &literata14BoldItalicFont);
-EpdFont literata16RegularFont(&literata_16_regular);
-EpdFont literata16BoldFont(&literata_16_bold);
-EpdFont literata16ItalicFont(&literata_16_italic);
-EpdFont literata16BoldItalicFont(&literata_16_bolditalic);
-EpdFontFamily literata16FontFamily(&literata16RegularFont, &literata16BoldFont, &literata16ItalicFont,
-                                   &literata16BoldItalicFont);
-EpdFont literata18RegularFont(&literata_18_regular);
-EpdFont literata18BoldFont(&literata_18_bold);
-EpdFont literata18ItalicFont(&literata_18_italic);
-EpdFont literata18BoldItalicFont(&literata_18_bolditalic);
-EpdFontFamily literata18FontFamily(&literata18RegularFont, &literata18BoldFont, &literata18ItalicFont,
-                                   &literata18BoldItalicFont);
 
 EpdFont notosans12RegularFont(&notosans_12_regular);
 EpdFont notosans12BoldFont(&notosans_12_bold);
@@ -306,14 +308,14 @@ void setupDisplayAndFonts(bool seamless = false) {
   }
   fontCacheManager.setFontDecompressor(&fontDecompressor);
   renderer.setFontCacheManager(&fontCacheManager);
-  renderer.insertFont(LITERATA_5_FONT_ID, literata5FontFamily);
-  renderer.insertFont(LITERATA_6_FONT_ID, literata6FontFamily);
-  renderer.insertFont(LITERATA_8_FONT_ID, literata8FontFamily);
+  renderer.insertFont(NOTOSERIF_6_FONT_ID, notoserif6FontFamily);
+  renderer.insertFont(NOTOSERIF_8_FONT_ID, notoserif8FontFamily);
+  renderer.insertFont(NOTOSERIF_10_FONT_ID, notoserif10FontFamily);
+  renderer.insertFont(NOTOSERIF_12_FONT_ID, notoserif12FontFamily);
+  renderer.insertFont(NOTOSERIF_14_FONT_ID, notoserif14FontFamily);
+  renderer.insertFont(NOTOSERIF_16_FONT_ID, notoserif16FontFamily);
+  renderer.insertFont(NOTOSERIF_18_FONT_ID, notoserif18FontFamily);
   renderer.insertFont(LITERATA_10_FONT_ID, literata10FontFamily);
-  renderer.insertFont(LITERATA_12_FONT_ID, literata12FontFamily);
-  renderer.insertFont(LITERATA_14_FONT_ID, literata14FontFamily);
-  renderer.insertFont(LITERATA_16_FONT_ID, literata16FontFamily);
-  renderer.insertFont(LITERATA_18_FONT_ID, literata18FontFamily);
 
   renderer.insertFont(NOTOSANS_12_FONT_ID, notosans12FontFamily);
   renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);
@@ -323,7 +325,7 @@ void setupDisplayAndFonts(bool seamless = false) {
   // every theme apply (UITheme::setTheme -> repointUiFonts). Seed them with the
   // Folio defaults so the ids are valid before the first reload(renderer).
   renderer.insertFont(UI_10_FONT_ID, literata10FontFamily);
-  renderer.insertFont(UI_12_FONT_ID, literata12FontFamily);
+  renderer.insertFont(UI_12_FONT_ID, notoserif12FontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
 
   // Discover and load SD card fonts

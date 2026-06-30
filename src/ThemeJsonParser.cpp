@@ -6,7 +6,7 @@
 #include <cstring>
 
 #include "components/themes/BaseTheme.h"
-#include "components/themes/ThemeData.h"
+#include "components/themes/ThemeDefaults.generated.h"
 #include "fontIds.h"
 
 void parseThemeFields(JsonDocument& doc, ThemeData& out);
@@ -21,26 +21,16 @@ struct BuiltinFontEntry {
 };
 
 constexpr BuiltinFontEntry kBuiltinFonts[] = {
-    // Literata is the built-in serif at every size (reader serif + UI roles).
-    {"literata-5", LITERATA_5_FONT_ID},
-    {"literata-6", LITERATA_6_FONT_ID},
-    {"literata-8", LITERATA_8_FONT_ID},
+    // NotoSerif is the built-in serif (reader serif + UI roles). Literata 10 is
+    // the lone retained Literata face (Folio Body/Caption/Accent roles).
     {"literata-10", LITERATA_10_FONT_ID},
-    {"literata-12", LITERATA_12_FONT_ID},
-    {"literata-14", LITERATA_14_FONT_ID},
-    {"literata-16", LITERATA_16_FONT_ID},
-    {"literata-18", LITERATA_18_FONT_ID},
-    // Back-compat: themes authored before the NotoSerif->Literata swap reference
-    // "notoserif-N"; alias them onto the matching Literata face so existing
-    // .cptheme JSONs keep resolving.
-    {"notoserif-5", LITERATA_5_FONT_ID},
-    {"notoserif-6", LITERATA_6_FONT_ID},
-    {"notoserif-8", LITERATA_8_FONT_ID},
-    {"notoserif-10", LITERATA_10_FONT_ID},
-    {"notoserif-12", LITERATA_12_FONT_ID},
-    {"notoserif-14", LITERATA_14_FONT_ID},
-    {"notoserif-16", LITERATA_16_FONT_ID},
-    {"notoserif-18", LITERATA_18_FONT_ID},
+    {"notoserif-6", NOTOSERIF_6_FONT_ID},
+    {"notoserif-8", NOTOSERIF_8_FONT_ID},
+    {"notoserif-10", NOTOSERIF_10_FONT_ID},
+    {"notoserif-12", NOTOSERIF_12_FONT_ID},
+    {"notoserif-14", NOTOSERIF_14_FONT_ID},
+    {"notoserif-16", NOTOSERIF_16_FONT_ID},
+    {"notoserif-18", NOTOSERIF_18_FONT_ID},
     {"notosans-12", NOTOSANS_12_FONT_ID},
     {"notosans-14", NOTOSANS_14_FONT_ID},
     {"notosans-16", NOTOSANS_16_FONT_ID},

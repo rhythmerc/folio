@@ -207,7 +207,7 @@ bool CrossPointSettings::loadFromBinaryFile() {
       if (legacyFontFamily < BUILTIN_FONT_COUNT) {
         fontFamily = legacyFontFamily;
       } else if (legacyFontFamily == LEGACY_OPENDYSLEXIC) {
-        fontFamily = LITERATA;
+        fontFamily = NOTOSERIF;
         strncpy(sdFontFamilyName, "OpenDyslexic", sizeof(sdFontFamilyName) - 1);
         sdFontFamilyName[sizeof(sdFontFamilyName) - 1] = '\0';
       }
@@ -315,7 +315,7 @@ float CrossPointSettings::getReaderLineCompression() const {
   }
 
   switch (fontFamily) {
-    case LITERATA:
+    case NOTOSERIF:
     default:
       switch (lineSpacing) {
         case TIGHT:
@@ -364,15 +364,15 @@ int CrossPointSettings::getRefreshFrequency() const {
 }
 
 namespace {
-// Built-in reader faces by point size. Literata is the serif (and exposes the
+// Built-in reader faces by point size. NotoSerif is the serif (and exposes the
 // small 8/10 sizes); NotoSans is the sans (ships 12-18 only).
 struct BuiltinSizeId {
   uint8_t pt;
   int id;
 };
-constexpr BuiltinSizeId LITERATA_SIZES[] = {
-    {8, LITERATA_8_FONT_ID},   {10, LITERATA_10_FONT_ID}, {12, LITERATA_12_FONT_ID},
-    {14, LITERATA_14_FONT_ID}, {16, LITERATA_16_FONT_ID}, {18, LITERATA_18_FONT_ID},
+constexpr BuiltinSizeId NOTOSERIF_SIZES[] = {
+    {8, NOTOSERIF_8_FONT_ID},   {10, NOTOSERIF_10_FONT_ID}, {12, NOTOSERIF_12_FONT_ID},
+    {14, NOTOSERIF_14_FONT_ID}, {16, NOTOSERIF_16_FONT_ID}, {18, NOTOSERIF_18_FONT_ID},
 };
 constexpr BuiltinSizeId NOTOSANS_SIZES[] = {
     {12, NOTOSANS_12_FONT_ID},
@@ -386,8 +386,8 @@ void builtinTable(uint8_t family, const BuiltinSizeId*& table, size_t& count) {
     table = NOTOSANS_SIZES;
     count = sizeof(NOTOSANS_SIZES) / sizeof(NOTOSANS_SIZES[0]);
   } else {
-    table = LITERATA_SIZES;
-    count = sizeof(LITERATA_SIZES) / sizeof(LITERATA_SIZES[0]);
+    table = NOTOSERIF_SIZES;
+    count = sizeof(NOTOSERIF_SIZES) / sizeof(NOTOSERIF_SIZES[0]);
   }
 }
 }  // namespace
