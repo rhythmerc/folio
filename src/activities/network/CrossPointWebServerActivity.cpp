@@ -93,6 +93,16 @@ void CrossPointWebServerActivity::onExit() {
   LOG_DBG("WEBACT", "Free heap at onExit start: %d bytes", ESP.getFreeHeap());
 
   state = WebServerActivityState::SHUTTING_DOWN;
+  fontBudget.reset();  // restore font-cache budgets
+
+  // Stop the server (TCP + WebSocket + UDP sockets) BEFORE powering WiFi down.
+  // Closing sockets on a dead interface can't complete lwIP's shutdown, which
+  // strands PCBs + WebSocket client buffers (persistent leak + fragmentation).
+  if (webServer) {
+    webServer->stop();
+    webServer.reset();
+  }
+
   stopDnsServer();
   MDNS.end();
 
@@ -244,6 +254,8 @@ void CrossPointWebServerActivity::startWebServer() {
 
   if (webServer->isRunning()) {
     state = WebServerActivityState::SERVER_RUNNING;
+    // Free font-cache heap for the duration of file transfers; restored in onExit.
+    fontBudget.emplace(renderer.getFontCacheManager());
     LOG_DBG("WEBACT", "Web server started successfully");
     lastWifiBars = isApMode ? 0 : barsForRssi(WiFi.RSSI(), 0);
 

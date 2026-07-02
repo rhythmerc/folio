@@ -285,6 +285,10 @@ void FontDownloadActivity::downloadFamily(ManifestFamily& family) {
     return;
   }
 
+  // Shrink the font caches (glyph pool + persistent advance tables) for the whole
+  // transfer so TLS + download buffers aren't heap-starved; restored on return.
+  ScopedFontMemoryBudget fontBudget(renderer.getFontCacheManager());
+
   for (size_t i = 0; i < family.files.size(); i++) {
     const auto& file = family.files[i];
 
@@ -303,10 +307,6 @@ void FontDownloadActivity::downloadFamily(ManifestFamily& family) {
         fileTotal_ = file.size;
       }
       requestUpdateAndWait();
-
-      // Reclaim the built-in-font glyph cache (warmed by the list render) so the
-      // transfer isn't heap-starved; self-rewarms on the next render.
-      if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
 
       const uint32_t dlStart = millis();
       const auto result = HttpDownloader::downloadToFile(

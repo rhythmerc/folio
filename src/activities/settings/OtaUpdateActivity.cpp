@@ -1,5 +1,6 @@
 #include "OtaUpdateActivity.h"
 
+#include <FontCacheManager.h>
 #include <GfxRenderer.h>
 #include <I18n.h>
 #include <WiFi.h>
@@ -27,7 +28,11 @@ void OtaUpdateActivity::onWifiSelectionComplete(const bool success) {
   }
   requestUpdateAndWait();
 
-  const auto res = updater.checkForUpdate();
+  const auto res = [this] {
+    // Constrain font caches for the TLS check; restored when the guard leaves scope.
+    ScopedFontMemoryBudget fontBudget(renderer.getFontCacheManager());
+    return updater.checkForUpdate();
+  }();
   if (res != OtaUpdater::OK) {
     LOG_DBG("OTA", "Update check failed: %d", res);
     {
@@ -149,14 +154,18 @@ void OtaUpdateActivity::loop() {
         state = UPDATE_IN_PROGRESS;
       }
       requestUpdateAndWait();
-      const auto res = updater.installUpdate(
-          [](void* ctx) {
-            // immediate=true notifies the render task directly. The default deferred path only
-            // sets a flag consumed at the end of ActivityManager::loop(), which never runs while
-            // installUpdate() blocks this task.
-            static_cast<OtaUpdateActivity*>(ctx)->requestUpdate(true);
-          },
-          this);
+      // Constrain font caches for the whole OTA transfer; restored when the guard leaves scope.
+      const auto res = [this] {
+        ScopedFontMemoryBudget fontBudget(renderer.getFontCacheManager());
+        return updater.installUpdate(
+            [](void* ctx) {
+              // immediate=true notifies the render task directly. The default deferred path only
+              // sets a flag consumed at the end of ActivityManager::loop(), which never runs while
+              // installUpdate() blocks this task.
+              static_cast<OtaUpdateActivity*>(ctx)->requestUpdate(true);
+            },
+            this);
+      }();
 
       if (res != OtaUpdater::OK) {
         LOG_DBG("OTA", "Update failed: %d", res);

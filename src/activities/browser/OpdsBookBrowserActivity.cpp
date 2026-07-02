@@ -1,5 +1,6 @@
 #include "OpdsBookBrowserActivity.h"
 
+#include <FontCacheManager.h>
 #include <GfxRenderer.h>
 #include <I18n.h>
 #include <Logging.h>
@@ -192,6 +193,8 @@ void OpdsBookBrowserActivity::fetchFeed(const std::string& path) {
 
   std::string url = (path.find("http") == 0) ? path : UrlUtils::buildUrl(server.url, path);
   LOG_DBG("OPDS", "Fetching: %s", url.c_str());
+  // Constrain font caches for transfer headroom; restored on return.
+  ScopedFontMemoryBudget fontBudget(renderer.getFontCacheManager());
   OpdsParser parser;
   {
     OpdsParserStream stream{parser};
@@ -269,6 +272,9 @@ void OpdsBookBrowserActivity::downloadBook(const OpdsEntry& book) {
   std::string filename =
       "/" + StringUtils::sanitizeFilename((book.author.empty() ? "" : book.author + " - ") + book.title) + ".epub";
   LOG_DBG("OPDS", "Downloading: %s -> %s", downloadUrl.c_str(), filename.c_str());
+
+  // Constrain font caches for transfer headroom; restored on return.
+  ScopedFontMemoryBudget fontBudget(renderer.getFontCacheManager());
 
   const auto result = HttpDownloader::downloadToFile(
       downloadUrl, filename,

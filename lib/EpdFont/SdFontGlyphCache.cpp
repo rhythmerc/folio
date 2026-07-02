@@ -72,7 +72,7 @@ const int8_t* SdFontGlyphCache::insertKernRow(const SdCardFont* owner, uint8_t s
 
 void SdFontGlyphCache::evictGlyphsToFit(uint32_t neededBytes) {
   while (!glyphs_.empty() &&
-         (glyphs_.size() >= OVERFLOW_MAX_SLOTS || glyphBytes_ + neededBytes > OVERFLOW_BUDGET_BYTES)) {
+         (glyphs_.size() >= OVERFLOW_MAX_SLOTS || glyphBytes_ + neededBytes > glyphBudgetBytes_)) {
     size_t lru = 0;
     for (size_t i = 1; i < glyphs_.size(); i++) {
       if (glyphs_[i].lastUsedTick < glyphs_[lru].lastUsedTick) lru = i;
@@ -88,7 +88,7 @@ void SdFontGlyphCache::evictGlyphsToFit(uint32_t neededBytes) {
 
 void SdFontGlyphCache::evictKernRowsToFit(uint32_t neededBytes) {
   while (!kernRows_.empty() &&
-         (kernRows_.size() >= KERN_ROW_MAX_SLOTS || kernRowBytes_ + neededBytes > KERN_ROW_BUDGET_BYTES)) {
+         (kernRows_.size() >= KERN_ROW_MAX_SLOTS || kernRowBytes_ + neededBytes > kernRowBudgetBytes_)) {
     size_t lru = 0;
     for (size_t i = 1; i < kernRows_.size(); i++) {
       if (kernRows_[i].lastUsed < kernRows_[lru].lastUsed) lru = i;
@@ -97,6 +97,15 @@ void SdFontGlyphCache::evictKernRowsToFit(uint32_t neededBytes) {
     kernRows_[lru] = std::move(kernRows_.back());
     kernRows_.pop_back();
   }
+}
+
+void SdFontGlyphCache::setBudgets(uint32_t glyphBytes, uint32_t kernRowBytes) {
+  glyphBudgetBytes_ = glyphBytes;
+  kernRowBudgetBytes_ = kernRowBytes;
+  // Trim now: evict-to-fit with no new item pending drops LRU entries until
+  // resident bytes are under the (possibly reduced) budget.
+  evictGlyphsToFit(0);
+  evictKernRowsToFit(0);
 }
 
 void SdFontGlyphCache::clearOwner(const SdCardFont* owner) {

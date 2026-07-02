@@ -55,6 +55,17 @@ class SdFontGlyphCache {
   void clearOwner(const SdCardFont* owner);
   void clear();
 
+  // Default byte budgets (total across all fonts). Callers restore to these
+  // after a constrained window; see FontCacheManager::setMemoryConstrained.
+  static constexpr uint32_t DEFAULT_GLYPH_BUDGET_BYTES = 32 * 1024;
+  static constexpr uint32_t DEFAULT_KERN_ROW_BUDGET_BYTES = 12 * 1024;
+
+  // Runtime-adjust the byte budgets and immediately evict LRU entries down to
+  // the new limits. Lets heap-hungry flows (network transfers, OTA) shrink the
+  // pool for their duration, then restore it. Thrash in the shrunk window is
+  // acceptable — glyphs re-warm from SD on the next paint.
+  void setBudgets(uint32_t glyphBytes, uint32_t kernRowBytes);
+
  private:
   SdFontGlyphCache() = default;
   ~SdFontGlyphCache() { clear(); }
@@ -64,10 +75,12 @@ class SdFontGlyphCache {
   // Single shared budgets (total across all fonts), matching the former
   // per-font values. The hot font can use most of the pool, so a shared 32 KB
   // outperforms 4 starved per-font slices at a quarter of the footprint.
+  // Slot caps stay compile-time (secondary safety bound); the byte budgets are
+  // the RAM lever and are runtime-tunable via setBudgets().
   static constexpr uint32_t OVERFLOW_MAX_SLOTS = 512;
-  static constexpr uint32_t OVERFLOW_BUDGET_BYTES = 32 * 1024;
   static constexpr uint32_t KERN_ROW_MAX_SLOTS = 96;
-  static constexpr uint32_t KERN_ROW_BUDGET_BYTES = 12 * 1024;
+  uint32_t glyphBudgetBytes_ = DEFAULT_GLYPH_BUDGET_BYTES;
+  uint32_t kernRowBudgetBytes_ = DEFAULT_KERN_ROW_BUDGET_BYTES;
 
   struct GlyphEntry {
     const SdCardFont* owner = nullptr;

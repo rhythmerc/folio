@@ -1,7 +1,10 @@
 #pragma once
 
+#include <FontCacheManager.h>
+
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "NetworkModeSelectionActivity.h"
@@ -36,6 +39,10 @@ class CrossPointWebServerActivity final : public Activity {
 
   // Web server - owned by this activity
   std::unique_ptr<CrossPointWebServer> webServer;
+
+  // Shrinks font caches while the server (and its file uploads) is live;
+  // restored on exit. Emplaced on server start, reset in onExit.
+  std::optional<ScopedFontMemoryBudget> fontBudget;
 
   // Server status
   std::string connectedIP;

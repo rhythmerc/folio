@@ -81,8 +81,8 @@ void ThemeDownloadActivity::onWifiSelectionComplete(const bool success) {
 // --- Manifest fetching ---
 
 bool ThemeDownloadActivity::fetchAndParseManifest() {
-  // Free up heap by clearing font cache. Re-warms on render. 
-  if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
+  // Constrain font caches for transfer headroom; restored on return.
+  ScopedFontMemoryBudget fontBudget(renderer.getFontCacheManager());
 
   if (
     HttpDownloader::downloadToFile(THEME_MANIFEST_URL, MANIFEST_TMP, nullptr) !=
@@ -229,8 +229,8 @@ void ThemeDownloadActivity::downloadTheme(int index) {
   buildThemePath(info.file.c_str(), destPath, sizeof(destPath));
   const std::string url = baseUrl_ + info.file;
 
-  // Reclaim the UI-font glyph cache for transfer headroom; self-rewarms on the next render.
-  if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
+  // Constrain font caches for transfer headroom; restored on return.
+  ScopedFontMemoryBudget fontBudget(renderer.getFontCacheManager());
 
   const auto result = HttpDownloader::downloadToFile(
     url,
