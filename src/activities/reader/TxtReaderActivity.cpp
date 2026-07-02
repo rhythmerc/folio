@@ -12,6 +12,7 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "ProgressFile.h"
+#include "ReaderFontSystem.h"
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
@@ -50,6 +51,10 @@ void TxtReaderActivity::onEnter() {
 
 void TxtReaderActivity::onExit() {
   Activity::onExit();
+
+  // Leaving the reader: unload the eager SD font family to reclaim its resident
+  // tables (rebinds on next reader entry via ReaderActivity::ensureLoaded).
+  readerFontSystem.releaseFonts(renderer);
 
   // Reset orientation back to portrait for the rest of the UI
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);

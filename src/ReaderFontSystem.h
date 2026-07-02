@@ -35,6 +35,12 @@ class ReaderFontSystem {
   /// is directly renderable — layout measurement and paint need no extra hook.
   int resolveFontId(const char* familyName, uint8_t pointSize) const;
 
+  /// Unload the bound family's SD fonts (frees their resident tables + unregisters
+  /// from the renderer). Idempotent — no-op if nothing is bound. Called at the
+  /// activity-exit boundary once we've left reader context; rebinds on next reader
+  /// entry via ensureLoaded. Leaves the saved family name in settings intact.
+  void releaseFonts(GfxRenderer& renderer) { manager_.unloadAll(renderer); }
+
   /// Access the registry (e.g. for settings UI to enumerate available fonts).
   const ReaderFontRegistry& registry() const { return registry_; }
 

@@ -19,6 +19,7 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "ProgressFile.h"
+#include "ReaderFontSystem.h"
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
 #include "XtcReaderChapterSelectionActivity.h"
@@ -53,6 +54,10 @@ void XtcReaderActivity::onEnter() {
 
 void XtcReaderActivity::onExit() {
   Activity::onExit();
+
+  // Leaving the reader: unload the eager SD font family to reclaim its resident
+  // tables (rebinds on next reader entry via ReaderActivity::ensureLoaded).
+  readerFontSystem.releaseFonts(renderer);
 
   APP_STATE.readerActivityLoadCount = 0;
   APP_STATE.saveToFile();
