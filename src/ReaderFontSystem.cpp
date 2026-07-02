@@ -6,6 +6,7 @@
 #include "CrossPointSettings.h"
 
 void ReaderFontSystem::begin(GfxRenderer& renderer) {
+  (void)renderer;  // binding is deferred to reader entry (ensureLoaded)
   registry_.discover();
 
   // Register this system as the SD font ID resolver in settings.
@@ -15,30 +16,16 @@ void ReaderFontSystem::begin(GfxRenderer& renderer) {
   };
   SETTINGS.sdFontResolverCtx = this;
 
-  // If user has a saved SD font selection, load it
-  if (SETTINGS.sdFontFamilyName[0] != '\0') {
-    const auto* family = registry_.findFamily(SETTINGS.sdFontFamilyName);
-    if (family) {
-      if (manager_.loadFamily(*family, renderer, SETTINGS.fontSize)) {
-        LOG_DBG("RDRFS", "Loaded SD card font family: %s", SETTINGS.sdFontFamilyName);
-      } else {
-        LOG_ERR("RDRFS", "Failed to load SD font family: %s (clearing)", SETTINGS.sdFontFamilyName);
-        SETTINGS.sdFontFamilyName[0] = '\0';
-      }
-    } else {
-      LOG_DBG("RDRFS", "SD font family not found on card: %s (clearing)", SETTINGS.sdFontFamilyName);
-      SETTINGS.sdFontFamilyName[0] = '\0';
-    }
-  }
-
+  // NB: the saved family is intentionally NOT loaded here. Eager-loading every
+  // shipped size at boot cost ~110KB and OOM'd the library. bindFamily runs
+  // lazily on reader entry via ensureLoaded().
   LOG_DBG("RDRFS", "SD font system ready (%d families discovered)", registry_.getFamilyCount());
 }
 
 void ReaderFontSystem::ensureLoaded(GfxRenderer& renderer) {
   // If the web server (or another task) installed/deleted fonts, re-discover.
-  // Track whether we just re-discovered so we can force a reload below even
-  // when the wanted family/size still maps to the same point size — the file
-  // contents on disk may have changed (e.g. user re-uploaded a new build).
+  // A registry refresh also forces a re-bind below even when the family name is
+  // unchanged — the file on disk may have been replaced (new content hash).
   const bool registryWasDirty = registryDirty_.exchange(false, std::memory_order_acquire);
   if (registryWasDirty) {
     LOG_DBG("RDRFS", "Registry dirty — re-discovering fonts");
@@ -46,56 +33,37 @@ void ReaderFontSystem::ensureLoaded(GfxRenderer& renderer) {
   }
 
   const char* wantedFamily = SETTINGS.sdFontFamilyName;
-  const std::string& currentFamily = manager_.currentFamilyName();
-  const uint8_t pointSize = SETTINGS.fontSize;
 
   if (wantedFamily[0] == '\0') {
-    if (!currentFamily.empty()) {
-      manager_.unloadAll(renderer);
-    }
+    if (manager_.isBound()) manager_.unloadAll(renderer);
     return;
   }
 
-  // Reload if family changed OR if the user-selected size maps to a
-  // different file than what's currently loaded OR if the registry was
-  // just rediscovered (file may have been replaced on disk).
-  bool familyMatches = (currentFamily == wantedFamily);
-  if (familyMatches) {
-    const auto* family = registry_.findFamily(wantedFamily);
-    if (!family) {
-      LOG_DBG("RDRFS", "SD font family disappeared: %s (clearing)", wantedFamily);
-      manager_.unloadAll(renderer);
-      SETTINGS.sdFontFamilyName[0] = '\0';
-      return;
-    }
-    const auto* selected = family->findClosestByPoint(pointSize);
-    const uint8_t wantedPt = selected ? selected->pointSize : 0;
-    if (!registryWasDirty && wantedPt == manager_.currentPointSize()) return;
-    LOG_DBG("RDRFS", "Reloading %s: size %u -> %u (req pt %u)%s", wantedFamily, manager_.currentPointSize(), wantedPt,
-            pointSize, registryWasDirty ? " [registry dirty]" : "");
-  }
-
-  if (!currentFamily.empty()) {
-    manager_.unloadAll(renderer);
+  // Already bound to this family, nothing changed on disk: all sizes are
+  // resident. A body-size change needs no reload — it just re-snaps ids (and
+  // re-keys the section cache).
+  if (manager_.isBound() && manager_.currentFamilyName() == wantedFamily && !registryWasDirty) {
+    return;
   }
 
   const auto* family = registry_.findFamily(wantedFamily);
-  if (family) {
-    if (manager_.loadFamily(*family, renderer, pointSize)) {
-      LOG_DBG("RDRFS", "Loaded SD font family: %s", wantedFamily);
-    } else {
-      LOG_ERR("RDRFS", "Failed to load SD font family: %s (clearing)", wantedFamily);
-      SETTINGS.sdFontFamilyName[0] = '\0';
-    }
-  } else {
+  if (!family) {
     LOG_DBG("RDRFS", "SD font family not found: %s (clearing)", wantedFamily);
+    manager_.unloadAll(renderer);
     SETTINGS.sdFontFamilyName[0] = '\0';
+    return;
   }
+  if (!manager_.bindFamily(*family, renderer)) {
+    LOG_ERR("RDRFS", "Failed to bind SD font family: %s (clearing)", wantedFamily);
+    SETTINGS.sdFontFamilyName[0] = '\0';
+    return;
+  }
+  LOG_DBG("RDRFS", "Bound SD card font family: %s", wantedFamily);
 }
 
-int ReaderFontSystem::resolveFontId(const char* familyName, uint8_t /*pointSize*/) const {
-  // The manager loads exactly one size (closest to SETTINGS.fontSize), so the
-  // enum is implicit — always return the single loaded font ID for this family.
-  // ensureLoaded() must have been called with the current settings before this.
-  return manager_.getFontId(familyName);
+int ReaderFontSystem::resolveFontId(const char* familyName, uint8_t pointSize) const {
+  // Deterministic id for the nearest shipped size. bindFamily has already
+  // loaded + registered every size, so this id is directly renderable at both
+  // layout (measurement) and paint — no per-page loading hook required.
+  return manager_.idForSize(familyName, pointSize);
 }

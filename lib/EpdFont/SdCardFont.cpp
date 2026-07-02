@@ -134,7 +134,8 @@ void SdCardFont::closeOverflowFile() { overflowFile_.reset(); }
 
 // --- Per-style kern/ligature ---
 
-bool SdCardFont::loadStyleKernLigatureData(PerStyle& s) {
+bool SdCardFont::loadStyleKernLigatureData(uint8_t styleIdx) {
+  auto& s = styles_[styleIdx];
   if (s.kernLigLoaded) return true;
   bool hasKern = s.header.kernLeftEntryCount > 0;
   bool hasLig = s.header.ligaturePairCount > 0;
@@ -200,8 +201,22 @@ bool SdCardFont::loadStyleKernLigatureData(PerStyle& s) {
 
   s.kernLigLoaded = true;
 
-  // Make ligatures visible to the stub. Kern class tables + the on-demand
-  // row handler are wired separately in applyGlyphMissCallback.
+  // Wire the stub so getKerning resolves classes from the resident tables and
+  // fetches matrix rows on demand via onKernRow (the full matrix is never
+  // resident), and make ligatures visible. Wired HERE (not applyGlyphMissCallback)
+  // so it happens on the style's lazy first-use load rather than at load() time.
+  // overflowCtx_[styleIdx] was populated by applyGlyphMissCallback at load().
+  if (s.kernLeftClasses && s.kernRightClasses) {
+    s.stubData.kernLeftClasses = s.kernLeftClasses;
+    s.stubData.kernRightClasses = s.kernRightClasses;
+    s.stubData.kernLeftEntryCount = s.header.kernLeftEntryCount;
+    s.stubData.kernRightEntryCount = s.header.kernRightEntryCount;
+    s.stubData.kernLeftClassCount = s.header.kernLeftClassCount;
+    s.stubData.kernRightClassCount = s.header.kernRightClassCount;
+    s.stubData.kernMatrix = nullptr;  // resolved per-row on demand via onKernRow
+    s.stubData.kernRowHandler = &SdCardFont::onKernRow;
+    s.stubData.kernRowCtx = &overflowCtx_[styleIdx];
+  }
   s.stubData.ligaturePairs = s.ligaturePairs;
   s.stubData.ligaturePairCount = s.header.ligaturePairCount;
 
@@ -299,6 +314,12 @@ bool SdCardFont::ensureStyleIntervalsLoaded(uint8_t styleIdx) {
     }
   }
 
+  // First real touch of this style: warm its kern-class + ligature tables too
+  // (best effort — getKerning/ligature lookups are null-safe if it fails). This
+  // single hook is shared by paint (onGlyphMiss) and reader layout
+  // (buildAdvanceTable), so kern/lig load only for sizes that actually render.
+  loadStyleKernLigatureData(styleIdx);
+
   return true;
 }
 
@@ -312,24 +333,11 @@ void SdCardFont::applyGlyphMissCallback(uint8_t styleIdx) {
   s.stubData.glyphMissHandler = &SdCardFont::onGlyphMiss;
   s.stubData.glyphMissCtx = &overflowCtx_[styleIdx];
 
-  // Self-warming kern + ligatures for the non-prewarmed (stub) path. Load the
-  // small class-lookup + ligature tables once (guarded by kernLigLoaded; a
-  // no-op on subsequent calls and across clearCache, since those tables are
-  // never freed by clearCache). Wire the stub so getKerning resolves classes
-  // from the resident tables and fetches matrix rows on demand via onKernRow —
-  // the full matrix is never resident. loadStyleKernLigatureData already wires
-  // stubData.ligaturePairs; the ligature output glyphs arrive via onGlyphMiss.
-  if (loadStyleKernLigatureData(s) && s.kernLeftClasses && s.kernRightClasses) {
-    s.stubData.kernLeftClasses = s.kernLeftClasses;
-    s.stubData.kernRightClasses = s.kernRightClasses;
-    s.stubData.kernLeftEntryCount = s.header.kernLeftEntryCount;
-    s.stubData.kernRightEntryCount = s.header.kernRightEntryCount;
-    s.stubData.kernLeftClassCount = s.header.kernLeftClassCount;
-    s.stubData.kernRightClassCount = s.header.kernRightClassCount;
-    s.stubData.kernMatrix = nullptr;  // resolved per-row on demand
-    s.stubData.kernRowHandler = &SdCardFont::onKernRow;
-    s.stubData.kernRowCtx = &overflowCtx_[styleIdx];
-  }
+  // Kern-class + ligature tables (and their stub wiring) are loaded lazily on
+  // the style's first use — see ensureStyleIntervalsLoaded ->
+  // loadStyleKernLigatureData. Loading them here (at load() time) would cost
+  // ~18KB per size up front, which is prohibitive when eager-loading a whole
+  // family. overflowCtx_ is populated above so the lazy wiring can reference it.
 }
 
 // --- Compute per-style file offsets from a base data offset ---

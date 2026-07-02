@@ -28,67 +28,72 @@ int ReaderFontManager::computeFontId(uint32_t contentHash, const char* familyNam
   return id != 0 ? id : 1;  // 0 is reserved as "not found" sentinel
 }
 
-bool ReaderFontManager::loadFamily(const ReaderFontFamilyInfo& family, GfxRenderer& renderer, uint8_t pointSize) {
-  // Unload any previously loaded family first
-  if (!loadedFamilyName_.empty()) {
-    unloadAll(renderer);
+bool ReaderFontManager::bindFamily(const ReaderFontFamilyInfo& family, GfxRenderer& renderer) {
+  unloadAll(renderer);
+
+  loaded_.reserve(family.files.size());
+  for (const auto& f : family.files) {
+    auto* font = new (std::nothrow) SdCardFont();
+    if (!font) {
+      LOG_ERR("RDRMGR", "OOM SdCardFont for %s", f.path.c_str());
+      continue;
+    }
+    if (!font->load(f.path.c_str())) {
+      LOG_ERR("RDRMGR", "Failed to load %s", f.path.c_str());
+      delete font;
+      continue;
+    }
+
+    const int fontId = computeFontId(font->contentHash(), family.name.c_str(), f.pointSize);
+    // Guard against colliding with an already-registered id (built-in / other).
+    if (renderer.getFontMap().count(fontId) != 0) {
+      LOG_ERR("RDRMGR", "Font id %d collides, skipping %s", fontId, f.path.c_str());
+      delete font;
+      continue;
+    }
+
+    renderer.registerSdCardFont(fontId, font);
+    EpdFontFamily fontFamily(font->getEpdFont(font->resolveStyle(0)), font->getEpdFont(font->resolveStyle(1)),
+                             font->getEpdFont(font->resolveStyle(2)), font->getEpdFont(font->resolveStyle(3)));
+    renderer.insertFont(fontId, fontFamily);
+    loaded_.push_back({font, fontId, f.pointSize});
   }
 
-  // Load the physical file whose point size is closest to the requested pt
-  // (ties favour the larger size). A family may not ship the exact size the
-  // user picked for another font, so we snap to its nearest available size.
-  const ReaderFontFileInfo* selected = family.findClosestByPoint(pointSize);
-  if (!selected) {
-    LOG_ERR("RDRMGR", "Family %s has no files to load", family.name.c_str());
+  if (loaded_.empty()) {
+    LOG_ERR("RDRMGR", "Family %s: no sizes loaded", family.name.c_str());
     return false;
   }
-
-  auto* font = new (std::nothrow) SdCardFont();
-  if (!font) {
-    LOG_ERR("RDRMGR", "Failed to allocate SdCardFont for %s", selected->path.c_str());
-    return false;
-  }
-
-  if (!font->load(selected->path.c_str())) {
-    LOG_ERR("RDRMGR", "Failed to load %s", selected->path.c_str());
-    delete font;
-    return false;
-  }
-
-  int fontId = computeFontId(font->contentHash(), family.name.c_str(), selected->pointSize);
-  // Guard against collision with built-in font IDs (astronomically unlikely
-  // with FNV-1a hashes, but provides a safety net)
-  if (renderer.getFontMap().count(fontId) != 0) {
-    LOG_ERR("RDRMGR", "Font ID %d collides with existing font, skipping %s", fontId, selected->path.c_str());
-    delete font;
-    return false;
-  }
-  renderer.registerSdCardFont(fontId, font);
-  loaded_.push_back({font, fontId, selected->pointSize});
-
-  LOG_DBG("RDRMGR", "Loaded %s size=%u id=%d styles=%u (requested pt=%u)", selected->path.c_str(),
-          selected->pointSize, fontId, font->styleCount(), pointSize);
-
-  EpdFontFamily fontFamily(font->getEpdFont(0), font->getEpdFont(1), font->getEpdFont(2), font->getEpdFont(3));
-  renderer.insertFont(fontId, fontFamily);
-
   loadedFamilyName_ = family.name;
-  loadedPointSize_ = selected->pointSize;
+  LOG_DBG("RDRMGR", "Bound %s (%zu sizes)", family.name.c_str(), loaded_.size());
   return true;
 }
 
 void ReaderFontManager::unloadAll(GfxRenderer& renderer) {
-  renderer.clearSdCardFonts();
+  // removeFont() erases both the fontMap and sdCardFonts_ entries for this id,
+  // so we touch only our own ids and leave any theme UI SD fonts alone.
   for (auto& lf : loaded_) {
     renderer.removeFont(lf.fontId);
     delete lf.font;
   }
   loaded_.clear();
   loadedFamilyName_.clear();
-  loadedPointSize_ = 0;
 }
 
-int ReaderFontManager::getFontId(const std::string& familyName) const {
-  if (familyName != loadedFamilyName_ || loaded_.empty()) return 0;
-  return loaded_.front().fontId;
+const ReaderFontManager::LoadedFont* ReaderFontManager::snapSize(uint8_t pt) const {
+  const LoadedFont* best = nullptr;
+  int bestDelta = 0;
+  for (const auto& lf : loaded_) {
+    const int d = (lf.size > pt) ? (lf.size - pt) : (pt - lf.size);
+    if (!best || d < bestDelta || (d == bestDelta && lf.size > best->size)) {  // ties -> larger size
+      best = &lf;
+      bestDelta = d;
+    }
+  }
+  return best;
+}
+
+int ReaderFontManager::idForSize(const char* familyName, uint8_t pt) const {
+  if (loadedFamilyName_.empty() || loadedFamilyName_ != familyName) return 0;
+  const LoadedFont* lf = snapSize(pt);
+  return lf ? lf->fontId : 0;
 }

@@ -246,7 +246,11 @@ class SdCardFont {
   // Per-style helpers
   void freeStyleAll(PerStyle& s);
   void freeStyleKernLigatureData(PerStyle& s);
-  bool loadStyleKernLigatureData(PerStyle& s);
+  // Lazy-load a style's kern-class + ligature tables AND wire them into its stub
+  // (kern classes, on-demand row handler, ligatures). Called on the style's first
+  // use via ensureStyleIntervalsLoaded — NOT at load() — so an unrendered size
+  // never pays the ~18KB kern cost. Guarded by kernLigLoaded; no-op if loaded.
+  bool loadStyleKernLigatureData(uint8_t styleIdx);
   // Lazy-load fullIntervals for a style. Returns true if intervals are
   // resident after the call. Cheap when already loaded (no-op).
   bool ensureStyleIntervalsLoaded(uint8_t styleIdx);

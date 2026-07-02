@@ -29,10 +29,10 @@ class ReaderFontSystem {
   /// Also re-discovers if the registry has been marked dirty (e.g. by web upload).
   void ensureLoaded(GfxRenderer& renderer);
 
-  /// Resolve an SD card font ID for a family. The point size is implicit: the
-  /// manager has already loaded the size closest to SETTINGS.fontSize, so this
-  /// returns that single loaded id. Returns 0 if not found. Used by
-  /// CrossPointSettings::getReaderFontId().
+  /// Resolver wired into CrossPointSettings: deterministic id for the size
+  /// nearest `pointSize` in the bound family (0 if unbound / wrong family).
+  /// bindFamily eager-loads + registers every shipped size, so the returned id
+  /// is directly renderable — layout measurement and paint need no extra hook.
   int resolveFontId(const char* familyName, uint8_t pointSize) const;
 
   /// Access the registry (e.g. for settings UI to enumerate available fonts).
